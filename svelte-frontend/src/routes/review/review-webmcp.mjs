@@ -1,0 +1,236 @@
+export const REVIEW_CURRENT_TOOL_NAME = 'get_current_review_queue';
+export const REVIEW_SCOPE_TOOL_NAME = 'set_review_scope';
+
+const REVIEW_FILTERS = new Set(['all', 'blocked', 'missing-next', 'owner-gap']);
+
+/** @typedef {'all' | 'blocked' | 'missing-next' | 'owner-gap'} ReviewFilter */
+/** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string, due: string | null, blocker: string | null }} ReviewItemView */
+/** @typedef {{ totalReview: number, searchMatches: number, filtered: number, shown: number, remaining: number, blocked: number, missingNext: number, missingOwner: number }} ReviewCounts */
+/** @typedef {{ scope: { query: string, filter: ReviewFilter }, availableFilters: ReviewFilter[], counts: ReviewCounts, upNext: ReviewItemView | null, items: ReviewItemView[] }} ReviewView */
+/** @typedef {{ changed: boolean, review: ReviewView }} ReviewScopeReceipt */
+
+/**
+ * Project the exact bounded queue already rendered by Review. Raw packs,
+ * memory, purpose, sources, and mutation payloads never cross this boundary.
+ *
+ * @param {unknown} input
+ * @returns {ReviewView | null}
+ */
+export function reviewPageView(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const scope = reviewScope(candidate.scope);
+	const counts = reviewCounts(candidate.counts);
+	if (!scope || !counts || !Array.isArray(candidate.availableFilters) || !Array.isArray(candidate.items)) {
+		return null;
+	}
+
+	const availableFilters = candidate.availableFilters.map(reviewFilter);
+	if (
+		availableFilters.some((filter) => filter === null) ||
+		new Set(availableFilters).size !== availableFilters.length ||
+		!availableFilters.includes('all') ||
+		!availableFilters.includes(scope.filter)
+	) {
+		return null;
+	}
+
+	const upNext = candidate.upNext === null ? null : reviewItemPageView(candidate.upNext);
+	const items = candidate.items.map(reviewItemPageView);
+	if ((candidate.upNext !== null && !upNext) || items.some((item) => item === null)) return null;
+
+	const projectedItems = /** @type {ReviewItemView[]} */ (items);
+	const shownIds = [upNext?.id, ...projectedItems.map((item) => item.id)].filter(Boolean);
+	if (
+		new Set(shownIds).size !== shownIds.length ||
+		counts.shown !== projectedItems.length + (upNext ? 1 : 0) ||
+		counts.filtered !== counts.shown + counts.remaining ||
+		counts.searchMatches < counts.filtered ||
+		counts.totalReview < counts.searchMatches ||
+		counts.blocked > counts.searchMatches ||
+		counts.missingNext > counts.searchMatches ||
+		counts.missingOwner > counts.searchMatches
+	) {
+		return null;
+	}
+
+	return {
+		scope,
+		availableFilters: /** @type {ReviewFilter[]} */ (availableFilters),
+		counts,
+		upNext,
+		items: projectedItems
+	};
+}
+
+/** @param {unknown} input @returns {ReviewItemView | null} */
+export function reviewItemPageView(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const id = normalizedText(candidate.id);
+	const title = normalizedText(candidate.title);
+	const workflow = normalizedText(candidate.workflow);
+	const owner = normalizedText(candidate.owner);
+	const due = nullableText(candidate.due);
+	const blocker = nullableText(candidate.blocker);
+	if (!id || !title || !workflow || !owner || due === undefined || blocker === undefined) return null;
+	return {
+		id,
+		title,
+		href: `/next?pack=${encodeURIComponent(id)}`,
+		workflow,
+		owner,
+		due,
+		blocker
+	};
+}
+
+/** @param {() => ReviewView | null} getReview */
+export function createCurrentReviewTool(getReview) {
+	if (typeof getReview !== 'function') throw new TypeError('Review WebMCP requires a queue getter.');
+	return {
+		name: REVIEW_CURRENT_TOOL_NAME,
+		title: 'Get current review queue',
+		description: 'Read the bounded work queue currently rendered on Review, including explicit total, filtered, shown, and remaining counts.',
+		inputSchema: {
+			type: 'object',
+			properties: {},
+			additionalProperties: false
+		},
+		annotations: {
+			readOnlyHint: true,
+			openWorldHint: false,
+			untrustedContentHint: true
+		},
+		/** @param {unknown} input @param {{ signal?: AbortSignal }} [options] */
+		async execute(input, options = {}) {
+			options.signal?.throwIfAborted();
+			requireEmptyInput(input);
+			return cloneReviewView(getReview());
+		}
+	};
+}
+
+/** @param {(scope: { query: string, filter: ReviewFilter }) => Promise<ReviewScopeReceipt>} setScope */
+export function createSetReviewScopeTool(setScope) {
+	if (typeof setScope !== 'function') throw new TypeError('Review WebMCP requires a scope setter.');
+	return {
+		name: REVIEW_SCOPE_TOOL_NAME,
+		title: 'Set review scope',
+		description: "Set Review's page-local search and queue filter. This changes only the current page scope and does not modify workspace data.",
+		inputSchema: {
+			type: 'object',
+			properties: {
+				query: { type: 'string', description: 'Search text. Use an empty string to clear the search.' },
+				filter: {
+					type: 'string',
+					enum: ['all', 'blocked', 'missing-next', 'owner-gap'],
+					description: 'Review queue subfilter.'
+				}
+			},
+			required: ['query', 'filter'],
+			additionalProperties: false
+		},
+		annotations: {
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+			untrustedContentHint: true
+		},
+		/** @param {unknown} input @param {{ signal?: AbortSignal }} [options] */
+		async execute(input, options = {}) {
+			options.signal?.throwIfAborted();
+			const scope = reviewScopeInput(input);
+			const receipt = await setScope(scope);
+			options.signal?.throwIfAborted();
+			return reviewScopeReceipt(receipt);
+		}
+	};
+}
+
+/** @param {unknown} input */
+function requireEmptyInput(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 0) {
+		throw new TypeError('Review current queue requires an empty object.');
+	}
+}
+
+/** @param {unknown} input @returns {{ query: string, filter: ReviewFilter }} */
+function reviewScopeInput(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) {
+		throw new TypeError('Review scope requires an object input.');
+	}
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const allowedKeys = new Set(['query', 'filter']);
+	if (Object.keys(candidate).some((key) => !allowedKeys.has(key))) {
+		throw new TypeError('Review scope accepts only query and filter.');
+	}
+	if (typeof candidate.query !== 'string') throw new TypeError('Review query must be a string.');
+	const filter = reviewFilter(candidate.filter);
+	if (!filter) throw new TypeError('Review filter must be all, blocked, missing-next, or owner-gap.');
+	return { query: candidate.query, filter };
+}
+
+/** @param {unknown} input @returns {ReviewScopeReceipt} */
+function reviewScopeReceipt(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) {
+		throw new TypeError('Review did not return a verifiable page receipt.');
+	}
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const review = cloneReviewView(candidate.review);
+	if (typeof candidate.changed !== 'boolean' || !review) {
+		throw new TypeError('Review did not return a verifiable page receipt.');
+	}
+	return { changed: candidate.changed, review };
+}
+
+/** @param {unknown} input @returns {{ query: string, filter: ReviewFilter } | null} */
+function reviewScope(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	if (typeof candidate.query !== 'string') return null;
+	const filter = reviewFilter(candidate.filter);
+	return filter ? { query: candidate.query, filter } : null;
+}
+
+/** @param {unknown} input @returns {ReviewCounts | null} */
+function reviewCounts(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const keys = ['totalReview', 'searchMatches', 'filtered', 'shown', 'remaining', 'blocked', 'missingNext', 'missingOwner'];
+	if (keys.some((key) => !Number.isInteger(candidate[key]) || /** @type {number} */ (candidate[key]) < 0)) return null;
+	return /** @type {ReviewCounts} */ ({
+		totalReview: candidate.totalReview,
+		searchMatches: candidate.searchMatches,
+		filtered: candidate.filtered,
+		shown: candidate.shown,
+		remaining: candidate.remaining,
+		blocked: candidate.blocked,
+		missingNext: candidate.missingNext,
+		missingOwner: candidate.missingOwner
+	});
+}
+
+/** @param {unknown} value @returns {ReviewFilter | null} */
+function reviewFilter(value) {
+	return typeof value === 'string' && REVIEW_FILTERS.has(value) ? /** @type {ReviewFilter} */ (value) : null;
+}
+
+/** @param {unknown} view @returns {ReviewView | null} */
+function cloneReviewView(view) {
+	return reviewPageView(view);
+}
+
+/** @param {unknown} value */
+function normalizedText(value) {
+	if (typeof value !== 'string') return null;
+	const text = value.trim();
+	return text || null;
+}
+
+/** @param {unknown} value @returns {string | null | undefined} */
+function nullableText(value) {
+	if (value === null || value === undefined || value === '') return null;
+	return typeof value === 'string' ? value.trim() || null : undefined;
+}

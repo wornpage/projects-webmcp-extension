@@ -1,0 +1,20 @@
+{
+  "name": "projects-webmcp-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Public static WebMCP submission for Wornpage Projects.",
+  "scripts": {
+    "build": "npm --prefix svelte-frontend run build",
+    "build:pages": "npm --prefix svelte-frontend ci --ignore-scripts && npm run build",
+    "check": "npm --prefix svelte-frontend run check",
+    "manifest:write": "node scripts/generate-public-manifest.mjs --write",
+    "test:manifest": "node scripts/generate-public-manifest.mjs",
+    "test:artifact": "node --test scripts/static-artifact-contract.test.mjs",
+    "test:webmcp": "node scripts/run-webmcp-contracts.mjs",
+    "verify": "npm run test:manifest && npm run check && npm run test:webmcp && npm run build && npm run test:artifact"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,451 @@
+// Browser-local state owner for the static WebMCP challenge application.
+
+import { browser } from '$app/environment';
+import { get, writable } from 'svelte/store';
+import type { DemoPack, DemoReceipt, DemoState } from '$lib/demo-workflow';
+import {
+	formatWorkTitle,
+	nextChoiceForwardPath,
+	rebaseSeedPacks,
+	PACK_ACTIONS,
+	STATE_FILTERS,
+	VALID_PACK_STATUSES,
+	workTitle
+} from '$lib/demo-workflow';
+import {
+	DEMO_BLOCKER_NONE,
+	formatActivityEntry,
+	forwardPathStatusForBlocker,
+	normalizeStoredBlocker,
+	normalizeText,
+	packActionEffect,
+	unblockPacksBlockedBy,
+	unblockedReceiptSentence
+} from './workflow-rules.mjs';
+
+const STORAGE_KEY = 'projects-webmcp-challenge-state-v1';
+const SEED_URL = '/data/demo-packs.json';
+const FORWARD_PATH_FIELDS = [
+	'title',
+	'status',
+	'blocker',
+	'blockedBy',
+	'owner',
+	'due',
+	'next',
+	'doneWhen',
+	'purpose'
+] as const;
+
+export const demoState = writable<DemoState | null>(null);
+export const demoStateLoading = writable(false);
+export const demoStateError = writable('');
+export const actionBusy = writable('');
+
+export interface DemoToast {
+	id: string;
+	message: string;
+	kind?: 'info' | 'error' | 'success';
+}
+
+export const toasts = writable<DemoToast[]>([]);
+
+export class ChallengeStateError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'ChallengeStateError';
+	}
+}
+
+let toastCounter = 0;
+let stateRevision = 0;
+let refreshFlight: Promise<DemoState | null> | null = null;
+
+function errorMessage(error: unknown, fallback: string): string {
+	return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function assertDemoState(value: unknown): asserts value is DemoState {
+	if (!value || typeof value !== 'object' || !Array.isArray((value as DemoState).packs)) {
+		throw new ChallengeStateError('Saved challenge data is not a valid work-item state.');
+	}
+	const ids = new Set<string>();
+	for (const pack of (value as DemoState).packs) {
+		if (!pack || typeof pack !== 'object' || typeof pack.id !== 'string' || !pack.id.trim()) {
+			throw new ChallengeStateError('Saved challenge data contains a work item without an id.');
+		}
+		if (ids.has(pack.id)) {
+			throw new ChallengeStateError(`Saved challenge data contains duplicate id "${pack.id}".`);
+		}
+		ids.add(pack.id);
+	}
+}
+
+function cloneState(state: DemoState): DemoState {
+	try {
+		const clone = JSON.parse(JSON.stringify(state)) as unknown;
+		assertDemoState(clone);
+		return clone;
+	} catch (error) {
+		if (error instanceof ChallengeStateError) throw error;
+		throw new ChallengeStateError('Challenge data could not be copied for a local save.');
+	}
+}
+
+function readStoredState(): DemoState | null {
+	let serialized: string | null;
+	try {
+		serialized = localStorage.getItem(STORAGE_KEY);
+	} catch {
+		throw new ChallengeStateError('Browser storage is unavailable. Local changes cannot be loaded.');
+	}
+	if (serialized === null) return null;
+	try {
+		const parsed = JSON.parse(serialized) as unknown;
+		assertDemoState(parsed);
+		return parsed;
+	} catch (error) {
+		if (error instanceof ChallengeStateError) throw error;
+		throw new ChallengeStateError('Saved challenge data is invalid JSON. Clear this site\'s local data to restart.');
+	}
+}
+
+function persistState(state: DemoState): void {
+	assertDemoState(state);
+	let serialized: string;
+	try {
+		serialized = JSON.stringify(state);
+	} catch {
+		throw new ChallengeStateError('Challenge data could not be serialized for a local save.');
+	}
+	try {
+		localStorage.setItem(STORAGE_KEY, serialized);
+	} catch {
+		throw new ChallengeStateError('Browser storage is full or unavailable. The change was not saved.');
+	}
+}
+
+async function loadSeedState(): Promise<DemoState> {
+	let response: Response;
+	try {
+		response = await fetch(SEED_URL, { cache: 'no-store' });
+	} catch {
+		throw new ChallengeStateError('Could not load the bundled challenge data.');
+	}
+	if (!response.ok) {
+		throw new ChallengeStateError(`Could not load the bundled challenge data (${response.status}).`);
+	}
+	let source: unknown;
+	try {
+		source = await response.json();
+	} catch {
+		throw new ChallengeStateError('The bundled challenge data is invalid JSON.');
+	}
+	if (!Array.isArray(source)) {
+		throw new ChallengeStateError('The bundled challenge data is not a work-item list.');
+	}
+	const state: DemoState = { packs: rebaseSeedPacks(source as DemoPack[]) };
+	assertDemoState(state);
+	return state;
+}
+
+async function runDemoStateRefresh(): Promise<DemoState | null> {
+	const startingRevision = stateRevision;
+	demoStateLoading.set(true);
+	try {
+		const state = readStoredState() ?? (await loadSeedState());
+		if (startingRevision !== stateRevision) return get(demoState);
+		demoState.set(state);
+		demoStateError.set('');
+		return state;
+	} catch (error) {
+		if (startingRevision !== stateRevision) return get(demoState);
+		demoStateError.set(errorMessage(error, 'Could not load challenge data.'));
+		return null;
+	} finally {
+		if (startingRevision === stateRevision) demoStateLoading.set(false);
+	}
+}
+
+function replaceDemoState(state: DemoState): DemoState {
+	stateRevision += 1;
+	demoState.set(state);
+	demoStateError.set('');
+	return state;
+}
+
+export function displayToast(
+	message: string,
+	kind: 'info' | 'error' | 'success' = 'info'
+): void {
+	if (!browser) return;
+	const id = `toast-${++toastCounter}`;
+	toasts.update((items) => [...items.slice(-4), { id, message, kind }]);
+	setTimeout(() => toasts.update((items) => items.filter((item) => item.id !== id)), 4000);
+}
+
+export async function refreshDemoState(
+	{ reuseRecent = false }: { reuseRecent?: boolean } = {}
+): Promise<DemoState | null> {
+	if (!browser) return null;
+	const current = get(demoState);
+	if (reuseRecent && current) return current;
+	if (refreshFlight) return refreshFlight;
+	refreshFlight = runDemoStateRefresh();
+	try {
+		return await refreshFlight;
+	} finally {
+		refreshFlight = null;
+	}
+}
+
+export async function saveBrowserState(
+	mutate: (state: DemoState) => void
+): Promise<DemoState | null> {
+	if (!browser) return null;
+	const current = get(demoState) ?? (await refreshDemoState());
+	if (!current) return null;
+	const draft = cloneState(current);
+	mutate(draft);
+	persistState(draft);
+	return replaceDemoState(draft);
+}
+
+function appendActivity(pack: DemoPack, detail: string): boolean {
+	const entry = formatActivityEntry(detail);
+	if (!entry) return false;
+	pack.activity = [...(pack.activity || []).slice(-99), entry];
+	return true;
+}
+
+function actionSignature(pack: DemoPack): string {
+	return `${normalizeText(pack.status, 40) || 'unknown'}|${normalizeStoredBlocker(pack.blocker)}|${normalizeText(pack.next, 200)}`;
+}
+
+function actionSummary(pack: DemoPack, action: string, changed: boolean): string {
+	const title = workTitle(pack);
+	if (action === 'done') return changed ? `Done saved for ${title}.` : `Done already saved for ${title}.`;
+	if (action === 'start') return changed ? `Started ${title}.` : `${title} is already active.`;
+	if (action === 'unblock') return changed ? `Blocker cleared for ${title}.` : `Blocker already clear for ${title}.`;
+	if (action === 'block') return changed ? `Blocker added for ${title}.` : `${title} is already blocked.`;
+	if (action === 'open') return changed ? `Work path opened for ${title}.` : `Work path already open for ${title}.`;
+	return changed ? `${action} saved for ${title}.` : `${action} is already saved for ${title}.`;
+}
+
+function proofActivity(pack: DemoPack): string {
+	const target = normalizeText(pack.doneWhen, 1000);
+	return target ? `Proof saved: ${target}` : 'Finished work.';
+}
+
+export async function runPackAction(packId: string, rawAction: string): Promise<DemoReceipt | null> {
+	const action = normalizeText(rawAction, 40).toLowerCase();
+	if (!PACK_ACTIONS.has(action)) {
+		throw new ChallengeStateError(`Unsupported work action: ${action || 'missing'}.`);
+	}
+	let current = get(demoState);
+	if (!current) current = await refreshDemoState();
+	if (!current) return null;
+	if (!current.packs.some((pack) => pack.id === packId)) {
+		displayToast('That work item is no longer in this challenge state.', 'error');
+		return null;
+	}
+
+	const written = await saveBrowserState((draft) => {
+		const pack = draft.packs.find((item) => item.id === packId)!;
+		const before = actionSignature(pack);
+		const wasDone = pack.status === 'done';
+		let changed = false;
+
+		if (action === 'archive') {
+			changed = pack.archived !== true;
+			pack.archived = true;
+			if (changed && pack.status !== 'done') appendActivity(pack, 'Archived.');
+		} else if (action === 'open') {
+			changed = appendActivity(pack, 'Opened.');
+		} else {
+			Object.assign(pack, packActionEffect(pack, action));
+			changed = actionSignature(pack) !== before;
+			if (changed) {
+				const detail = action === 'start'
+					? 'Started.'
+					: action === 'unblock'
+						? 'Blocker set to None.'
+						: action === 'block'
+							? 'Blocked.'
+							: proofActivity(pack);
+				appendActivity(pack, detail);
+			}
+		}
+
+		const unblockedCount = action === 'done' && !wasDone
+			? unblockPacksBlockedBy(draft.packs, pack, { onActivity: appendActivity, workTitle }).length
+			: 0;
+		const summary = [actionSummary(pack, action, changed), unblockedReceiptSentence(unblockedCount)]
+			.filter(Boolean)
+			.join(' ');
+		const receipt: DemoReceipt = { summary, pack };
+		draft.selectedId = pack.id;
+		draft.status = summary;
+		draft.actionReceipt = receipt;
+	});
+	const receipt = written?.actionReceipt || null;
+	if (receipt?.summary) {
+		displayToast(receipt.summary.replace(/(\.)?$/u, ' · Undo is available in the receipt.'), 'success');
+	}
+	return receipt;
+}
+
+export async function createPack(payload: Record<string, unknown>): Promise<{
+	pack: DemoPack;
+	state: DemoState;
+}> {
+	const title = normalizeText(payload.title, 200);
+	if (!title) throw new ChallengeStateError('A work title is required.');
+	if (!globalThis.crypto?.randomUUID) {
+		throw new ChallengeStateError('This browser cannot create a collision-safe local work id.');
+	}
+	const requestedStatus = normalizeText(payload.status, 40) || 'draft';
+	if (!VALID_PACK_STATUSES.has(requestedStatus)) {
+		throw new ChallengeStateError('Work path status is not supported.');
+	}
+	const id = `challenge-${globalThis.crypto.randomUUID()}`;
+	const pack: DemoPack = {
+		...payload,
+		id,
+		title,
+		status: requestedStatus,
+		blocker: normalizeStoredBlocker(payload.blocker),
+		next: normalizeText(payload.next, 200) || (requestedStatus === 'active' ? 'Open' : 'Set next action'),
+		activity: [formatActivityEntry('Created.')],
+		pinned: false,
+		archived: false
+	};
+	const state = await saveBrowserState((draft) => {
+		draft.packs.push(pack);
+		draft.selectedId = id;
+		draft.status = `Created ${formatWorkTitle(title)}.`;
+	});
+	if (!state) throw new ChallengeStateError('Challenge data is not available.');
+	const created = state.packs.find((item) => item.id === id)!;
+	displayToast(`Created: ${formatWorkTitle(created.title)}`, 'success');
+	return { pack: created, state };
+}
+
+function pathSignature(pack: DemoPack): string {
+	return JSON.stringify(Object.fromEntries(FORWARD_PATH_FIELDS.map((field) => [field, pack[field] ?? ''])));
+}
+
+export async function savePackPath(
+	packId: string,
+	values: Record<string, unknown>
+): Promise<{ saved: true; pack: DemoPack; receipt: DemoReceipt; state: DemoState }> {
+	const written = await saveBrowserState((draft) => {
+		const pack = draft.packs.find((item) => item.id === packId);
+		if (!pack) throw new ChallengeStateError('Work item was not found.');
+		const before = pathSignature(pack);
+		const statusBefore = normalizeText(pack.status, 40);
+
+		for (const field of FORWARD_PATH_FIELDS) {
+			if (!Object.prototype.hasOwnProperty.call(values, field)) continue;
+			const value = normalizeText(values[field], field === 'purpose' || field === 'doneWhen' ? 1000 : 200);
+			if (field === 'status') {
+				if (!VALID_PACK_STATUSES.has(value)) throw new ChallengeStateError('Work path status is not supported.');
+				pack.status = value;
+			} else if (field === 'blocker') {
+				pack.blocker = normalizeStoredBlocker(value);
+				if (pack.blocker === DEMO_BLOCKER_NONE && !Object.prototype.hasOwnProperty.call(values, 'blockedBy')) {
+					pack.blockedBy = '';
+				}
+			} else {
+				pack[field] = value;
+			}
+		}
+
+		if (!Object.prototype.hasOwnProperty.call(values, 'status') && pack.status !== 'done') {
+			pack.status = pack.blockedBy
+				? 'blocked'
+				: forwardPathStatusForBlocker(pack.status, pack.blocker, pack.next);
+		}
+		let unblockedCount = 0;
+		if (statusBefore !== 'done' && pack.status === 'done') {
+			pack.blocker = DEMO_BLOCKER_NONE;
+			pack.blockedBy = '';
+			unblockedCount = unblockPacksBlockedBy(draft.packs, pack, { onActivity: appendActivity, workTitle }).length;
+		}
+		const summary = [
+			pathSignature(pack) === before ? `${workTitle(pack)}: unchanged.` : `${workTitle(pack)}: path updated.`,
+			unblockedReceiptSentence(unblockedCount)
+		].filter(Boolean).join(' ');
+		const receipt: DemoReceipt = { summary, pack };
+		draft.status = summary;
+		draft.actionReceipt = receipt;
+	});
+	if (!written?.actionReceipt?.pack) throw new ChallengeStateError('Work path was not saved.');
+	displayToast('Saved.', 'success');
+	return {
+		saved: true,
+		pack: written.actionReceipt.pack,
+		receipt: written.actionReceipt,
+		state: written
+	};
+}
+
+export async function setPackNextAction(
+	packId: string,
+	next: string
+): Promise<{ saved: true; pack: DemoPack; receipt: DemoReceipt; state: DemoState }> {
+	const written = await saveBrowserState((draft) => {
+		const pack = draft.packs.find((item) => item.id === packId);
+		if (!pack) throw new ChallengeStateError('Work item was not found.');
+		const forwardPath = nextChoiceForwardPath(pack, next);
+		Object.assign(pack, forwardPath);
+		const summary = `Next action set to "${forwardPath.next || 'open'}".`;
+		const receipt: DemoReceipt = { summary, pack };
+		draft.selectedId = pack.id;
+		draft.status = summary;
+		draft.actionReceipt = receipt;
+	});
+	if (!written?.actionReceipt?.pack) throw new ChallengeStateError('Next action was not saved.');
+	displayToast('Next action saved.', 'success');
+	return {
+		saved: true,
+		pack: written.actionReceipt.pack,
+		receipt: written.actionReceipt,
+		state: written
+	};
+}
+
+export async function togglePackPinned(packId: string): Promise<void> {
+	await saveBrowserState((draft) => {
+		const pack = draft.packs.find((item) => item.id === packId);
+		if (pack) pack.pinned = !pack.pinned;
+	});
+	displayToast('Pin toggled.', 'success');
+}
+
+export async function setStateFilter(filter: string): Promise<void> {
+	const value = normalizeText(filter, 40);
+	if (!STATE_FILTERS.includes(value)) throw new ChallengeStateError('Work filter is not supported.');
+	await saveBrowserState((draft) => {
+		draft.filter = value;
+	});
+}
+
+export async function setSelectedWork(selectedId: string): Promise<void> {
+	let current = get(demoState);
+	if (!current) current = await refreshDemoState();
+	if (!current?.packs.some((pack) => pack.id === selectedId)) return;
+	await saveBrowserState((draft) => {
+		draft.selectedId = selectedId;
+	});
+}
+
+export async function savePackBrowserFields(
+	packId: string,
+	mutate: (pack: DemoPack) => void
+): Promise<DemoState | null> {
+	return saveBrowserState((draft) => {
+		const pack = draft.packs.find((item) => item.id === packId);
+		if (pack) mutate(pack);
+	});
+}

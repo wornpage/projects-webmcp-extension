@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f5f3ef"/>
+      <stop offset="100%" stop-color="#e8e4dc"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <!-- Decorative circle -->
+  <circle cx="600" cy="315" r="200" fill="none" stroke="#0d9488" stroke-width="2" opacity="0.15"/>
+  <circle cx="600" cy="315" r="160" fill="none" stroke="#0d9488" stroke-width="1" opacity="0.08"/>
+  <!-- Logo mark -->
+  <rect x="540" y="160" width="120" height="120" rx="24" fill="#0d9488"/>
+  <text x="600" y="250" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#f5f3ef" text-anchor="middle">P</text>
+  <!-- Title -->
+  <text x="600" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="42" font-weight="650" fill="#21322b" text-anchor="middle">Wornpage Projects<tspan font-size="20" baseline-shift="super">™</tspan></text>
+  <!-- Subtitle -->
+  <text x="600" y="410" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="#5c6b63" text-anchor="middle">Work tracking · Blockers · Next actions</text>
+  <!-- Divider -->
+  <line x1="480" y1="450" x2="720" y2="450" stroke="#0d9488" stroke-width="2" opacity="0.3"/>
+  <!-- Footer label -->
+  <text x="600" y="530" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#8a9a91" text-anchor="middle">WebMCP Challenge</text>
+</svg>
