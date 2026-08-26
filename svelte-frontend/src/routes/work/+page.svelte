@@ -187,11 +187,9 @@
 	});
 	let blockedCount = $derived(visible.filter(hasBlocker).length);
 	let workStatus = $derived(
-		visible.length === 0 || packs.length <= 1
+		packs.length === 0
 			? undefined
-			: blockedCount > 0
-				? `${visible.length} visible · ${blockedCount} blocked`
-				: `${visible.length} visible`
+			: `${renderedVisible.length} shown · ${visible.length} matching · ${packs.length} workspace${blockedCount > 0 ? ` · ${blockedCount} blocked` : ''}`
 	);
 	let currentWorkView = $derived.by(() => workPageView({
 		scope: {
@@ -224,10 +222,24 @@
 			blocker: hasBlocker(pack) ? blockerText(pack) : null
 		}))
 	}));
+	let workReceiptScopeKey = $derived(currentWorkView
+		? JSON.stringify({ scope: currentWorkView.scope, counts: currentWorkView.counts })
+		: '');
 	let receipt = $derived($demoState?.actionReceipt || null);
+	let webMcpSearchReceipt = $state<{
+		summary: string;
+		cells: Array<{ label: string; value: string }>;
+		scopeKey: string;
+	} | null>(null);
 	let receiptVisible = $derived(Boolean(receipt?.summary && receipt.summary !== dismissedReceiptSummary));
 	let receiptFocusTimer: ReturnType<typeof setTimeout> | null = null;
 	let stopWorkWebMcp: (() => void) | null = null;
+
+	$effect(() => {
+		if (webMcpSearchReceipt && webMcpSearchReceipt.scopeKey !== workReceiptScopeKey) {
+			webMcpSearchReceipt = null;
+		}
+	});
 
 	async function refreshWork(
 		{
@@ -434,6 +446,16 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		if (!currentWorkView || currentWorkView.scope.search !== nextQuery) {
 			throw new Error('Work did not render the requested search.');
 		}
+		webMcpSearchReceipt = {
+			summary: nextQuery ? `Agent narrowed Work to “${nextQuery}”.` : 'Agent cleared the Work search.',
+			cells: [
+				{ label: 'Search', value: nextQuery || 'Any text' },
+				{ label: 'Denominator', value: `${currentWorkView.counts.shown} shown of ${currentWorkView.counts.matching} matching · ${currentWorkView.counts.workspace} workspace` },
+				{ label: 'Other filters', value: activeFilterLabel || 'Preserved as shown' },
+				{ label: 'Workspace data', value: 'Unchanged' }
+			],
+			scopeKey: workReceiptScopeKey
+		};
 		return {
 			changed,
 			query: nextQuery,
@@ -803,7 +825,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 
 <!-- Keep existing browser-local items visible during a background refresh;
      show the skeleton only when there is genuinely nothing to render. -->
-<WornPage title="Work" status={workStatus} variant="list" loading={$demoStateLoading && packs.length === 0}>
+<WornPage sectionLabel="Step 1 of 3 · Inspect" title="Work" status={workStatus} variant="list" loading={$demoStateLoading && packs.length === 0}>
 
 	{#snippet headActions()}
 		<div class="work-head-actions">
@@ -872,6 +894,17 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		returnFocus={batchDeleteReturnFocus}
 		onconfirm={confirmBatchDelete}
 	/>
+
+	{#if webMcpSearchReceipt}
+		<div data-webmcp-receipt="work">
+			<WornReceipt
+				summary={webMcpSearchReceipt.summary}
+				announce={false}
+				cells={webMcpSearchReceipt.cells}
+				ondone={() => (webMcpSearchReceipt = null)}
+			/>
+		</div>
+	{/if}
 
 	{#if receiptVisible && receipt}
 		<WornReceipt id="work-receipt"

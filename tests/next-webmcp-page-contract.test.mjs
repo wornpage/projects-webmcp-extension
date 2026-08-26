@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import {
 	CURRENT_NEXT_EDITOR_TOOL_NAME,
 	NEXT_EDITOR_PREVIEW_ID,
+	NEXT_PREPARATION_RECEIPT_ID,
+	NEXT_PREPARATION_SUMMARY,
 	PREPARE_NEXT_ACTION_TOOL_NAME,
 	createCurrentNextEditorTool,
 	createPrepareNextActionTool,
@@ -26,6 +28,7 @@ function editor(overrides = {}) {
 		presetChoices,
 		editor: { mode: 'preset', choice: 'Open' },
 		preview: { blocker: null, nextAction: 'Open' },
+		preparationReceipt: null,
 		canSave: true,
 		busy: false,
 		privateState: 'not exposed',
@@ -40,11 +43,27 @@ test('Next projects only its exact current editor, choices, and visible preview'
 		presetChoices,
 		editor: { mode: 'preset', choice: 'Open' },
 		preview: { blocker: 'Waiting for labels', nextAction: 'Unblock' },
+		preparationReceipt: null,
 		canSave: true,
 		busy: false
 	});
 	assert.doesNotMatch(JSON.stringify(view), /not exposed/u);
 	assert.notEqual(view.presetChoices, presetChoices);
+	const prepared = editor({
+		editor: { mode: 'custom', choice: 'Clear the garage floor' },
+		preview: { blocker: 'Waiting on storage bins', nextAction: 'Clear the garage floor' },
+		preparationReceipt: {
+			summary: NEXT_PREPARATION_SUMMARY,
+			work: { id: 'next-current', title: 'Prepare the garage inventory' },
+			agentNote: 'The shelves are blocked until the floor is clear and bins arrive.',
+			preparedAction: 'Clear the garage floor',
+			workspaceChanged: false,
+			requiresHumanSave: true
+		}
+	});
+	assert.equal(prepared.preview.nextAction, 'Clear the garage floor');
+	assert.equal(prepared.preparationReceipt.workspaceChanged, false);
+	assert.equal(prepared.preparationReceipt.requiresHumanSave, true);
 
 	for (const malformed of [
 		null,
@@ -53,6 +72,11 @@ test('Next projects only its exact current editor, choices, and visible preview'
 		{ ...view, presetChoices: [...presetChoices, presetChoices[0]] },
 		{ ...view, editor: { mode: 'archive', choice: 'Open' } },
 		{ ...view, preview: { blocker: null, nextAction: '' } },
+		{ ...view, preparationReceipt: { summary: NEXT_PREPARATION_SUMMARY } },
+		{ ...prepared, preparationReceipt: { ...prepared.preparationReceipt, preparedAction: 'Open' } },
+		{ ...prepared, preparationReceipt: { ...prepared.preparationReceipt, workspaceChanged: true } },
+		{ ...prepared, preparationReceipt: { ...prepared.preparationReceipt, requiresHumanSave: false } },
+		{ ...prepared, preparationReceipt: { ...prepared.preparationReceipt, agentNote: 'x'.repeat(281) } },
 		{ ...view, canSave: 'yes' },
 		{ ...view, busy: 'no' }
 	]) {
@@ -91,10 +115,18 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 		calls.push(input);
 		return {
 			changed: true,
-			focus: { id: NEXT_EDITOR_PREVIEW_ID },
+			focus: { id: NEXT_PREPARATION_RECEIPT_ID },
 			next: editor({
 				editor: { mode: 'custom', choice: input.choice },
-				preview: { blocker: null, nextAction: input.choice }
+				preview: { blocker: null, nextAction: input.choice },
+				preparationReceipt: {
+					summary: NEXT_PREPARATION_SUMMARY,
+					work: { id: 'next-current', title: 'Prepare the garage inventory' },
+					agentNote: input.agentNote,
+					preparedAction: input.choice,
+					workspaceChanged: false,
+					requiresHumanSave: true
+				}
 			})
 		};
 	});
@@ -108,9 +140,10 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 		properties: {
 			choice: { type: 'string', minLength: 1, maxLength: 200, description: 'Preset label or custom next action to preview.' },
 			expectedMode: { type: 'string', enum: ['preset', 'custom'], description: 'Editor mode returned by the latest current-editor read.' },
-			expectedChoice: { type: 'string', maxLength: 200, description: 'Editor choice returned by the latest current-editor read.' }
+			expectedChoice: { type: 'string', maxLength: 200, description: 'Editor choice returned by the latest current-editor read.' },
+			agentNote: { type: 'string', minLength: 1, maxLength: 280, description: 'Brief user-facing reason for the choice, grounded in the visible page evidence.' }
 		},
-		required: ['choice', 'expectedMode', 'expectedChoice'],
+		required: ['choice', 'expectedMode', 'expectedChoice', 'agentNote'],
 		additionalProperties: false
 	});
 	assert.deepEqual(tool.annotations, {
@@ -124,40 +157,50 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 	const result = await tool.execute({
 		choice: '  Call the supplier  ',
 		expectedMode: 'preset',
-		expectedChoice: ' Open '
+		expectedChoice: ' Open ',
+		agentNote: '  Labels are still waiting on the supplier.  '
 	}, { signal: new AbortController().signal });
-	assert.deepEqual(calls, [{ choice: 'Call the supplier', expectedMode: 'preset', expectedChoice: 'Open' }]);
+	assert.deepEqual(calls, [{
+		choice: 'Call the supplier',
+		expectedMode: 'preset',
+		expectedChoice: 'Open',
+		agentNote: 'Labels are still waiting on the supplier.'
+	}]);
 	assert.equal(result.changed, true);
-	assert.deepEqual(result.focus, { id: 'next-action-preview' });
+	assert.deepEqual(result.focus, { id: 'next-preparation-receipt' });
 	assert.equal(result.next.editor.mode, 'custom');
 	assert.equal(result.next.editor.choice, 'Call the supplier');
+	assert.equal(result.next.preparationReceipt.agentNote, 'Labels are still waiting on the supplier.');
 
 	for (const [input, message] of [
-		[{}, /requires choice, expectedMode, and expectedChoice/u],
-		[{ choice: '', expectedMode: 'preset', expectedChoice: 'Open' }, /choice cannot be empty/u],
-		[{ choice: 'Start', expectedMode: 'other', expectedChoice: 'Open' }, /expectedMode must be preset or custom/u],
-		[{ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open', packId: 'other' }, /accepts only choice, expectedMode, and expectedChoice/u],
-		[{ choice: 42, expectedMode: 'preset', expectedChoice: 'Open' }, /choice must be a string/u],
-		[{ choice: 'x'.repeat(201), expectedMode: 'preset', expectedChoice: 'Open' }, /choice must be 200 characters or fewer/u],
-		[{ choice: 'Line\nbreak', expectedMode: 'preset', expectedChoice: 'Open' }, /choice cannot contain control characters/u]
+		[{}, /requires choice, expectedMode, expectedChoice, and agentNote/u],
+		[{ choice: '', expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'Reason' }, /choice cannot be empty/u],
+		[{ choice: 'Start', expectedMode: 'other', expectedChoice: 'Open', agentNote: 'Reason' }, /expectedMode must be preset or custom/u],
+		[{ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'Reason', packId: 'other' }, /accepts only choice, expectedMode, expectedChoice, and agentNote/u],
+		[{ choice: 42, expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'Reason' }, /choice must be a string/u],
+		[{ choice: 'x'.repeat(201), expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'Reason' }, /choice must be 200 characters or fewer/u],
+		[{ choice: 'Line\nbreak', expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'Reason' }, /choice cannot contain control characters/u],
+		[{ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open', agentNote: '' }, /agentNote cannot be empty/u],
+		[{ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'x'.repeat(281) }, /agentNote must be 280 characters or fewer/u],
+		[{ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'Line\nbreak' }, /agentNote cannot contain control characters/u]
 	]) {
 		await assert.rejects(() => tool.execute(input), message);
 	}
 	const aborted = new AbortController();
 	aborted.abort();
 	await assert.rejects(
-		() => tool.execute({ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open' }, { signal: aborted.signal }),
+		() => tool.execute({ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'Reason' }, { signal: aborted.signal }),
 		{ name: 'AbortError' }
 	);
 	assert.throws(() => createPrepareNextActionTool(null), /next-action preparer/u);
 
 	const mismatched = createPrepareNextActionTool(async () => ({
 		changed: true,
-		focus: { id: NEXT_EDITOR_PREVIEW_ID },
+		focus: { id: NEXT_PREPARATION_RECEIPT_ID },
 		next: editor({ editor: { mode: 'preset', choice: 'Open' } })
 	}));
 	await assert.rejects(
-		() => mismatched.execute({ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open' }),
+		() => mismatched.execute({ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'Reason' }),
 		/did not preserve the prepared choice/u
 	);
 });
@@ -165,14 +208,16 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 test('Next owns one projection and one unsaved setter without server or navigation authority', () => {
 	assert.match(routeSource, /import \{ registerPageTools \} from '\$lib\/webmcp\.mjs';/u);
 	assert.match(routeSource, /import \{[\s\S]*?createCurrentNextEditorTool,[\s\S]*?createPrepareNextActionTool,[\s\S]*?nextEditorPageView[\s\S]*?\} from '\.\/next-webmcp\.mjs';/u);
-	assert.match(routeSource, /let currentNextEditor = \$derived\.by\(\(\) => \{[\s\S]*?return nextEditorPageView\(\{[\s\S]*?work: \{ id: pack\.id,[\s\S]*?presetChoices: NEXT_ACTION_CHOICES,[\s\S]*?editor:[\s\S]*?preview:[\s\S]*?canSave:[\s\S]*?busy/u);
-	assert.match(routeSource, /function setNextEditorChoice\(nextChoice: string, mode: NextEditorMode\)[\s\S]*?choice = nextChoice;[\s\S]*?showingCustom = mode === 'custom';[\s\S]*?customValue = nextChoice/u);
-	assert.match(routeSource, /async function prepareNextActionFromWebMcp[\s\S]*?if \(busy\)[\s\S]*?currentNextEditor[\s\S]*?expectedMode[\s\S]*?expectedChoice[\s\S]*?stale[\s\S]*?setNextEditorChoice[\s\S]*?await tick\(\)[\s\S]*?focusAndPulse[\s\S]*?next: currentNextEditor/u);
+	assert.match(routeSource, /let currentNextEditor = \$derived\.by\(\(\) => \{[\s\S]*?return nextEditorPageView\(\{[\s\S]*?work: \{ id: pack\.id,[\s\S]*?presetChoices: NEXT_ACTION_CHOICES,[\s\S]*?editor:[\s\S]*?preview:[\s\S]*?preparationReceipt,[\s\S]*?canSave:[\s\S]*?busy/u);
+	assert.match(routeSource, /function setNextEditorChoice\(nextChoice: string, mode: NextEditorMode,[\s\S]*?choice = nextChoice;[\s\S]*?showingCustom = mode === 'custom';[\s\S]*?customValue = nextChoice/u);
+	assert.match(routeSource, /async function prepareNextActionFromWebMcp[\s\S]*?if \(busy\)[\s\S]*?currentNextEditor[\s\S]*?expectedMode[\s\S]*?expectedChoice[\s\S]*?stale[\s\S]*?agentNote[\s\S]*?workspaceChanged: false[\s\S]*?requiresHumanSave: true[\s\S]*?focusAndPulse[\s\S]*?next: currentNextEditor/u);
 	assert.match(routeSource, /stopNextWebMcp = registerPageTools\(document, \[[\s\S]*?createCurrentNextEditorTool\(\(\) => currentNextEditor\),[\s\S]*?createPrepareNextActionTool\(prepareNextActionFromWebMcp\)[\s\S]*?\]\);/u);
 	assert.match(routeSource, /return \(\) => \{\s*stopNextWebMcp\?\.\(\);\s*stopNextWebMcp = null;\s*\};/u);
 	const handler = routeSource.match(/async function prepareNextActionFromWebMcp[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.doesNotMatch(handler, /setPackNextAction|setSelectedWork|saveChoice|goto\(|fetch\(|runPackAction/u);
+	assert.doesNotMatch(handler, /setPackNextAction|setSelectedWork|saveChoice|goto\(|fetch\(|runPackAction|localStorage|sessionStorage/u);
 	assert.match(routeSource, /id=\{NEXT_EDITOR_PREVIEW_ID\}[^>]*data-next-preview/u);
+	assert.match(routeSource, /<WornReceipt[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?cells=\{preparationCells\}/u);
+	assert.match(routeSource, /Proposed next action<\/span><strong>\{effectiveChoice \|\| 'Not set'\}/u);
 	assert.match(registrationSource, /const registrationController = new AbortController\(\);/u);
 	assert.doesNotMatch(helperSource, /modelContext|registerTool|fetch\(|jsonrpc|setPackNextAction|update_pack/u);
 });

@@ -4,28 +4,31 @@
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import { createWebMcpChallengeGuideTool } from './webmcp-challenge-webmcp.mjs';
 
-	const recommendedPrompt = 'Find what needs attention, narrow the visible work, and prepare the next action for my review. Do not change workspace data.';
+	const recommendedPrompt = 'As you move through Work, Review, and Next, use each page’s WebMCP tools to show only “Garage reset” work, notice that the floor is already done while shelf sorting still waits on storage bins, narrow Review to blocked Garage-reset items, and prepare “Confirm storage bin delivery” with a brief evidence-based note for my review. Do not save or change workspace data.';
 	const steps = [
 		{
-			title: 'Understand the current work',
-			description: 'Read the exact bounded Work view and narrow only its visible search.',
+			title: 'Observe the workspace',
+			description: 'On Work, read the full denominator and show only Garage-reset work.',
+			action: 'Start in Work',
 			href: '/work'
 		},
 		{
-			title: 'Inspect the review queue',
-			description: 'Read the visible queue and change only its reversible page scope.',
+			title: 'Explain what needs attention',
+			description: 'On Review, narrow to blocked Garage-reset items and surface “Waiting on storage bins.”',
+			action: 'Continue to Review',
 			href: '/review'
 		},
 		{
-			title: 'Prepare the next action',
-			description: 'Prepare a visible draft while the person retains Save authority.',
+			title: 'Prepare the handoff',
+			description: 'On Next, replace the stale floor-clearing action with “Confirm storage bin delivery,” add a short evidence note, then stop before Save.',
+			action: 'Open the draft editor',
 			href: '/next'
 		}
 	] as const;
 	const safety = [
-		'Sample data stays in this browser.',
-		'Page tools expose bounded visible state, not private production data.',
-		'Consequential workspace changes remain human-owned.'
+		'Agent: read the exact state currently rendered.',
+		'Agent: change page-local scope and prepare an unsaved draft.',
+		'Person: approve, save, or discard every workspace change.'
 	] as const;
 	let copyStatus = $state('');
 
@@ -69,59 +72,79 @@
 	/>
 </svelte:head>
 
-<WornPage title="WebMCP Challenge guide">
+<WornPage sectionLabel="Judge path · about 90 seconds" title="WebMCP Challenge guide">
 	<div
-		class="challenge-intro"
+		class="challenge-guide"
 		data-webmcp-challenge-guide
 		data-webmcp-challenge-title="WebMCP Challenge guide"
 		data-webmcp-challenge-purpose="People and browser agents share the same live project page while consequential decisions remain human-owned."
 		data-webmcp-challenge-prompt={recommendedPrompt}
 	>
-		<p class="challenge-kicker">Public static edition · sample data · no login</p>
-		<p class="challenge-purpose">People and browser agents share the same live project page while consequential decisions remain human-owned.</p>
-		<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">
-			<div class="challenge-prompt-head">
-				<h2 id="challenge-prompt-title">Try this prompt</h2>
-				<WornButton type="button" size="sm" onclick={copyRecommendedPrompt}>Copy prompt</WornButton>
-			</div>
-			<blockquote>{recommendedPrompt}</blockquote>
-			<p class="challenge-copy-status" data-challenge-copy-status aria-live="polite">{copyStatus}</p>
-		</section>
-	</div>
-
-	<ol class="challenge-steps" aria-label="Three-step WebMCP demonstration">
-		{#each steps as step, index (step.href)}
-			<li data-webmcp-challenge-step>
-				<span class="challenge-number" aria-hidden="true">{index + 1}</span>
-				<div>
-					<h2>{step.title}</h2>
-					<p>{step.description}</p>
+		<div class="challenge-hero">
+			<div class="challenge-intro">
+				<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
+				<p class="challenge-purpose">A browser agent reads and narrows the same work you see, then prepares an unsaved next action while you keep the final say.</p>
+				<div class="challenge-facts" aria-label="Challenge build facts">
+					<div><strong>7</strong><span>route-owned tools</span></div>
+					<div><strong>3</strong><span>reversible page actions</span></div>
+					<div><strong>0</strong><span>automatic saves</span></div>
 				</div>
-				<WornButton href={step.href} size="sm">Open {step.title}</WornButton>
-			</li>
-		{/each}
-	</ol>
+			</div>
+			<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">
+				<div class="challenge-prompt-head">
+					<h2 id="challenge-prompt-title">Run the judged path</h2>
+					<WornButton type="button" size="sm" onclick={copyRecommendedPrompt}>Copy prompt</WornButton>
+				</div>
+				<blockquote>{recommendedPrompt}</blockquote>
+				<p class="challenge-copy-status" data-challenge-copy-status aria-live="polite">{copyStatus}</p>
+			</section>
+		</div>
 
-	<section class="challenge-safety" data-webmcp-challenge-safety aria-labelledby="challenge-safety-title">
-		<h2 id="challenge-safety-title">Authority boundary</h2>
-		<ul>
-			{#each safety as guarantee (guarantee)}
-				<li>{guarantee}</li>
+		<ol class="challenge-steps" aria-label="Three-step WebMCP demonstration">
+			{#each steps as step, index (step.href)}
+				<li data-webmcp-challenge-step>
+					<span class="challenge-number" aria-hidden="true">{index + 1}</span>
+					<div>
+						<h2>{step.title}</h2>
+						<p>{step.description}</p>
+					</div>
+					<WornButton href={step.href} size="sm">{step.action}</WornButton>
+				</li>
 			{/each}
-		</ul>
-	</section>
+		</ol>
 
-	<p class="challenge-browser-note">
-		WebMCP tools are available in Codex and ChatGPT in-app browsers, or in a supported Chrome build with WebMCP testing enabled. The ordinary page remains usable when WebMCP is unavailable.
-	</p>
+		<div class="challenge-boundary-grid">
+			<section class="challenge-safety" data-webmcp-challenge-safety aria-labelledby="challenge-safety-title">
+				<h2 id="challenge-safety-title">Authority boundary</h2>
+				<ul>
+					{#each safety as guarantee (guarantee)}
+						<li>{guarantee}</li>
+					{/each}
+				</ul>
+			</section>
+
+			<p class="challenge-browser-note">
+				WebMCP tools are available in Codex and ChatGPT in-app browsers, or in a supported Chrome build with WebMCP testing enabled. The ordinary page remains usable when WebMCP is unavailable.
+			</p>
+		</div>
+	</div>
 </WornPage>
 
 <style>
-	.challenge-intro,
-	.challenge-steps,
-	.challenge-safety,
-	.challenge-browser-note {
-		max-width: 760px;
+	.challenge-guide {
+		display: grid;
+		gap: 24px;
+		min-width: 0;
+	}
+	.challenge-hero {
+		display: grid;
+		gap: 20px;
+		grid-template-columns: minmax(0, 0.82fr) minmax(360px, 1.18fr);
+	}
+	.challenge-intro {
+		align-content: start;
+		display: grid;
+		gap: 16px;
 	}
 	.challenge-kicker {
 		color: var(--worn-text-secondary);
@@ -129,7 +152,7 @@
 		font-size: 12px;
 		font-weight: 700;
 		letter-spacing: 0.04em;
-		margin: 0 0 8px;
+		margin: 0;
 		text-transform: uppercase;
 	}
 	.challenge-purpose {
@@ -138,10 +161,30 @@
 		line-height: 1.6;
 		margin: 0;
 	}
+	.challenge-facts {
+		display: grid;
+		gap: 8px;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+	.challenge-facts div {
+		border-top: 2px solid var(--worn-accent);
+		display: grid;
+		gap: 2px;
+		padding-top: 8px;
+	}
+	.challenge-facts strong {
+		font-family: var(--font-typewriter);
+		font-size: 20px;
+	}
+	.challenge-facts span {
+		color: var(--worn-text-muted);
+		font-size: 11px;
+		line-height: 1.35;
+	}
 	.challenge-prompt {
-		background: var(--worn-surface-raised, var(--worn-surface));
+		background: var(--worn-bg-secondary);
 		border: 1px solid var(--worn-border);
-		margin-top: 20px;
+		border-radius: var(--worn-radius);
 		padding: 16px;
 	}
 	.challenge-prompt h2,
@@ -174,18 +217,22 @@
 		min-height: 1.4em;
 	}
 	.challenge-steps {
-		border-top: 1px solid var(--worn-border);
+		display: grid;
+		gap: 10px;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 		list-style: none;
-		margin: 24px 0 0;
+		margin: 0;
 		padding: 0;
 	}
 	.challenge-steps li {
-		align-items: center;
-		border-bottom: 1px solid var(--worn-border);
+		align-content: start;
+		background: var(--worn-surface);
+		border: 1px solid var(--worn-border);
+		border-radius: var(--worn-radius);
 		display: grid;
 		gap: 12px;
-		grid-template-columns: 32px minmax(0, 1fr) auto;
-		padding: 16px 0;
+		grid-template-rows: auto minmax(0, 1fr) auto;
+		padding: 16px;
 	}
 	.challenge-number {
 		align-items: center;
@@ -210,8 +257,13 @@
 		line-height: 1.55;
 		margin: 3px 0 0;
 	}
-	.challenge-safety {
-		margin-top: 24px;
+	.challenge-steps :global(.worn-btn) {
+		justify-self: start;
+	}
+	.challenge-boundary-grid {
+		display: grid;
+		gap: 16px;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 	}
 	.challenge-safety ul {
 		color: var(--worn-text-secondary);
@@ -222,18 +274,21 @@
 	}
 	.challenge-browser-note {
 		border-left: 3px solid var(--worn-accent);
-		margin-top: 20px;
+		margin: 0;
 		padding-left: 12px;
 	}
-	@media (max-width: 620px) {
-		.challenge-steps li {
-			align-items: start;
-			grid-template-columns: 28px minmax(0, 1fr);
+	@media (max-width: 860px) {
+		.challenge-hero,
+		.challenge-boundary-grid {
+			grid-template-columns: minmax(0, 1fr);
 		}
-		.challenge-steps :global(.worn-btn) {
-			grid-column: 2;
-			justify-self: start;
-			min-block-size: var(--worn-target-min);
+		.challenge-steps {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+	@media (max-width: 520px) {
+		.challenge-facts {
+			grid-template-columns: minmax(0, 1fr);
 		}
 	}
 </style>

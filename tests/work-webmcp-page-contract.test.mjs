@@ -178,6 +178,11 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /let currentWorkView = \$derived\.by\(\(\) => workPageView\(\{[\s\S]*?search: query,[\s\S]*?appliedSearch: debouncedQuery,[\s\S]*?matching: visible\.length,[\s\S]*?shown: renderedVisible\.length,[\s\S]*?items: renderedVisible\.map\(\(pack\) => workItemPageView\(/u);
 	assert.match(routeSource, /\{#each renderedVisible as pack, i \(pack\.id\)\}/u);
 	assert.match(routeSource, /async function showWorkSearchFromWebMcp\(nextQuery: string\) \{[\s\S]*?query = nextQuery;\s*debouncedQuery = nextQuery;[\s\S]*?focusAndPulse\(destination, \{ block: 'center' \}\);[\s\S]*?work: currentWorkView/u);
+	assert.match(routeSource, /webMcpSearchReceipt = \{[\s\S]*?Agent narrowed Work[\s\S]*?Workspace data[\s\S]*?Unchanged/u);
+	assert.match(routeSource, /let workReceiptScopeKey = \$derived\([\s\S]*?currentWorkView\.scope[\s\S]*?currentWorkView\.counts/u);
+	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpSearchReceipt\.scopeKey !== workReceiptScopeKey[\s\S]*?webMcpSearchReceipt = null/u);
+	assert.match(routeSource, /webMcpSearchReceipt = \{[\s\S]*?scopeKey: workReceiptScopeKey/u);
+	assert.match(routeSource, /data-webmcp-receipt="work"[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpSearchReceipt\.cells\}/u);
 	assert.match(routeSource, /registerPageTools\(document, \[[\s\S]*?createCurrentWorkTool\(\(\) => currentWorkView\),[\s\S]*?createShowWorkSearchTool\(showWorkSearchFromWebMcp\)[\s\S]*?\]\)/u);
 	assert.match(routeSource, /stopWorkWebMcp\?\.\(\);\s*stopWorkWebMcp = null;/u);
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);

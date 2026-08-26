@@ -87,13 +87,13 @@
 	{/if}
 	<div class="grid-card-quick">
 		{#if commandHref}
-			<WornButton data-work-primary-navigation href={commandHref} size="sm" class="grid-card-action"
+			<WornButton data-work-primary-navigation href={commandHref} size="sm" variant="primary"
 				title={cmd.label}
 				data-action={cmd.action}
 				onclick={(event) => { event.stopPropagation(); }}
 			>{cmd.label}</WornButton>
 		{:else}
-			<WornButton data-work-primary-mutation type="button" size="sm" class="grid-card-action"
+			<WornButton data-work-primary-mutation type="button" size="sm" variant="primary"
 				title={cmd.label}
 				data-action={cmd.action}
 				onclick={(event) => { event.stopPropagation(); onPrimaryMutation(pack, cmd.action); }}
@@ -104,9 +104,9 @@
 </div>
 
 <style>
-	.demo-grid-card{position:relative;min-width:0;padding:8px 10px;background:var(--worn-surface);border:1px solid var(--demo-work-card-border);border-radius:var(--worn-radius);display:flex;flex-direction:column;gap:4px;transition:box-shadow .1s ease,background .1s ease,border-color .12s;font-size:12px;min-height:44px;overflow:hidden;cursor:pointer}
+	.demo-grid-card{position:relative;min-width:0;padding:8px 10px;background:var(--worn-surface);border:1px solid var(--worn-border);border-radius:var(--worn-radius);display:flex;flex-direction:column;gap:4px;transition:box-shadow .1s ease,background .1s ease,border-color .12s;font-size:12px;min-height:44px;overflow:hidden;cursor:pointer}
 	@media (hover: hover) and (pointer: fine) {
-		.demo-grid-card:hover{border-color:var(--worn-border-strong);box-shadow:var(--demo-work-card-hover-shadow)}
+		.demo-grid-card:hover{border-color:var(--worn-border-strong);box-shadow:var(--worn-shadow-md)}
 		.demo-grid-card .grid-card-title:hover{color:var(--worn-link)}
 		.demo-grid-card.is-blocked:hover{background:color-mix(in srgb,var(--worn-warning-bg)70%,var(--worn-surface))}
 	}

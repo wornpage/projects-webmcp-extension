@@ -39,6 +39,7 @@ function queueView() {
 			owner: 'Avery',
 			due: 'Due today',
 			blocker: 'Waiting for access',
+			attentionReasons: ['Blocked: Waiting for access.', 'Due date is overdue.'],
 			memory: ['not exposed'],
 			purpose: 'not exposed'
 		},
@@ -49,6 +50,7 @@ function queueView() {
 			owner: 'Unassigned',
 			due: null,
 			blocker: null,
+			attentionReasons: ['No owner is assigned.'],
 			next: 'not exposed'
 		}]
 	});
@@ -62,6 +64,7 @@ test('Review projects only its explicit rendered queue and denominators', () => 
 		owner: 'Avery',
 		due: 'Due today',
 		blocker: 'Waiting for access',
+		attentionReasons: ['Blocked: Waiting for access.'],
 		memory: ['not exposed']
 	}), {
 		id: 'garage / one',
@@ -70,7 +73,8 @@ test('Review projects only its explicit rendered queue and denominators', () => 
 		workflow: 'Blocked',
 		owner: 'Avery',
 		due: 'Due today',
-		blocker: 'Waiting for access'
+		blocker: 'Waiting for access',
+		attentionReasons: ['Blocked: Waiting for access.']
 	});
 
 	const view = queueView();
@@ -94,7 +98,8 @@ test('Review projects only its explicit rendered queue and denominators', () => 
 			workflow: 'Blocked',
 			owner: 'Avery',
 			due: 'Due today',
-			blocker: 'Waiting for access'
+			blocker: 'Waiting for access',
+			attentionReasons: ['Blocked: Waiting for access.', 'Due date is overdue.']
 		},
 		items: [{
 			id: 'garage-two',
@@ -103,7 +108,8 @@ test('Review projects only its explicit rendered queue and denominators', () => 
 			workflow: 'Needs action',
 			owner: 'Unassigned',
 			due: null,
-			blocker: null
+			blocker: null,
+			attentionReasons: ['No owner is assigned.']
 		}]
 	});
 	assert.doesNotMatch(JSON.stringify(view), /not exposed/u);
@@ -116,6 +122,9 @@ test('Review projects only its explicit rendered queue and denominators', () => 
 		{ ...view, counts: { ...view.counts, remaining: 2 } },
 		{ ...view, counts: { ...view.counts, searchMatches: 2 } },
 		{ ...view, items: [view.upNext] },
+		{ ...view, upNext: { ...view.upNext, attentionReasons: [] } },
+		{ ...view, upNext: { ...view.upNext, attentionReasons: ['Same reason.', 'Same reason.'] } },
+		{ ...view, upNext: { ...view.upNext, attentionReasons: ['x'.repeat(241)] } },
 		{ ...view, scope: { query: '', filter: 'unknown' } }
 	]) {
 		assert.equal(reviewPageView(malformed), null);
@@ -199,9 +208,17 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /import \{ createCurrentReviewTool, createSetReviewScopeTool, reviewItemPageView, reviewPageView \} from '\.\/review-webmcp\.mjs';/u);
 	assert.match(routeSource, /let currentReviewView = \$derived\.by\(\(\) => reviewPageView\(\{[\s\S]*?totalReview: reviewTotal,[\s\S]*?searchMatches: visible\.length,[\s\S]*?filtered: filteredVisible\.length,[\s\S]*?shown: renderedReviewCount,[\s\S]*?remaining: hiddenReviewCount/u);
 	assert.match(routeSource, /upNext: reviewItemForPageTool\(firstReview\),\s*items: renderedList\.map\(reviewItemForPageTool\)/u);
-	assert.match(routeSource, /function reviewItemForPageTool\([\s\S]*?reviewItemPageView\(\{[\s\S]*?title: workTitle\(pack\)[\s\S]*?workflow: workflowLabel\(pack\)[\s\S]*?owner: ownerLabel\(pack\.owner\)[\s\S]*?blocker: hasBlocker\(pack\) \? blockerText\(pack\) : null/u);
+	assert.match(routeSource, /function attentionReasons\(pack: DemoPack\): string\[\][\s\S]*?Blocked:[\s\S]*?No next action is set[\s\S]*?Decision needed from/u);
+	assert.doesNotMatch(routeSource, /This item is in the review queue/u);
+	assert.match(routeSource, /function reviewItemForPageTool\([\s\S]*?reviewItemPageView\(\{[\s\S]*?title: workTitle\(pack\)[\s\S]*?workflow: workflowLabel\(pack\)[\s\S]*?owner: ownerLabel\(pack\.owner\)[\s\S]*?blocker: hasBlocker\(pack\) \? blockerText\(pack\) : null,[\s\S]*?attentionReasons: attentionReasons\(pack\)/u);
+	assert.match(routeSource, /class="review-reasons"[\s\S]*?Why this surfaced[\s\S]*?attentionReasons\(firstReview\)/u);
 	assert.match(routeSource, /async function applyReviewScope\([\s\S]*?query = nextQuery;\s*reviewSubFilter = nextFilter;\s*await tick\(\);[\s\S]*?focusAndPulse\(focusTarget/u);
 	assert.match(routeSource, /const requestedQueue = summarizeReviewQueue\(packs, nextQuery, 'all'\);[\s\S]*?nextFilter === reviewSubFilter[\s\S]*?const changed = await applyReviewScope\(nextQuery, nextFilter, 'results'\);[\s\S]*?return \{ changed, review: currentReviewView \};/u);
+	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?Agent scoped Review[\s\S]*?Workspace data[\s\S]*?Unchanged/u);
+	assert.match(routeSource, /let reviewReceiptScopeKey = \$derived\([\s\S]*?currentReviewView\.scope[\s\S]*?currentReviewView\.counts/u);
+	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
+	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?scopeKey: reviewReceiptScopeKey/u);
+	assert.match(routeSource, /data-webmcp-receipt="review"[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}/u);
 	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\]\)/u);
 	assert.match(routeSource, /stopReviewWebMcp\?\.\(\);\s*stopReviewWebMcp = null;/u);
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);

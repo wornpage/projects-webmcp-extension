@@ -38,14 +38,17 @@ These results describe the local candidate. The hosted judging URL must be check
 2. Open `/work`.
    - Discover `get_current_work_view` and `show_work_search` only.
    - Read the view; verify workspace, matching, shown, and remaining denominators are explicit.
-   - Set a search and verify the visible page and returned projection agree.
+   - Set search to `Garage reset`; verify the visible page, returned projection, and page receipt agree while preserving the full workspace denominator.
 3. Open `/review`.
    - Discover `get_current_review_queue` and `set_review_scope` only.
-   - Apply the blocked scope; verify total and filtered denominators remain distinct.
+   - Apply query `Garage reset` and the blocked scope; verify total and filtered denominators remain distinct.
+   - Verify each returned `attentionReasons` entry is rendered verbatim beside the corresponding item.
 4. Open `/next`.
    - Discover `get_current_next_editor` and `prepare_next_action` only.
-   - Prepare a different valid choice; verify the visible preview changes.
-   - Reload and verify the prepared choice was not persisted.
+   - Open `?pack=garage-reset-sort-shelves` and confirm the exact stored action `Clear the garage floor` is not collapsed to a generic command.
+   - Prepare `Confirm storage bin delivery` with an evidence note explaining that the floor is already done and the bins remain the blocker.
+   - Verify the visible receipt says no workspace data was saved and requires a human Save.
+   - Repeat the exact call and verify `changed` is `false`; reload or choose Discard and verify the proposal and note were not persisted.
 5. Navigate between routes.
    - Verify tools from the previous page are aborted and no longer active.
    - Verify ordinary page use still works when `document.modelContext` is unavailable.

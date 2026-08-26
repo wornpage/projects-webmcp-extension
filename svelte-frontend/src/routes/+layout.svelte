@@ -10,9 +10,9 @@
 
 	const ROUTES: readonly RouteItem[] = [
 		{ href: '/webmcp-challenge', label: 'Guide' },
-		{ href: '/work', label: 'Work' },
-		{ href: '/review', label: 'Review' },
-		{ href: '/next', label: 'Next' }
+		{ href: '/work', label: '1 Work' },
+		{ href: '/review', label: '2 Review' },
+		{ href: '/next', label: '3 Next' }
 	];
 
 	let { children }: { children: any } = $props();
@@ -219,8 +219,11 @@
 	}
 
 	@media (max-width: 360px) {
-		.challenge-shell-nav nav {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+		.challenge-brand small {
+			display: none;
+		}
+		.challenge-shell-nav nav a {
+			font-size: 11px;
 		}
 	}
 </style>

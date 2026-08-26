@@ -15,32 +15,53 @@
 	import {
 		NEXT_ACTION_CHOICES,
 		nextChoiceForwardPath,
-		commandActionForLabel,
-		primaryCommand,
 		blockerText,
 		isReview,
 		hasBlocker,
 		workTitle,
 		type DemoPack
 	} from '$lib/demo-workflow';
-import { WornButton, WornAlert, WornChip, WornEmpty, WornError, WornInput, WornPage } from '$lib/components';
-import { workItemIssues } from '$lib/work-item-issues';
-import { focusAndPulse } from '$lib/focus-pulse.mjs';
-import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
-import { registerPageTools } from '$lib/webmcp.mjs';
-import {
-	NEXT_EDITOR_PREVIEW_ID,
-	createCurrentNextEditorTool,
-	createPrepareNextActionTool,
-	nextEditorPageView
-} from './next-webmcp.mjs';
+	import {
+		WornAccordion,
+		WornAlert,
+		WornButton,
+		WornChip,
+		WornEmpty,
+		WornError,
+		WornInput,
+		WornPage,
+		WornReceipt
+	} from '$lib/components';
+	import { workItemIssues } from '$lib/work-item-issues';
+	import { focusAndPulse } from '$lib/focus-pulse.mjs';
+	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
+	import { registerPageTools } from '$lib/webmcp.mjs';
+	import {
+		NEXT_EDITOR_PREVIEW_ID,
+		NEXT_PREPARATION_RECEIPT_ID,
+		NEXT_PREPARATION_SUMMARY,
+		createCurrentNextEditorTool,
+		createPrepareNextActionTool,
+		nextEditorPageView
+	} from './next-webmcp.mjs';
 
-type NextEditorMode = 'preset' | 'custom';
-type PrepareNextActionInput = {
-	choice: string;
-	expectedMode: NextEditorMode;
-	expectedChoice: string;
-};
+	type NextEditorMode = 'preset' | 'custom';
+	type PrepareNextActionInput = {
+		choice: string;
+		expectedMode: NextEditorMode;
+		expectedChoice: string;
+		agentNote: string;
+	};
+	type PreparationReceipt = {
+		summary: string;
+		work: { id: string; title: string };
+		agentNote: string;
+		preparedAction: string;
+		workspaceChanged: false;
+		requiresHumanSave: true;
+	};
+	type EditorSnapshot = { mode: NextEditorMode; choice: string };
+	type SavedNextReceipt = { summary: string; pack: DemoPack };
 
 	let chosenPackId = $state('');
 	let choice = $state('');
@@ -48,6 +69,10 @@ let customValue = $state('');
 let showingCustom = $state(false);
 	let busy = $state(false);
 	let errorText = $state('');
+	let preparationReceipt = $state<PreparationReceipt | null>(null);
+	let preparationPreviousEditor = $state<EditorSnapshot | null>(null);
+	let savedNextReceipt = $state<SavedNextReceipt | null>(null);
+	let editorPackId = $state('');
 	let editorFocusRequest = 0;
 	let saveFocusFrame: number | null = null;
 	let stopNextWebMcp: (() => void) | null = null;
@@ -87,29 +112,46 @@ let showingCustom = $state(false);
 	// The editor previews the pack AS IF the current choice were saved, so the
 	// fact lines and help always show what the main button will really run.
 	let effectiveChoice = $derived(showingCustom ? choice.trim() : choice || defaultChoiceFor(pack));
+	let effectiveMode = $derived<NextEditorMode>(
+		showingCustom || !(NEXT_ACTION_CHOICES as readonly string[]).includes(effectiveChoice)
+			? 'custom'
+			: 'preset'
+	);
 	let previewChoice = $derived(effectiveChoice || defaultChoiceFor(pack));
 	let preview = $derived(
 		pack ? ({ ...pack, ...nextChoiceForwardPath(pack, previewChoice) } as DemoPack) : null
 	);
-	let previewCommand = $derived(preview ? primaryCommand(preview) : null);
 	let currentNextEditor = $derived.by(() => {
-		if (!pack?.id || !preview || !previewCommand) return null;
+		if (!pack?.id || !preview) return null;
 		return nextEditorPageView({
 			work: { id: pack.id, title: workTitle(pack) },
 			presetChoices: NEXT_ACTION_CHOICES,
-			editor: { mode: showingCustom ? 'custom' : 'preset', choice: effectiveChoice },
+			editor: { mode: effectiveMode, choice: effectiveChoice },
 			preview: {
 				blocker: hasBlocker(preview) ? blockerText(preview) : null,
-				nextAction: showingCustom && !effectiveChoice ? 'Not set' : previewCommand.label
+				nextAction: effectiveChoice || 'Not set'
 			},
+			preparationReceipt,
 			canSave: Boolean(effectiveChoice) && !busy,
 			busy
 		});
 	});
+	let preparationCells = $derived(preparationReceipt ? [
+		{ label: 'Work item', value: preparationReceipt.work.title },
+		{ label: 'Why this choice', value: preparationReceipt.agentNote },
+		{ label: 'Prepared action', value: preparationReceipt.preparedAction },
+		{ label: 'Authority', value: 'Awaiting your Save' }
+	] : []);
+	let savedNextCells = $derived(savedNextReceipt ? [
+		{ label: 'Work item', value: workTitle(savedNextReceipt.pack) },
+		{ label: 'Saved next action', value: savedNextReceipt.pack.next || 'Open' },
+		{ label: 'Blocker', value: blockerText(savedNextReceipt.pack) },
+		{ label: 'Proof target', value: savedNextReceipt.pack.doneWhen || 'Not set' }
+	] : []);
 
 	// Describe the save command directly; the preview already owns workflow facts.
 	let saveNextHelp = $derived.by(() => {
-		if (!pack || !previewCommand) return '';
+		if (!pack) return '';
 		if (!effectiveChoice) return 'Type a custom next action.';
 		return `Save "${effectiveChoice}" as the next action for ${workTitle(pack)}.`;
 	});
@@ -159,20 +201,35 @@ let showingCustom = $state(false);
 	// Map the saved action to one visible editor choice.
 	function defaultChoiceFor(target: DemoPack | null): string {
 		if (!target) return 'Open';
-		const stored = target.next || '';
-		if ((NEXT_ACTION_CHOICES as readonly string[]).includes(stored)) return stored;
-		const action = commandActionForLabel(stored).action;
-		if (action === 'unblock') return 'Set Blocker: None';
-		if (action === 'done') return 'Finish with proof';
-		if (action === 'start' || action === 'block') return 'Open';
+		const stored = String(target.next || '').trim();
+		if (stored) return stored;
 		return 'Open';
 	}
 
-	function setNextEditorChoice(nextChoice: string, mode: NextEditorMode) {
+	function clearPreparation() {
+		preparationReceipt = null;
+		preparationPreviousEditor = null;
+	}
+
+	function setNextEditorChoice(nextChoice: string, mode: NextEditorMode, clearAgentPreparation = true) {
+		if (clearAgentPreparation) clearPreparation();
+		savedNextReceipt = null;
 		choice = nextChoice;
 		showingCustom = mode === 'custom';
 		if (mode === 'custom') customValue = nextChoice;
 	}
+
+	$effect(() => {
+		const nextPackId = pack?.id || '';
+		if (!nextPackId || nextPackId === editorPackId) return;
+		editorPackId = nextPackId;
+		const initialChoice = defaultChoiceFor(pack);
+		setNextEditorChoice(
+			initialChoice,
+			(NEXT_ACTION_CHOICES as readonly string[]).includes(initialChoice) ? 'preset' : 'custom'
+		);
+		errorText = '';
+	});
 
 	async function prepareNextActionFromWebMcp(input: PrepareNextActionInput) {
 		if (busy) throw new Error('Prepare next action is unavailable while Next is saving.');
@@ -182,21 +239,42 @@ let showingCustom = $state(false);
 			? 'preset'
 			: 'custom';
 		const alreadyDesired = current.editor.mode === desiredMode && current.editor.choice === input.choice;
+		const receiptAlreadyDesired = preparationReceipt?.preparedAction === input.choice &&
+			preparationReceipt.agentNote === input.agentNote &&
+			preparationReceipt.work.id === current.work.id;
 		const matchesExpected = current.editor.mode === input.expectedMode && current.editor.choice === input.expectedChoice;
 		if (!alreadyDesired && !matchesExpected) {
 			throw new Error('Prepare next action rejected stale Next editor state.');
 		}
-		if (!alreadyDesired) setNextEditorChoice(input.choice, desiredMode);
+		if (!preparationReceipt) {
+			preparationPreviousEditor = { mode: current.editor.mode, choice: current.editor.choice };
+		}
+		setNextEditorChoice(input.choice, desiredMode, false);
+		preparationReceipt = {
+			summary: NEXT_PREPARATION_SUMMARY,
+			work: current.work,
+			agentNote: input.agentNote,
+			preparedAction: input.choice,
+			workspaceChanged: false,
+			requiresHumanSave: true
+		};
 		await tick();
-		const target = document.getElementById(NEXT_EDITOR_PREVIEW_ID);
+		const target = document.getElementById(NEXT_PREPARATION_RECEIPT_ID);
 		if (!(target instanceof HTMLElement)) throw new Error('Prepare next action could not find its visible preview.');
 		focusAndPulse(target, { behavior: 'smooth', block: 'center' });
 		if (!currentNextEditor) throw new Error('Prepare next action could not verify the visible editor.');
 		return {
-			changed: !alreadyDesired,
-			focus: { id: NEXT_EDITOR_PREVIEW_ID },
+			changed: !alreadyDesired || !receiptAlreadyDesired,
+			focus: { id: NEXT_PREPARATION_RECEIPT_ID },
 			next: currentNextEditor
 		};
+	}
+
+	function discardPreparation() {
+		const previous = preparationPreviousEditor;
+		clearPreparation();
+		if (previous) setNextEditorChoice(previous.choice, previous.mode, false);
+		void scheduleEditorFocus('choices');
 	}
 
 	function editPack(candidate: DemoPack) {
@@ -205,6 +283,8 @@ let showingCustom = $state(false);
 		choice = '';
 		customValue = '';
 		showingCustom = false;
+		clearPreparation();
+		savedNextReceipt = null;
 		errorText = '';
 		// Keep the browser-local selection in step with the visible editor.
 		setSelectedWork(candidate.id).catch((e) => console.warn('Failed to sync selected work:', e));
@@ -222,6 +302,8 @@ let showingCustom = $state(false);
 		try {
 			const result = await setPackNextAction(pack.id, effectiveChoice);
 			const summary = result?.receipt?.summary || `Next action saved: ${effectiveChoice}.`;
+			savedNextReceipt = { summary, pack: result.pack };
+			clearPreparation();
 			toasts.update((t) => [...t, { id: `next-${Date.now()}`, message: summary, kind: 'success' }]);
 			// Land focus on the preview so keyboard users land on the updated
 			// state — the /next analogue of the pack page's afterSave receipt
@@ -292,20 +374,37 @@ let showingCustom = $state(false);
 			<WornError message="Could not load next actions" detail={$demoStateError} onretry={refreshNext} />
 		{/if}
 	</WornPage>
-{:else if pack && preview && previewCommand}
-	<WornPage title="Set the next action" status={workTitle(pack)}>
+{:else if pack && preview}
+	<WornPage sectionLabel="Step 3 of 3 · Prepare" title={preparationReceipt ? 'Review the proposed next action' : 'Set the next action'} status={workTitle(pack)}>
 		{#if $demoStateError}
 			<WornError message="Could not load next actions" detail={$demoStateError} onretry={refreshNext} />
 		{/if}
 		{#if errorText}
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
 		{/if}
+		{#if preparationReceipt}
+			<WornReceipt
+				id={NEXT_PREPARATION_RECEIPT_ID}
+				summary={preparationReceipt.summary}
+				announce={false}
+				cells={preparationCells}
+			/>
+		{/if}
+		{#if savedNextReceipt}
+			<WornReceipt
+				summary={savedNextReceipt.summary}
+				announce={false}
+				cells={savedNextCells}
+				ondone={() => (savedNextReceipt = null)}
+			/>
+		{/if}
 		<div class="demo-command-lines compact" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">
 			{#if hasBlocker(preview)}
-				<div class="demo-command-line" data-command-field="blocker"><span>Blocker</span><strong>{blockerText(preview)}</strong></div>
+				<div class="demo-command-line" data-command-field="blocker"><span>Current blocker</span><strong>{blockerText(preview)}</strong></div>
 			{/if}
-			<div class="demo-command-line" data-command-field="button-runs-next"><span>Next action</span><strong>{showingCustom && !effectiveChoice ? 'Not set' : previewCommand.label}</strong></div>
+			<div class="demo-command-line" data-command-field="button-runs-next"><span>Proposed next action</span><strong>{effectiveChoice || 'Not set'}</strong></div>
 		</div>
+		<p class="next-authority">Review the draft. Nothing changes until you choose Save.</p>
 
 		<div class="demo-inline-form next-action-editor">
 			<div class="demo-field">
@@ -314,28 +413,32 @@ let showingCustom = $state(false);
 						<WornChip label={act} size="sm" pressed={!showingCustom && effectiveChoice === act}
 							onclick={() => setNextEditorChoice(act, 'preset')} />
 					{/each}
-					<WornChip label="Custom…" size="sm" pressed={showingCustom}
+					<WornChip label="Custom…" size="sm" pressed={effectiveMode === 'custom'}
 						onclick={() => { setNextEditorChoice(customValue, 'custom'); scheduleEditorFocus('custom'); }} />
 				</div>
-				{#if showingCustom}
-					<WornInput id="custom-next-input" aria-label="Custom next action" placeholder="Type a custom next action…" bind:value={choice} oninput={() => customValue = choice} />
+				{#if effectiveMode === 'custom'}
+					<WornInput id="custom-next-input" aria-label="Custom next action" placeholder="Type a custom next action…" bind:value={choice} oninput={() => { customValue = choice; clearPreparation(); savedNextReceipt = null; }} />
 				{/if}
 			</div>
-			<span id="apply-next-action-help" class="sr-only">{saveNextHelp}</span>
-			<WornButton variant="primary" disabled={busy || !effectiveChoice} aria-describedby="apply-next-action-help" onclick={saveChoice}>
-				{busy ? 'Saving…' : 'Save next action'}
-			</WornButton>
+			<span id="apply-next-action-help" class="next-save-help">{saveNextHelp}</span>
+			<div class="next-save-actions">
+				{#if preparationReceipt}
+					<WornButton type="button" onclick={discardPreparation}>Discard draft</WornButton>
+				{/if}
+				<WornButton variant="primary" disabled={busy || !effectiveChoice} aria-describedby="apply-next-action-help" onclick={saveChoice}>
+					{busy ? 'Saving…' : preparationReceipt ? 'Approve and save' : 'Save next action'}
+				</WornButton>
+			</div>
 		</div>
 
 		{#each workItemIssues(pack) as v}
 			<WornAlert tone="warning">{v.message}</WornAlert>
 		{/each}
-	</WornPage>
 
-	{#if otherCandidates.length > 0}
-	<WornPage title="Other next actions">
-		<div class="demo-list">
-			{#each renderedOtherCandidates as candidate (candidate.id)}
+		{#if otherCandidates.length > 0}
+			<WornAccordion label={`Choose another item (${otherCandidates.length})`}>
+				<div class="demo-list next-other-list">
+				{#each renderedOtherCandidates as candidate (candidate.id)}
 				<div class="demo-row has-row-support" data-pack-id={candidate.id}>
 					<div>
 						<strong>{workTitle(candidate)}</strong>
@@ -363,8 +466,8 @@ let showingCustom = $state(false);
 						</WornButton>
 					</div>
 				</div>
-			{/each}
-			{#if otherCandidates.length > NEXT_CANDIDATE_RENDER_LIMIT}
+				{/each}
+				{#if otherCandidates.length > NEXT_CANDIDATE_RENDER_LIMIT}
 				<div class="next-load-more">
 					<span aria-live="polite">{renderedOtherCandidates.length} of {otherCandidates.length} shown</span>
 					{#if hasMoreCandidates}
@@ -373,10 +476,11 @@ let showingCustom = $state(false);
 						</WornButton>
 					{/if}
 				</div>
-			{/if}
-		</div>
+				{/if}
+				</div>
+			</WornAccordion>
+		{/if}
 	</WornPage>
-	{/if}
 {:else}
 	<WornPage title="Next actions">
 		{#if $demoStateError}
@@ -411,6 +515,26 @@ let showingCustom = $state(false);
 		flex: 1 1 auto;
 		min-width: 0;
 	}
+	.next-other-list {
+		margin-top: 8px;
+	}
+	.next-authority,
+	.next-save-help {
+		color: var(--worn-text-secondary);
+		font-size: 13px;
+		line-height: 1.5;
+		margin: 0;
+	}
+	.next-save-help {
+		display: block;
+		flex: 1 1 220px;
+	}
+	.next-save-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		justify-content: flex-end;
+	}
 	@media (max-width: 500px) {
 		.demo-inline-form,
 		.demo-row.has-row-support {
@@ -427,6 +551,7 @@ let showingCustom = $state(false);
 		}
 		.demo-row-actions :global(.worn-btn),
 		.demo-inline-form > :global(.worn-btn),
+		.next-save-actions :global(.worn-btn),
 		.next-load-more :global(.worn-btn) {
 			min-width: 0;
 			width: 100%;
@@ -434,6 +559,11 @@ let showingCustom = $state(false);
 		.next-load-more {
 			align-items: stretch;
 			flex-direction: column;
+		}
+		.next-save-actions {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			width: 100%;
 		}
 	}
 </style>

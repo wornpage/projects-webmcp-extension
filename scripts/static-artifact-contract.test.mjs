@@ -73,6 +73,9 @@ test('static mode identifies its bounded routes without production fallbacks', (
 	const headers = readFileSync(path.join(root, 'svelte-frontend', 'static', '_headers'), 'utf8');
 	assert.match(landing, /href="\/work"/u);
 	assert.match(landing, /href="\/review\?tour=landing"/u);
+	assert.match(landing, /Let an agent find the next move\. Keep the final say\./u);
+	assert.match(landing, /No automatic saves/u);
+	assert.match(landing, /Confirm storage bin delivery/u);
 	assert.doesNotMatch(`${landing}\n${app}`, /projectsdemo\.org|\/agents|\/billing/u);
 	assert.match(headers, /X-Content-Type-Options: nosniff/u);
 	assert.match(headers, /X-Robots-Tag: noindex, nofollow, noarchive/u);

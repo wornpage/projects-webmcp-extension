@@ -65,13 +65,15 @@ test('challenge route is prerendered and owns one public reader without navigati
 	}
 	assert.match(pageSource, /registerPageTools\(document/u);
 	assert.match(pageSource, /createWebMcpChallengeGuideTool\(readChallengeGuide\)/u);
-	assert.match(pageSource, /Public static edition · sample data · no login/u);
-	assert.match(pageSource, /Consequential workspace changes remain human-owned/u);
+	assert.match(pageSource, /WebMCP project workspace · live sample · no login/u);
+	assert.match(pageSource, /Person: approve, save, or discard every workspace change/u);
+	assert.match(pageSource, /prepare “Confirm storage bin delivery” with a brief evidence-based note/u);
 	assert.match(pageSource, /Codex and ChatGPT in-app browsers/u);
 	assert.match(pageSource, /navigator\.clipboard\.writeText\(recommendedPrompt\)/u);
 	assert.match(pageSource, /WornButton type="button" size="sm" onclick=\{copyRecommendedPrompt\}>Copy prompt<\/WornButton>/u);
 	assert.match(pageSource, /data-challenge-copy-status aria-live="polite"/u);
-	assert.match(pageSource, /<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">[\s\S]*?<h2 id="challenge-prompt-title">Try this prompt<\/h2>[\s\S]*?<\/section>/u);
+	assert.match(pageSource, /<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">[\s\S]*?<h2 id="challenge-prompt-title">Run the judged path<\/h2>[\s\S]*?<\/section>/u);
+	assert.match(pageSource, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/u);
 	assert.match(pageSource, /\.challenge-kicker \{\s*color: var\(--worn-text-secondary\);/u);
 	assert.doesNotMatch(pageSource, /\.challenge-kicker \{[^}]*color: var\(--worn-accent\);/u);
 	assert.doesNotMatch(pageSource, /fetch\(|apiFetch|localStorage|sessionStorage|\.click\(/u);

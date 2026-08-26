@@ -15,12 +15,12 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 | Guide | `get_webmcp_challenge_guide` | Read the visible judge path |
 | Work | `get_current_work_view` | Read the bounded, filtered list and its denominators |
 | Work | `show_work_search` | Change only the visible search scope |
-| Review | `get_current_review_queue` | Read the bounded review queue and its denominators |
+| Review | `get_current_review_queue` | Read the bounded queue, denominators, and visible reasons each item surfaced |
 | Review | `set_review_scope` | Change only the visible review filter and query |
 | Next | `get_current_next_editor` | Read the visible next-action editor |
-| Next | `prepare_next_action` | Prepare an unsaved choice for the person to review |
+| Next | `prepare_next_action` | Prepare an unsaved choice and concise evidence note for the person to review |
 
-The page owns registration and teardown through `document.modelContext.registerTool`. WebMCP actions are deliberately reversible presentation changes or unsaved preparation; consequential saves remain visible, human-owned controls.
+The page owns registration and teardown through `document.modelContext.registerTool`. WebMCP actions are deliberately reversible presentation changes or unsaved preparation; each leaves a visible page receipt, while consequential saves remain visible, human-owned controls.
 
 ## Run locally
 
@@ -49,11 +49,11 @@ The Pages build script performs the nested locked frontend install before buildi
 
 ## Judge path
 
-1. Open `/webmcp-challenge` and ask the browser agent to read the guide.
-2. Open `/work`; read the current view, then ask the agent to show a search.
-3. Open `/review`; read the queue, then ask the agent to show one review scope.
-4. Open `/next`; ask the agent to prepare a next action.
-5. Reload. The agent-prepared preview was not saved.
+1. Open `/webmcp-challenge` and copy the deterministic judge prompt.
+2. On `/work`, read the current view and show only `Garage reset` work. The receipt preserves the 8-item workspace denominator and says workspace data is unchanged.
+3. On `/review`, set query `Garage reset` and filter `blocked`. The queue explains why each item surfaced using the same reasons returned to the agent.
+4. On `/next?pack=garage-reset-sort-shelves`, read the exact current editor. It preserves the stored `Clear the garage floor` action even though the floor item is already done.
+5. Prepare `Confirm storage bin delivery` with a concise evidence note. Review the unsaved receipt, then reload or choose Discard; no workspace value was saved.
 
 ## Repository boundary
 

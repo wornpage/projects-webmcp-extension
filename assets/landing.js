@@ -7,10 +7,9 @@
   }
 })();
 
-// Work-loop replay: Review → Act → Record → Resume.
+// Visible WebMCP handoff replay: Observe → Narrow → Prepare → Decide.
 (function () {
   var btn = document.getElementById("replay-play");
-  var tour = document.getElementById("replay-tour");
   var steps = document.querySelectorAll(".lp-replay-step");
   var note = document.getElementById("replay-note");
   if (!btn || !steps.length) return;
@@ -20,10 +19,10 @@
   var timer = null;
   var index = -1;
   var stepNotes = [
-    "Reviewed “Garage reset: sort shelves” — blocked, next action: clear the garage floor.",
-    "Acted on it — the floor is clear and shelf sorting can continue.",
-    "Recorded the change — the receipt keeps the result with the work.",
-    "Storage bins are still missing, so the blocker and next useful step are ready for later."
+    "Observed the exact visible queue — Garage reset: sort shelves is blocked, waiting on storage bins.",
+    "Narrowed Work and Review to Garage-reset items — the denominators stay visible and workspace data is unchanged.",
+    "Prepared “Confirm storage bin delivery” because clearing the floor is already done — the draft is still unsaved.",
+    "Decision stays with the person — approve and save the draft, edit it, or discard it."
   ];
 
   function clearAll() {
@@ -52,7 +51,7 @@
 
   function pause() {
     if (timer) { clearInterval(timer); timer = null; }
-    btn.textContent = "▶ Watch the loop";
+    btn.textContent = "▶ Watch the handoff";
     btn.setAttribute("aria-pressed", "false");
   }
 
@@ -61,7 +60,7 @@
     index = -1;
     clearAll();
     advance();
-    btn.textContent = "❚❚ Stop the loop";
+    btn.textContent = "❚❚ Stop the handoff";
     btn.setAttribute("aria-pressed", "true");
     timer = setInterval(advance, STEP_MS);
   }
@@ -93,13 +92,4 @@
     });
   }
 
-  // Keep the hero CTA as a real #replay link, while letting its native click
-  // activation also reach the replay control. That gives pointer and Enter
-  // activations the same replay behavior without taking over anchor scrolling
-  // or changing the reduced-motion control path above.
-  if (tour) {
-    tour.addEventListener("click", function () {
-      btn.click();
-    });
-  }
 })();

@@ -2,9 +2,11 @@ export const REVIEW_CURRENT_TOOL_NAME = 'get_current_review_queue';
 export const REVIEW_SCOPE_TOOL_NAME = 'set_review_scope';
 
 const REVIEW_FILTERS = new Set(['all', 'blocked', 'missing-next', 'owner-gap']);
+const MAX_ATTENTION_REASONS = 4;
+const MAX_REASON_LENGTH = 240;
 
 /** @typedef {'all' | 'blocked' | 'missing-next' | 'owner-gap'} ReviewFilter */
-/** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string, due: string | null, blocker: string | null }} ReviewItemView */
+/** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string, due: string | null, blocker: string | null, attentionReasons: string[] }} ReviewItemView */
 /** @typedef {{ totalReview: number, searchMatches: number, filtered: number, shown: number, remaining: number, blocked: number, missingNext: number, missingOwner: number }} ReviewCounts */
 /** @typedef {{ scope: { query: string, filter: ReviewFilter }, availableFilters: ReviewFilter[], counts: ReviewCounts, upNext: ReviewItemView | null, items: ReviewItemView[] }} ReviewView */
 /** @typedef {{ changed: boolean, review: ReviewView }} ReviewScopeReceipt */
@@ -73,7 +75,8 @@ export function reviewItemPageView(input) {
 	const owner = normalizedText(candidate.owner);
 	const due = nullableText(candidate.due);
 	const blocker = nullableText(candidate.blocker);
-	if (!id || !title || !workflow || !owner || due === undefined || blocker === undefined) return null;
+	const attentionReasons = reviewAttentionReasons(candidate.attentionReasons);
+	if (!id || !title || !workflow || !owner || due === undefined || blocker === undefined || !attentionReasons) return null;
 	return {
 		id,
 		title,
@@ -81,8 +84,22 @@ export function reviewItemPageView(input) {
 		workflow,
 		owner,
 		due,
-		blocker
+		blocker,
+		attentionReasons
 	};
+}
+
+/** @param {unknown} input @returns {string[] | null} */
+function reviewAttentionReasons(input) {
+	if (!Array.isArray(input) || input.length < 1 || input.length > MAX_ATTENTION_REASONS) return null;
+	const reasons = input.map((value) => {
+		if (typeof value !== 'string' || value.length > MAX_REASON_LENGTH || /\p{Cc}/u.test(value)) return null;
+		const text = value.trim();
+		return text || null;
+	});
+	if (reasons.some((reason) => reason === null)) return null;
+	const normalized = /** @type {string[]} */ (reasons);
+	return new Set(normalized).size === normalized.length ? normalized : null;
 }
 
 /** @param {() => ReviewView | null} getReview */

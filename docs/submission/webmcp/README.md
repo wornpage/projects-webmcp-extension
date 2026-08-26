@@ -2,9 +2,9 @@
 
 ## Positioning
 
-> A visible work queue that people and browser agents can inspect together without screen scraping or hidden writes.
+> A visible agent-to-human handoff: the browser agent finds the next move, explains it from page evidence, and stops at an unsaved proposal for the person to decide.
 
-The agent reads bounded page projections, can change reversible page scope, and can prepare—but not silently save—a next action. The person retains consequential decisions.
+The agent reads bounded page projections, can change reversible page scope, and can prepare—but not silently save—a next action with a concise evidence note. Visible receipts distinguish page-state changes from workspace writes, and the person retains consequential decisions.
 
 ## Eligibility record
 

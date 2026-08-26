@@ -7,9 +7,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="description" content="Projects is a work tracker that makes the next step clear. Every item names where it stands, what is blocking it, and what to do next. Starts on sample data, no login required.">
-  <meta property="og:title" content="Projects — keep work moving" />
-  <meta property="og:description" content="A work tracker that makes the next step clear — every item names where it stands, what is blocking it, and what to do next. Starts on sample data, no login required." />
+  <meta name="description" content="A public WebMCP project workspace where a browser agent reads visible work, narrows attention, and prepares an unsaved next action for a person to approve.">
+  <meta property="og:title" content="Projects — a visible WebMCP handoff" />
+  <meta property="og:description" content="Let a browser agent find the next move while you keep the final say. Public sample data, no login, no automatic saves." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://projects-webmcp-extension.pages.dev/landing.html" />
   <meta property="og:site_name" content="Projects" />
@@ -19,12 +19,12 @@
   <meta property="og:image:height" content="630" />
   <meta property="og:image:type" content="image/svg+xml" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Projects — keep work moving" />
-  <meta name="twitter:description" content="A work tracker that makes the next step clear — every item names where it stands, what is blocking it, and what to do next. Starts on sample data, no login required." />
+  <meta name="twitter:title" content="Projects — a visible WebMCP handoff" />
+  <meta name="twitter:description" content="Let a browser agent find the next move while you keep the final say. Public sample data, no login, no automatic saves." />
   <meta name="twitter:image" content="https://projects-webmcp-extension.pages.dev/assets/og-image.svg" />
   <meta name="theme-color" content="#f5f3ef" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0f1714" media="(prefers-color-scheme: dark)">
-  <title>Projects: keep work moving</title>
+  <title>Projects: a visible WebMCP handoff</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/favicon.png">
   <link rel="stylesheet" href="assets/landing.css">
@@ -44,36 +44,36 @@
       <a href="#how">How it works</a>
       <a href="#checked">What's checked</a>
     </nav>
-    <a class="lp-btn lp-btn-primary lp-btn-sm" href="/work" data-app-entry>Open the app <span class="lp-arrow" aria-hidden="true">→</span></a>
+    <a class="lp-btn lp-btn-primary lp-btn-sm" href="/webmcp-challenge" data-app-entry>Run the demo <span class="lp-arrow" aria-hidden="true">→</span></a>
   </header>
 
   <main>
     <!-- HERO -->
     <section class="lp-hero" aria-labelledby="hero-title">
       <div class="lp-hero-copy">
-        <span class="lp-kicker">Work tracker for people · sample data</span>
-        <h1 id="hero-title">Know what needs attention. Know what to do next.</h1>
-        <p class="lp-lede">Projects gives every work item a clear status, blocker, and next action so you can keep work moving.</p>
+        <span class="lp-kicker">WebMCP project workspace · live sample · no login</span>
+        <h1 id="hero-title">Let an agent find the next move. Keep the final say.</h1>
+        <p class="lp-lede">A browser agent reads and narrows the same work you see, then prepares an unsaved next action for you to approve.</p>
         <div class="lp-cta-row">
-          <a class="lp-btn lp-btn-primary" id="replay-tour" href="#replay">Take the 10-second tour <span class="lp-arrow" aria-hidden="true">→</span></a>
-          <a class="lp-btn" id="guided-review-link" href="/review?tour=landing">Go to Review <span class="lp-arrow" aria-hidden="true">→</span></a>
+          <a class="lp-btn lp-btn-primary" href="/webmcp-challenge">Run the 90-second demo <span class="lp-arrow" aria-hidden="true">→</span></a>
+          <a class="lp-btn" id="guided-review-link" href="/review?tour=landing">Explore the sample <span class="lp-arrow" aria-hidden="true">→</span></a>
         </div>
         <p class="lp-fine">
-          <span>Live now</span>
+          <span>No backend</span>
           <span class="lp-dot" aria-hidden="true"></span>
-          <span>No login required</span>
+          <span>No automatic saves</span>
         </p>
       </div>
 
       <!-- PRODUCT PREVIEW -->
-      <div class="lp-preview" role="img" aria-label="Review screen: three work items; two need attention. Garage reset: sort shelves is blocked, waiting on storage bins, next action clear the garage floor. Donate unused tools is ready, unassigned, next action choose a drop-off. Measure wall for pegboard is done.">
+      <div class="lp-preview" role="img" aria-label="WebMCP handoff in Review: the agent narrows to Garage reset work, notices that clearing the floor is already done, and prepares confirm storage bin delivery for the blocked shelf-sorting item, waiting on human approval.">
         <div class="lp-panel" aria-hidden="true">
           <div class="lp-panel-head">
             <div>
-              <span class="lp-eyebrow">Review</span>
-              <h2>3 work items</h2>
+              <span class="lp-eyebrow">WebMCP handoff</span>
+              <h2>Garage reset</h2>
             </div>
-            <span class="lp-panel-status">2 need attention</span>
+            <span class="lp-panel-status">Agent found 2</span>
           </div>
           <div class="lp-cards">
             <article class="lp-card is-attention">
@@ -84,7 +84,7 @@
               <div class="lp-card-meta"><span>Home</span></div>
               <div class="lp-command">
                 <span>Next action</span>
-                <strong>Clear the garage floor</strong>
+                <strong>Confirm storage bin delivery</strong>
               </div>
             </article>
             <article class="lp-card">
@@ -114,43 +114,43 @@
     <section class="lp-replay" id="replay" aria-labelledby="replay-title">
       <div class="lp-wrap">
         <div class="lp-section-head lp-replay-head">
-          <span class="lp-eyebrow">Watch it happen</span>
-          <h2 id="replay-title">One project, one clear loop.</h2>
-          <p>Review → act → record → resume. Watch a garage reset move forward.</p>
+          <span class="lp-eyebrow">The visible handoff</span>
+          <h2 id="replay-title">One browser. One accountable loop.</h2>
+          <p>Observe → narrow → prepare → decide. The agent’s work stays visible and the Save remains yours.</p>
         </div>
         <div class="lp-replay-stage">
           <ol class="lp-replay-steps">
             <li>
               <button class="lp-replay-step is-on" type="button" data-replay="1" aria-current="step">
                 <span class="lp-replay-step-num" aria-hidden="true">1</span>
-                <strong>Review</strong>
-                <span class="lp-replay-step-detail">Open <em>Garage reset: sort shelves</em> and see the blocker beside its next action.</span>
+                <strong>Observe</strong>
+                <span class="lp-replay-step-detail">The agent reads the exact visible counts, work items, and blockers.</span>
               </button>
             </li>
             <li>
               <button class="lp-replay-step" type="button" data-replay="2">
                 <span class="lp-replay-step-num" aria-hidden="true">2</span>
-                <strong>Act</strong>
-                <span class="lp-replay-step-detail">Clear the garage floor, then return to sorting the shelves.</span>
+                <strong>Narrow</strong>
+                <span class="lp-replay-step-detail">It shows only Garage-reset work. Workspace data stays unchanged.</span>
               </button>
             </li>
             <li>
               <button class="lp-replay-step" type="button" data-replay="3">
                 <span class="lp-replay-step-num" aria-hidden="true">3</span>
-                <strong>Record</strong>
-                <span class="lp-replay-step-detail">Mark the step done with a receipt that says what changed.</span>
+                <strong>Prepare</strong>
+                <span class="lp-replay-step-detail">It replaces the stale floor-clearing action with “Confirm storage bin delivery” and explains why.</span>
               </button>
             </li>
             <li>
               <button class="lp-replay-step" type="button" data-replay="4">
                 <span class="lp-replay-step-num" aria-hidden="true">4</span>
-                <strong>Resume</strong>
-                <span class="lp-replay-step-detail">If storage bins are still missing, record the blocker and the next useful step.</span>
+                <strong>Decide</strong>
+                <span class="lp-replay-step-detail">The person approves and saves the draft, or discards it without a workspace change.</span>
               </button>
             </li>
           </ol>
           <button class="lp-btn lp-btn-primary lp-replay-play" id="replay-play" type="button" aria-pressed="false">
-            ▶ Watch the loop
+            ▶ Watch the handoff
           </button>
           <span class="lp-replay-note" id="replay-note" role="status" aria-live="polite">Press play — four steps, about ten seconds. No account, no setup.</span>
         </div>
@@ -161,24 +161,24 @@
     <section class="lp-insights" aria-label="What this is">
       <div class="lp-wrap lp-insight-grid">
         <div class="lp-insight is-good">
-          <span class="lp-insight-value">1</span>
-          <strong>Next action per item</strong>
-          <small>never a to-do pile</small>
+          <span class="lp-insight-value">7</span>
+          <strong>Route-owned tools</strong>
+          <small>bounded to the page the person sees</small>
         </div>
         <div class="lp-insight">
-          <span class="lp-insight-value">2</span>
-          <strong>Place for every blocker</strong>
-          <small>name what is holding work up</small>
+          <span class="lp-insight-value">3</span>
+          <strong>Reversible page actions</strong>
+          <small>search, scope, and unsaved preparation</small>
         </div>
         <div class="lp-insight is-good">
-          <span class="lp-insight-value">3</span>
-          <strong>Columns per item</strong>
-          <small>where it is, what's blocking, what's next</small>
+          <span class="lp-insight-value">1</span>
+          <strong>Human Save boundary</strong>
+          <small>the consequential choice stays explicit</small>
         </div>
         <div class="lp-insight is-low">
           <span class="lp-insight-value">0</span>
-          <strong>Logins or installs</strong>
-          <small>sample data, in your browser</small>
+          <strong>Server writes</strong>
+          <small>public sample data stays in this browser</small>
         </div>
       </div>
     </section>
@@ -187,15 +187,15 @@
     <section class="lp-how" id="how" aria-labelledby="how-title">
       <div class="lp-wrap">
         <div class="lp-section-head">
-          <span class="lp-eyebrow">The signature move</span>
-          <h2 id="how-title">Where it is. What's blocking it. What to do next.</h2>
-          <p>Everyone reads the same three columns. A clear next action keeps work moving.</p>
+          <span class="lp-eyebrow">Shared visible state</span>
+          <h2 id="how-title">The agent sees what you see—and no more.</h2>
+          <p>Every recommendation is grounded in the rendered work item, blocker, and proposed next action.</p>
         </div>
         <div class="lp-triad-frame">
           <div class="lp-triad">
-            <div><span>Where</span><strong>Garage reset: sort shelves</strong></div>
-            <div class="lp-warn"><span>Blocker</span><strong>Waiting on storage bins</strong></div>
-            <div class="lp-next"><span>Next action</span><strong>Clear the garage floor</strong></div>
+            <div><span>Visible work</span><strong>Garage reset: sort shelves</strong></div>
+            <div class="lp-warn"><span>Why it surfaced</span><strong>Blocked: waiting on storage bins</strong></div>
+            <div class="lp-next"><span>Prepared · unsaved</span><strong>Confirm storage bin delivery</strong></div>
           </div>
         </div>
       </div>
@@ -208,23 +208,23 @@
         <div class="lp-feature-row">
           <div class="lp-feature">
             <span class="lp-feat-num" aria-hidden="true">1</span>
-            <h3>Attention, not activity</h3>
-            <p>Blocked work gets a warning border and rises to the top. Finished work keeps a clear success edge.</p>
+            <h3>Agent reads</h3>
+            <p>Each route exposes a validated projection of the same bounded state already visible to the person.</p>
           </div>
           <div class="lp-feature">
             <span class="lp-feat-num" aria-hidden="true">2</span>
-            <h3>One command per card</h3>
-            <p>Each item presents one next action, available by click or keystroke.</p>
+            <h3>Agent narrows</h3>
+            <p>Search and queue scope can change for clarity, while every denominator remains explicit.</p>
           </div>
           <div class="lp-feature">
             <span class="lp-feat-num" aria-hidden="true">3</span>
-            <h3>Every change leaves a receipt</h3>
-            <p>Finish work, clear a blocker, or add a note; each action records what changed. Undo restores the prior state.</p>
+            <h3>Agent prepares</h3>
+            <p>A proposed next action arrives with a short evidence note and a receipt that says nothing was saved.</p>
           </div>
           <div class="lp-feature">
             <span class="lp-feat-num" aria-hidden="true">4</span>
-            <h3>Ready for the next handoff</h3>
-            <p>Status, blockers, next actions, and receipts stay with the work, so the next person can continue without a recap.</p>
+            <h3>Person decides</h3>
+            <p>Approve and save the proposal, edit it, or discard it. Consequential authority never moves into the tool.</p>
           </div>
         </div>
       </div>
@@ -235,27 +235,27 @@
       <div class="lp-wrap">
         <div class="lp-section-head">
           <span class="lp-eyebrow">Built to be checked</span>
-          <h2 id="checked-title">An app that's wired to prove it holds up.</h2>
+          <h2 id="checked-title">The contract is visible in the product.</h2>
         </div>
         <div class="lp-ledger">
           <div class="lp-ledger-item">
-            <strong>Sample work is ready</strong>
-            <p>Open the app and try the workflow without creating an account.</p>
+            <strong>Exact denominators</strong>
+            <p>Workspace, matching, shown, and remaining counts travel with each bounded view.</p>
           </div>
           <div class="lp-ledger-item">
-            <strong>Every action is usable</strong>
-            <p>The sample is interactive, so you can review, update, and finish work yourself.</p>
+            <strong>Evidence beside priority</strong>
+            <p>Review explains why each work item surfaced using the same reasons exposed to the agent.</p>
           </div>
           <div class="lp-ledger-item">
-            <strong>The workflow stays visible</strong>
-            <p>Status, blockers, next actions, and receipts remain attached to each item.</p>
+            <strong>Visible page receipts</strong>
+            <p>Agent-driven scope and preparation report what changed and explicitly say workspace data did not.</p>
           </div>
           <div class="lp-ledger-item">
-            <strong>Your next move stays clear</strong>
-            <p>Attention rises to the top without turning the workspace into another dashboard.</p>
+            <strong>Stale-safe preparation</strong>
+            <p>Next rejects a proposal if the editor no longer matches the state the agent most recently read.</p>
           </div>
         </div>
-        <p class="lp-honesty"><b>Scope:</b> Starts with sample data and no login. This challenge build keeps all changes in this browser and exposes only the four judged screens.</p>
+        <p class="lp-honesty"><b>Scope:</b> Public static challenge edition, sample data, no login, no backend, and exactly four judged app routes. Only a person’s Save writes to browser-local workspace state.</p>
       </div>
     </section>
 
@@ -264,10 +264,10 @@
       <div class="lp-wrap">
         <div class="lp-cta-banner">
           <div>
-            <h2 id="cta-title">Pick up the next clear step.</h2>
-            <p>Open Review and move the garage reset forward. The sample is ready when you are.</p>
+            <h2 id="cta-title">See the handoff, end to end.</h2>
+            <p>Start with the judge guide, then let a browser agent inspect, narrow, and prepare the Garage reset example.</p>
           </div>
-          <a class="lp-btn lp-btn-oncta" href="/work" data-app-entry>Open the app <span class="lp-arrow" aria-hidden="true">→</span></a>
+          <a class="lp-btn lp-btn-oncta" href="/webmcp-challenge" data-app-entry>Run the demo <span class="lp-arrow" aria-hidden="true">→</span></a>
         </div>
       </div>
     </section>
@@ -275,8 +275,8 @@
 
   <footer class="lp-footer" role="contentinfo">
     <div class="lp-wrap">
-      <small>Starts with sample data and no login. <span id="lp-footer-scope">The sample stays in this browser.</span></small>
-      <a href="/work" data-app-entry>Open the app →</a>
+      <small>Public static sample, no login. <span id="lp-footer-scope">The sample stays in this browser.</span></small>
+      <a href="/work" data-app-entry>Explore Work →</a>
     </div>
   </footer>
   <script src="/assets/landing.js" defer></script>

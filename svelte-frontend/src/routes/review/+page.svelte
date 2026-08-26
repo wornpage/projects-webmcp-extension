@@ -68,6 +68,21 @@
 		};
 	}
 
+	function attentionReasons(pack: DemoPack): string[] {
+		const reasons: string[] = [];
+		if (hasBlocker(pack)) reasons.push(`Blocked: ${blockerText(pack)}.`);
+		if (isMissingNextAction(pack)) reasons.push('No next action is set.');
+		if (isMissingOwnerValue(pack.owner)) reasons.push('No owner is assigned.');
+		if (pack.decision === true) {
+			const decider = String(pack.decider || '').trim() || 'a person';
+			reasons.push(`Decision needed from ${decider}.`);
+		}
+		if (reasons.length === 0 && primaryCommand(pack).action === 'review') {
+			reasons.push('The current next action requests review.');
+		}
+		return [...new Set(reasons)].slice(0, 4);
+	}
+
 	const LANDING_TOUR_PACK_ID = 'garage-reset-sort-shelves';
 
 	function isExactLandingReviewTour(search: string): boolean {
@@ -95,6 +110,11 @@
 	let reviewTotal = $derived(reviewQueue.reviewTotal);
 	let visible = $derived(reviewQueue.visible);
 	let receipt = $derived($demoState?.actionReceipt || null);
+	let webMcpScopeReceipt = $state<{
+		summary: string;
+		cells: Array<{ label: string; value: string }>;
+		scopeKey: string;
+	} | null>(null);
 	let reviewSummaryText = $derived(buildReviewSummaryText(visible));
 	let blockedCount = $derived(reviewQueue.blockedCount);
 	let missingNextCount = $derived(reviewQueue.missingNextCount);
@@ -110,8 +130,10 @@
 	let reviewRenderLimit = $state(REVIEW_RENDER_PAGE_SIZE);
 	let filteredVisible = $derived(reviewQueue.filteredVisible);
 	let reviewTitle = $derived(
-		filteredVisible.length > 1 || (filteredVisible.length === 1 && (query.trim() || reviewSubFilter !== 'all'))
-			? `${filteredVisible.length} ${filteredVisible.length === 1 ? 'work item' : 'work items'} to review`
+		reviewTotal > 0
+			? filteredVisible.length === reviewTotal
+				? `${reviewTotal} to review · ${blockedCount} blocked`
+				: `${filteredVisible.length} of ${reviewTotal} scoped · ${blockedCount} blocked`
 			: undefined
 	);
 	let landingTourReview = $derived(landingTourItem(filteredVisible, landingTourRequested));
@@ -144,6 +166,15 @@
 		upNext: reviewItemForPageTool(firstReview),
 		items: renderedList.map(reviewItemForPageTool)
 	}));
+	let reviewReceiptScopeKey = $derived(currentReviewView
+		? JSON.stringify({ scope: currentReviewView.scope, counts: currentReviewView.counts })
+		: '');
+
+	$effect(() => {
+		if (webMcpScopeReceipt && webMcpScopeReceipt.scopeKey !== reviewReceiptScopeKey) {
+			webMcpScopeReceipt = null;
+		}
+	});
 
 	function reviewItemForPageTool(pack: DemoPack | null) {
 		if (!pack) return null;
@@ -153,7 +184,8 @@
 			workflow: workflowLabel(pack),
 			owner: ownerLabel(pack.owner),
 			due: pack.due ? dueDateLabel(pack.due) : null,
-			blocker: hasBlocker(pack) ? blockerText(pack) : null
+			blocker: hasBlocker(pack) ? blockerText(pack) : null,
+			attentionReasons: attentionReasons(pack)
 		});
 	}
 
@@ -237,6 +269,23 @@
 		}
 		const changed = await applyReviewScope(nextQuery, nextFilter, 'results');
 		if (!currentReviewView) throw new Error('Review did not render the requested queue scope.');
+		const filterLabel = nextFilter === 'all'
+			? 'All review items'
+			: nextFilter === 'blocked'
+				? 'Blocked'
+				: nextFilter === 'missing-next'
+					? 'No next action'
+					: 'No owner';
+		webMcpScopeReceipt = {
+			summary: `Agent scoped Review to ${currentReviewView.counts.shown} visible ${currentReviewView.counts.shown === 1 ? 'item' : 'items'}.`,
+			cells: [
+				{ label: 'Search', value: currentReviewView.scope.query.trim() || 'Any text' },
+				{ label: 'Queue filter', value: filterLabel },
+				{ label: 'Denominator', value: `${currentReviewView.counts.shown} shown of ${currentReviewView.counts.filtered} scoped · ${currentReviewView.counts.totalReview} total review` },
+				{ label: 'Workspace data', value: 'Unchanged' }
+			],
+			scopeKey: reviewReceiptScopeKey
+		};
 		return { changed, review: currentReviewView };
 	}
 
@@ -374,7 +423,7 @@ function handleCardKeys(e: KeyboardEvent) {
 </svelte:head>
 
 <!-- Keep existing browser-local items visible during a background refresh. -->
-<WornPage title="Review" status={reviewTitle} variant="list" loading={$demoStateLoading && packs.length === 0}>
+<WornPage sectionLabel="Step 2 of 3 · Narrow" title="Review" status={reviewTitle} variant="list" loading={$demoStateLoading && packs.length === 0}>
 	{#snippet headActions()}
 		<div class="review-head-actions">
 			{#if visible.length > 0 && !query.trim() && reviewSubFilter === 'all'}
@@ -389,12 +438,23 @@ function handleCardKeys(e: KeyboardEvent) {
 		<WornError message="Could not load review" detail={$demoStateError} onretry={refreshReview} />
 	{/if}
 
+	{#if webMcpScopeReceipt}
+		<div data-webmcp-receipt="review">
+			<WornReceipt
+				summary={webMcpScopeReceipt.summary}
+				announce={false}
+				cells={webMcpScopeReceipt.cells}
+				ondone={() => (webMcpScopeReceipt = null)}
+			/>
+		</div>
+	{/if}
+
 	{#if firstReview}
 		{@const firstValidation = validationSummary(firstReview)}
 		{@const firstCommand = primaryCommand(firstReview)}
 		{@const firstCommandHref = PACK_ACTIONS.has(firstCommand.action) ? undefined : primaryCommandNavigation(firstReview)}
 		<div class="review-priority-shell">
-		<WornContainer borderless label="Up next">
+		<WornContainer label="Up next">
 		<article class="review-priority" data-pack-id={firstReview.id}>
 			<div class="review-priority-head">
 				<div>
@@ -423,6 +483,12 @@ function handleCardKeys(e: KeyboardEvent) {
 			<div class="demo-card-meta">
 				{#if firstReview.due}<span>{dueDateLabel(firstReview.due)}</span>{/if}
 				<span>{ownerLabel(firstReview.owner)}</span>
+			</div>
+			<div class="review-reasons" aria-label="Why this work item surfaced">
+				<span>Why this surfaced</span>
+				<ul>
+					{#each attentionReasons(firstReview) as reason (reason)}<li>{reason}</li>{/each}
+				</ul>
 			</div>
 		</article>
 		</WornContainer>
@@ -498,6 +564,12 @@ function handleCardKeys(e: KeyboardEvent) {
 					<div class="demo-card-meta">
 						{#if pack.due}<span>{dueDateLabel(pack.due)}</span>{/if}
 						<span>{ownerLabel(pack.owner)}</span>
+					</div>
+					<div class="review-reasons compact" aria-label="Why this work item surfaced">
+						<span>Why this surfaced</span>
+						<ul>
+							{#each attentionReasons(pack) as reason (reason)}<li>{reason}</li>{/each}
+						</ul>
 					</div>
 					{#if receipt?.pack?.id === pack.id && receipt?.summary}
 						<div class="demo-card-receipt review-card-receipt" data-receipt-surface="card">
@@ -614,7 +686,7 @@ function handleCardKeys(e: KeyboardEvent) {
 		white-space: normal;
 	}
 	.review-priority-actions {
-		border-top: 1px solid var(--demo-card-divider);
+		border-top: 1px solid var(--worn-border);
 		flex-wrap: wrap;
 		padding-top: 12px;
 	}
@@ -628,6 +700,33 @@ function handleCardKeys(e: KeyboardEvent) {
 		color: var(--worn-text-muted);
 		padding: 4px 0;
 		border-top: 1px solid var(--worn-border);
+	}
+	.review-reasons {
+		background: var(--worn-bg-secondary);
+		border-left: 3px solid var(--worn-accent);
+		display: grid;
+		gap: 5px;
+		padding: 9px 11px;
+	}
+	.review-reasons > span {
+		color: var(--worn-text-muted);
+		font-family: var(--font-typewriter);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+	.review-reasons ul {
+		color: var(--worn-text-secondary);
+		display: grid;
+		font-size: 13px;
+		gap: 3px;
+		line-height: 1.45;
+		margin: 0;
+		padding-left: 18px;
+	}
+	.review-reasons.compact {
+		margin-top: 4px;
 	}
 	.review-card-receipt {
 		margin-top: 6px;
