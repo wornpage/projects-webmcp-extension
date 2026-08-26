@@ -8,6 +8,8 @@ The official submission period began August 25, 2026 at 11:00 a.m. Pacific Time 
 
 This repository's Git history is intentionally new and is never backdated. Its dated commits, this file, the focused contracts, and the route-level source are the public evidence for the challenge work. Earlier private product history is not published because it contains unrelated implementation.
 
+The public-edition baseline is commit `57d0fe1de5c3ef8d1d22a38cf363394968f0870c`, created August 26, 2026 at 5:31:15 p.m. EDT (`2026-08-26T17:31:15-04:00`). It records the complete challenge-only source after the official submission period opened.
+
 ## Boundary of prior and new work
 
 | Area | Existed before the challenge | Added or materially extended during the submission period |

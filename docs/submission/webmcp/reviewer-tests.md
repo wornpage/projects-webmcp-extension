@@ -14,6 +14,8 @@ Expected: zero Svelte errors and warnings, all focused contracts pass, and `dist
 
 ## Local verification record — August 26, 2026
 
+Source baseline: `57d0fe1de5c3ef8d1d22a38cf363394968f0870c`, committed at `2026-08-26T17:31:15-04:00` with the message `Create minimal static WebMCP challenge edition`.
+
 | Gate | Result |
 | --- | --- |
 | Clean dependency install | Root and frontend installs completed with 0 reported vulnerabilities |
