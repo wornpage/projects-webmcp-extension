@@ -107,9 +107,9 @@
 
 	let workMetadata = $derived.by(() => summarizeWorkMetadata(packs, { isMissingOwnerValue, dueUrgency }));
 	let dueUrgencyFilter = $state('all');
-	let hideDone = $state(
-		(() => { try { return localStorage.getItem('demo-hide-done') !== 'false'; } catch { return true; } })()
-	);
+	// The contest path always begins with the complete workspace visible so the
+	// completed Garage-reset evidence cannot be hidden by a prior browser visit.
+	let hideDone = $state(false);
 
 	// Debounce search query to avoid re-filtering on every keystroke
 	let _debounceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -118,10 +118,6 @@
 		clearTimeout(_debounceTimer);
 		_debounceTimer = setTimeout(() => { debouncedQuery = nextQuery; }, 150);
 		return () => clearTimeout(_debounceTimer);
-	});
-	// Persist hide-done preference
-	$effect(() => {
-		try { localStorage.setItem('demo-hide-done', hideDone ? 'true' : 'false'); } catch {}
 	});
 	let batchMode = $state(false);
 	let batchSelected = new SvelteSet<string>();
@@ -438,11 +434,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		query = nextQuery;
 		debouncedQuery = nextQuery;
 		await tick();
-		const firstItem = document.querySelector<HTMLElement>('[data-work-item][data-pack-id]');
-		const destination = firstItem ?? filterInput();
-		if (!destination) throw new Error('Work search is unavailable because no work list is rendered.');
-		focusAndPulse(destination, { block: 'center' });
-		await tick();
 		if (!currentWorkView || currentWorkView.scope.search !== nextQuery) {
 			throw new Error('Work did not render the requested search.');
 		}
@@ -456,6 +447,11 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			],
 			scopeKey: workReceiptScopeKey
 		};
+		await tick();
+		const firstItem = document.querySelector<HTMLElement>('[data-work-item][data-pack-id]');
+		const destination = firstItem ?? filterInput();
+		if (!destination) throw new Error('Work search is unavailable because no work list is rendered.');
+		focusAndPulse(destination, { behavior: 'auto', block: 'center' });
 		return {
 			changed,
 			query: nextQuery,
