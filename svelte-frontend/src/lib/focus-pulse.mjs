@@ -1,7 +1,7 @@
-// The arrival state must survive long enough for a person to orient after a
-// cross-route jump. Keyboard focus remains after this interval; only the
-// extra visual arrival treatment is removed.
-const FOCUS_PULSE_DURATION_MS = 4200;
+// The arrival state gives a person a brief chance to orient after a cross-route
+// jump. Keyboard focus remains after this interval; only the extra visual
+// arrival treatment is removed.
+const FOCUS_PULSE_DURATION_MS = 2400;
 
 const focusPulseTimers = new WeakMap();
 const FOCUSABLE_SELECTOR = 'a, button, input, select, textarea, [tabindex]';

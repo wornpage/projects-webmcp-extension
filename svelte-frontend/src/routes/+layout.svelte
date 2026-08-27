@@ -183,39 +183,12 @@
 	}
 
 
-	/* A route-level Focus jump needs a human-visible arrival state, not merely
-	   a narrow keyboard outline. The static treatment remains meaningful when
-	   reduced motion is requested; only this temporary treatment expires. */
+	/* Keep cross-route arrival distinct without competing with the focused
+	   control: this short-lived outline marks the destination for every motion
+	   preference, then the focused control keeps its normal keyboard outline. */
 	:global(.demo-focus-pulse[data-focus-arrival='true']) {
-		background: var(--worn-selected-bg) !important;
-		border-color: var(--worn-accent) !important;
-		box-shadow:
-			inset 5px 0 0 var(--worn-accent),
-			0 0 0 4px var(--worn-focus),
-			0 10px 24px rgb(0 0 0 / 0.28) !important;
-		outline: 3px solid var(--worn-focus);
-		outline-offset: 4px;
-		position: relative;
-	}
-
-	:global(.demo-focus-pulse[data-focus-arrival='true']::after) {
-		background: var(--worn-accent);
-		border: 1px solid var(--worn-focus);
-		border-radius: var(--worn-radius-sm);
-		color: var(--worn-accent-text);
-		content: 'Focused item';
-		font-family: var(--font-typewriter);
-		font-size: 10px;
-		font-weight: 700;
-		inset-block-start: 8px;
-		inset-inline-end: 8px;
-		letter-spacing: 0.04em;
-		line-height: 1;
-		padding: 4px 6px;
-		pointer-events: none;
-		position: absolute;
-		text-transform: uppercase;
-		z-index: 2;
+		outline: 2px solid var(--worn-focus) !important;
+		outline-offset: 2px;
 	}
 
 	@media (hover: hover) and (pointer: fine) {
