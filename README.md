@@ -2,7 +2,9 @@
 
 A small, static edition of Wornpage Projects built for the 2026 WebMCP Challenge. People and browser agents operate the same visible Work, Review, and Next screens; the agent receives a bounded projection of what the person can already see.
 
-Judge URL: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
+Protected preview: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
+
+Cloudflare Access currently requires authorization for that preview. It is not presented as a judge-accessible submission URL.
 
 The deployment is intentionally static. It has no sign-in, payment flow, Worker Function, database, secret, or production API. Sample changes stay in this browser.
 

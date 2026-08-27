@@ -1,6 +1,6 @@
 # Reviewer test plan
 
-Run these checks in the ChatGPT/Codex in-app browser or Chrome with WebMCP testing enabled.
+Run these checks in the ChatGPT or Codex in-app browser, the demonstrated WebMCP client path for this edition.
 
 ## Automated gate
 
@@ -28,13 +28,13 @@ Source baseline: `57d0fe1de5c3ef8d1d22a38cf363394968f0870c`, committed at `2026-
 | Previously clipped title | `Garage reset: clear the floor` rendered in a full 18.2px line box with visible overflow |
 | Reversibility | Work search and Review scope matched their visible pages; prepared Next choice reverted after reload |
 
-That baseline preceded the final hosted check. The current public result is recorded below.
+That baseline preceded the dated hosted pass recorded below. This historical record does not establish current submission accessibility.
 
 ## Podium-pass verification — August 26, 2026
 
 Verified at `2026-08-26T18:51:22-04:00` from source `c88575e0cfd9b24a4de3c958adc8bbeb70e6f9dc`. The main product pass is `fb2e7366f30e06683a8649e63472350ed3fdbf19`; `c88575e` is the narrow deterministic-Work follow-up.
 
-Public judge URL: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
+Historical protected preview endpoint (not a judge-accessibility claim): <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
 
 | Gate | Exact result |
 | --- | --- |
@@ -130,7 +130,6 @@ This record follows the merged reviewer-readiness work at `0284712edfd08d3f5cf02
 | Public source boundary | 77 tracked public paths after removing the inactive GitHub Actions workflow; no replacement CI or compatibility path remains. |
 | Local automated gate | `npm run verify` passed with 0 Svelte errors, 0 warnings, 25 WebMCP contracts, 4 static-artifact contracts, and a completed static build. |
 | Focused arrival state | `/work?focus=garage-reset-sort-shelves` focuses and centers the matching card, applies a selected-surface wash, accent rail, 4px ring, and `Focused item` label for 4.2 seconds, then removes the arrival treatment while visible keyboard focus remains. |
-| Hosted status | No post-merge Pages deployment was performed; the protected production URL is not presented as a verification result for this source. |
 
 ## Browser-agent path
 
