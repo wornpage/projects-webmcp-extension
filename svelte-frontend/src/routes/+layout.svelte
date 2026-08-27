@@ -60,6 +60,7 @@
 
 <style>
 	.challenge-shell {
+		align-content: start;
 		box-sizing: border-box;
 		display: grid;
 		gap: 20px;
@@ -91,6 +92,7 @@
 
 	.challenge-shell-nav {
 		align-items: center;
+		animation: challenge-nav-arrive 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 		background: var(--worn-surface);
 		border: 1px solid var(--worn-border);
 		border-radius: var(--worn-radius);
@@ -147,12 +149,20 @@
 		min-height: 44px;
 		padding: 0 12px;
 		text-decoration: none;
+		transition:
+			background-color 180ms ease,
+			border-color 180ms ease,
+			box-shadow 180ms ease,
+			color 180ms ease,
+			translate 180ms ease;
 	}
 
 	.challenge-shell-nav nav a[aria-current='page'] {
 		background: var(--worn-selected-bg);
 		border-color: var(--worn-border-strong);
+		box-shadow: inset 0 -2px 0 var(--worn-accent);
 		color: var(--worn-selected-fg);
+		translate: 0 -1px;
 	}
 
 	.challenge-brand:focus-visible,
@@ -165,6 +175,68 @@
 		display: grid;
 		gap: 22px;
 		min-width: 0;
+	}
+
+	.challenge-route > :global(.demo-panel) {
+		animation: challenge-route-arrive 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+		transform-origin: top center;
+	}
+
+	.challenge-route :global(.worn-receipt) {
+		box-shadow: var(--worn-shadow-sm);
+		margin-block: 14px 16px;
+		padding: 16px 18px;
+	}
+
+	.challenge-route :global(.worn-receipt-head) {
+		padding-bottom: 10px;
+	}
+
+	.challenge-route :global(.worn-receipt-lines > div) {
+		padding-block: 8px;
+	}
+
+	.challenge-route :global([data-webmcp-receipt]) {
+		animation: challenge-receipt-arrive 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+
+	@keyframes challenge-nav-arrive {
+		from {
+			opacity: 0;
+			translate: 0 -8px;
+		}
+		to {
+			opacity: 1;
+			translate: 0 0;
+		}
+	}
+
+	@keyframes challenge-route-arrive {
+		from {
+			opacity: 0;
+			scale: 0.992;
+			translate: 0 12px;
+		}
+		to {
+			opacity: 1;
+			scale: 1;
+			translate: 0 0;
+		}
+	}
+
+	@keyframes challenge-receipt-arrive {
+		0% {
+			opacity: 0;
+			translate: 0 -12px;
+		}
+		72% {
+			opacity: 1;
+			translate: 0 2px;
+		}
+		100% {
+			opacity: 1;
+			translate: 0 0;
+		}
 	}
 
 	.demo-toast-container {
@@ -219,6 +291,23 @@
 		.challenge-shell-nav nav a {
 			justify-content: center;
 			padding-inline: 4px;
+		}
+
+		.challenge-route :global(.worn-receipt) {
+			margin-block: 12px 14px;
+			padding: 14px;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.challenge-shell-nav,
+		.challenge-route > :global(.demo-panel),
+		.challenge-route :global([data-webmcp-receipt]) {
+			animation: none;
+		}
+
+		.challenge-shell-nav nav a {
+			transition: none;
 		}
 	}
 

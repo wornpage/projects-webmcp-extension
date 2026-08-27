@@ -387,12 +387,14 @@ let showingCustom = $state(false);
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
 		{/if}
 		{#if preparationReceipt}
-			<WornReceipt
-				id={NEXT_PREPARATION_RECEIPT_ID}
-				summary={preparationReceipt.summary}
-				announce={false}
-				cells={preparationCells}
-			/>
+			<div data-webmcp-receipt="next">
+				<WornReceipt
+					id={NEXT_PREPARATION_RECEIPT_ID}
+					summary={preparationReceipt.summary}
+					announce={false}
+					cells={preparationCells}
+				/>
+			</div>
 		{/if}
 		{#if savedNextReceipt}
 			<WornReceipt
