@@ -253,6 +253,24 @@ test('the Review scope descriptor declares and verifies one reversible page-stat
 	assert.throws(() => createSetReviewScopeTool(null), /scope setter/u);
 });
 
+test('every visible Review to Next activation uses one canonical focused handoff', () => {
+	assert.match(routeSource, /async function handoffToNext\(packId: string \| undefined, event\?: MouseEvent\)[\s\S]*?event\?\.preventDefault\(\);[\s\S]*?await goto\(`\/next\?pack=\$\{encodeURIComponent\(packId\)\}`\);[\s\S]*?await tick\(\);[\s\S]*?document\.querySelector<HTMLElement>\('\[data-next-preview\]'\)[\s\S]*?if \(!preview\) throw new Error\('Next preview did not render\.'\);[\s\S]*?focusAndPulse\(preview, \{ behavior: 'auto', block: 'center', requireVisibleFocus: true \}\);/u);
+	assert.equal(routeSource.match(/await goto\(`\/next\?pack=/gu)?.length, 1);
+	assert.equal(routeSource.match(/^\s*(?:await\s+)?goto\(/gmu)?.length, 1);
+
+	// Focusable card keyboard activation.
+	assert.match(routeSource, /async function handleCardKeys\(e: KeyboardEvent\)[\s\S]*?e\.key === ' '[^\n]*await handoffToNext\(packId\)[\s\S]*?e\.key === 'Enter'[^\n]*await handoffToNext\(packId\)/u);
+
+	// Primary Set next action navigation in both the priority and card surfaces.
+	assert.match(routeSource, /data-review-priority-navigation[\s\S]*?onclick=\{firstCommand\.action === 'set-next' \? \(event\) => handoffToNext\(firstReview\.id, event\) : undefined\}/u);
+	assert.match(routeSource, /data-review-card-navigation[\s\S]*?onclick=\{command\.action === 'set-next' \? \(event\) => handoffToNext\(pack\.id, event\) : undefined\}/u);
+
+	// Priority/list titles and the explicit secondary Set next action control.
+	assert.match(routeSource, /review-priority-title[\s\S]*?onclick=\{\(event\) => handoffToNext\(firstReview\.id, event\)\}/u);
+	assert.match(routeSource, /class="demo-card-title"[^\n]*data-pack=\{pack\.id\}[^\n]*onclick=\{\(event\) => handoffToNext\(pack\.id, event\)\}/u);
+	assert.match(routeSource, /data-review-next-action[^\n]*onclick=\{\(event\) => handoffToNext\(firstReview\.id, event\)\}/u);
+});
+
 test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /import \{ registerPageTools \} from '\$lib\/webmcp\.mjs';/u);
 	assert.match(routeSource, /import \{ createCurrentReviewTool, createSetReviewScopeTool, reviewItemPageView, reviewPageView \} from '\.\/review-webmcp\.mjs';/u);
