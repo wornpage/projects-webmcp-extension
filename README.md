@@ -2,7 +2,9 @@
 
 A small, static edition of Wornpage Projects built for the 2026 WebMCP Challenge. People and browser agents operate the same visible Work, Review, and Next screens; the agent receives a bounded projection of what the person can already see.
 
-Judge URL: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
+Protected preview: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
+
+Cloudflare Access currently requires authorization for that preview. It is not presented as a judge-accessible submission URL.
 
 The deployment is intentionally static. It has no sign-in, payment flow, Worker Function, database, secret, or production API. Sample changes stay in this browser.
 
@@ -33,7 +35,7 @@ npm run verify
 npm --prefix svelte-frontend run dev
 ```
 
-Open the URL printed by Vite, then visit `/webmcp-challenge` in the ChatGPT/Codex in-app browser or another WebMCP-capable browser.
+Open the URL printed by Vite, then visit `/webmcp-challenge` in the ChatGPT or Codex in-app browser for WebMCP tool discovery. If WebMCP is unavailable, the ordinary page remains usable with browser-local sample data.
 
 `npm run build` creates the complete static deployment in `dist/static-publish`. That directory can be uploaded directly to Cloudflare Pages; no Pages Functions or Worker are required.
 

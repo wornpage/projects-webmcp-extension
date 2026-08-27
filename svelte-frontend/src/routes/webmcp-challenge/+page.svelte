@@ -68,7 +68,7 @@
 	<title>WebMCP Challenge guide — Wornpage Projects™</title>
 	<meta
 		name="description"
-		content="Try Wornpage Projects with a browser agent using bounded, route-scoped WebMCP tools and sample data."
+		content="A browser-local WebMCP guide for Work, Review, and Next: tools read, narrow, and prepare while you control Save."
 	/>
 </svelte:head>
 
@@ -124,7 +124,7 @@
 			</section>
 
 			<p class="challenge-browser-note">
-				WebMCP tools are available in Codex and ChatGPT in-app browsers, or in a supported Chrome build with WebMCP testing enabled. The ordinary page remains usable when WebMCP is unavailable.
+				Open this demo in the ChatGPT or Codex in-app browser for the demonstrated WebMCP path. If WebMCP is unavailable, the ordinary page and browser-local sample remain usable.
 			</p>
 		</div>
 	</div>
