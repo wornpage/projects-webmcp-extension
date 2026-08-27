@@ -6,7 +6,7 @@
 - Route-owned WebMCP descriptors and one lifecycle-safe registration helper.
 - Deterministic synthetic sample data and browser-local state.
 - Only the shared workflow and Wornpage UI pieces required by those routes.
-- Static build scripts, locked dependencies, focused contracts, CI, and submission documentation.
+- Static build scripts, locked dependencies, focused contracts, and submission documentation.
 - `PUBLIC_SOURCE_MANIFEST.txt`, generated from the final tracked tree.
 
 ## Excluded

@@ -40,7 +40,7 @@ Public judge URL: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
 | --- | --- |
 | Source boundary | Public manifest matched exactly 76 files; four Svelte app routes plus the landing artifact; no Worker, Pages Function, backend, auth, billing, secret, or production-domain fallback |
 | Automated gate | Svelte 0 errors/0 warnings; WebMCP 21 passed/0 failed; static artifact 4 passed/0 failed; production static build accepted |
-| GitHub verification | Run `33020885056` completed successfully for exact source `c88575e0cfd9b24a4de3c958adc8bbeb70e6f9dc` |
+| Historical GitHub verification | Run `33020885056` completed successfully for exact source `c88575e0cfd9b24a4de3c958adc8bbeb70e6f9dc`; it is retained as dated evidence, not a claim about the current tree. |
 | Cloudflare production | Deployment `ffd5ac2b` recorded branch `main`, source `c88575e`, and Production environment |
 | Tool inventory | 7 total: Guide 1; Work 2; Review 2; Next 2; route navigation invalidated the prior page catalog |
 | Guide | Exact rendered projection returned 3 steps, 3 authority statements, and the `Confirm storage bin delivery` prompt |
@@ -120,6 +120,17 @@ The root and frontend locked installs completed from empty dependency directorie
 | Request ledger | 79/79 requests used `http://127.0.0.1:5197`; 0/79 targeted `/api/`; 0/79 used an external origin; 0 browser errors or warnings were observed. |
 
 Supported-client denominator: 1 tested / 1 supported. Independent Chrome-family denominator: 0 observable / 3 attempted paths (connected Chrome, local Chrome, installed Edge). The independent denominator is deliberately not combined with the in-app browser pass and does not imply Chrome WebMCP support.
+
+## Current merged reviewer-readiness state — August 26, 2026
+
+This record follows the merged reviewer-readiness work at `0284712edfd08d3f5cf02b9d76ac11b3d1297075`. It supersedes the current-source counts in the earlier dated records without rewriting their historical observations.
+
+| Gate | Current result |
+| --- | --- |
+| Public source boundary | 77 tracked public paths after removing the inactive GitHub Actions workflow; no replacement CI or compatibility path remains. |
+| Local automated gate | `npm run verify` passed with 0 Svelte errors, 0 warnings, 25 WebMCP contracts, 4 static-artifact contracts, and a completed static build. |
+| Focused arrival state | `/work?focus=garage-reset-sort-shelves` focuses and centers the matching card, applies a selected-surface wash, accent rail, 4px ring, and `Focused item` label for 4.2 seconds, then removes the arrival treatment while visible keyboard focus remains. |
+| Hosted status | No post-merge Pages deployment was performed; the protected production URL is not presented as a verification result for this source. |
 
 ## Browser-agent path
 
