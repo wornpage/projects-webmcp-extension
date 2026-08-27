@@ -130,7 +130,7 @@ This record follows the merged reviewer-readiness work at `0284712edfd08d3f5cf02
 | Public source boundary | 77 tracked public paths after removing the inactive GitHub Actions workflow; no replacement CI or compatibility path remains. |
 | Local automated gate | `npm run verify` passed with 0 Svelte errors, 0 warnings, 25 WebMCP contracts, 4 static-artifact contracts, and a completed static build. |
 | Focused arrival state | `/work?focus=garage-reset-sort-shelves` focuses and centers the matching card, applies a selected-surface wash, accent rail, 4px ring, and `Focused item` label for 4.2 seconds, then removes the arrival treatment while visible keyboard focus remains. |
-| Hosted status | Protected Pages deployment `5f0e1015-1019-4d28-8c41-a3ba3f819973` recorded Production / `main` / source `3f49f85`; anonymous requests to both the apex and immutable deployment URL returned 302 from Cloudflare Access. This is not an anonymous judge-accessibility claim. |
+| Hosted status | No post-merge Pages deployment was performed; the protected production URL is not presented as a verification result for this source. |
 
 ## Browser-agent path
 
