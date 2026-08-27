@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = path.join(root, 'PUBLIC_SOURCE_MANIFEST.txt');
-const excludedDirectories = new Set([
+const excludedEntries = new Set([
 	'.git',
 	'node_modules',
 	'dist',
@@ -18,7 +18,7 @@ const excludedDirectories = new Set([
 
 async function collect(directory, files = []) {
 	for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
-		if (entry.isDirectory() && excludedDirectories.has(entry.name)) continue;
+		if (excludedEntries.has(entry.name)) continue;
 		const absolute = path.join(directory, entry.name);
 		if (entry.isDirectory()) {
 			await collect(absolute, files);
