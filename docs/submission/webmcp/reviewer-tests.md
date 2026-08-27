@@ -85,6 +85,42 @@ Result: 7/7 natural prompts passed; 0/7 prompts contained a registered tool name
 
 The automated contracts are a separate denominator and are not counted as natural-prompt passes. `npm run test:webmcp` reported 24 passed / 24 total / 0 failed after the focused manifest rework. Its manifest fixture checks every reserved root entry once as a file and once as a directory, keeps all seven same-named nested source files in the exact manifest, and confirms that adding one legitimate source file makes the stale-manifest gate fail in both fixture shapes.
 
+## Merged-main cold-start portability recheck — August 26, 2026
+
+This recheck started from clean merged source `ba7efb131448b9f24f178a36ba9c897ce576f257`. It is the current cold-start record; the earlier records above remain dated historical evidence rather than claims about the present source tree.
+
+The root and frontend locked installs completed from empty dependency directories with 0 reported vulnerabilities. `npm run verify` then matched 78/78 public source files, reported 0 Svelte errors and 0 warnings, passed 24/24 WebMCP contracts and 4/4 static-artifact contracts, and completed the production prerender. The built artifact was served with `npm --prefix svelte-frontend run preview -- --host 127.0.0.1 --port 5197` before any browser check.
+
+| Client path | Tested | Supported | Exact result |
+| --- | ---: | ---: | --- |
+| Codex in-app browser | 1/1 | 1/1 | All four direct routes loaded and exposed their route-scoped WebMCP catalogs. |
+| Connected Chrome extension | 0/1 | 0/1 | Unavailable in this environment; no Chrome WebMCP execution is claimed. |
+| Independent Playwright Chrome | 0/1 | 0/1 | Chrome was not installed at the expected local channel; no execution is claimed. |
+| Independent installed Edge (Chromium) | 0/1 | 0/1 observable runs | The browser process exited before a page session became observable; this is recorded as unavailable, not as a product pass or failure. |
+| No-WebMCP registration path | 1/1 contract | 1/1 | The ordinary page path returned without inspecting tool descriptors; browser-level comparison was unavailable because neither independent Chromium path produced an observable session. |
+
+| Route | Direct loads | Catalog tools | Exact observed catalog |
+| --- | ---: | ---: | --- |
+| Guide | 1/1 | 1/1 | `get_webmcp_challenge_guide` |
+| Work | 1/1 | 2/2 | `get_current_work_view`, `show_work_search` |
+| Review | 1/1 | 2/2 | `get_current_review_queue`, `set_review_scope` |
+| Next | 1/1 | 2/2 | `get_current_next_editor`, `prepare_next_action` |
+| **Total** | **4/4** | **7/7** | No cross-route or extra tools were present. |
+
+| Behavior | Exact observed result |
+| --- | --- |
+| Registration teardown | 1/1 prior-route handle rejected after navigation as stale; registration contracts passed 6/6, including synchronous and asynchronous mixed-failure aborts. |
+| Tool aborts | 7/7 route tools retain an explicit already-aborted execution contract in the 24/24 focused gate. |
+| Work scope | 8 shown / 8 matching / 8 workspace / 3 blocked became 4 shown / 4 matching / 8 workspace / 2 blocked for `Garage reset`. |
+| Review scope | 5 total review / 5 filtered / 5 shown / 3 blocked became 5 total review / 3 search matches / 2 filtered / 2 shown / 2 blocked. |
+| Visible focus | Work result, Review result, and Next receipt passed 3/3 active-focus, `:focus-visible`, and in-viewport checks. |
+| Reduced motion | 1/1 emulated reduced-motion Work action retained verified visible focus with the reduced-motion media query active. |
+| Next authority | 1/1 current-editor read preserved `Clear the garage floor`; preparation reported `workspaceChanged: false` and `requiresHumanSave: true`; 1/1 exact repeat returned `changed: false`; 1/1 reload discarded the proposal and note. |
+| Clone-safe results | All 7/7 unique route tools returned through the browser WebMCP boundary without a serialization failure. |
+| Request ledger | 79/79 requests used `http://127.0.0.1:5197`; 0/79 targeted `/api/`; 0/79 used an external origin; 0 browser errors or warnings were observed. |
+
+Supported-client denominator: 1 tested / 1 supported. Independent Chrome-family denominator: 0 observable / 3 attempted paths (connected Chrome, local Chrome, installed Edge). The independent denominator is deliberately not combined with the in-app browser pass and does not imply Chrome WebMCP support.
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.

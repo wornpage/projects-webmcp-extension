@@ -1,4 +1,7 @@
-const FOCUS_PULSE_DURATION_MS = 1800;
+// The arrival state must survive long enough for a person to orient after a
+// cross-route jump. Keyboard focus remains after this interval; only the
+// extra visual arrival treatment is removed.
+const FOCUS_PULSE_DURATION_MS = 4200;
 
 const focusPulseTimers = new WeakMap();
 const FOCUSABLE_SELECTOR = 'a, button, input, select, textarea, [tabindex]';
@@ -47,10 +50,12 @@ export function focusAndPulse(target, options = {}) {
 	if (pendingTimer !== undefined) globalThis.clearTimeout(pendingTimer);
 	pulseTarget.classList.remove('demo-focus-pulse');
 	void pulseTarget.offsetWidth;
+	pulseTarget.setAttribute('data-focus-arrival', 'true');
 	pulseTarget.classList.add('demo-focus-pulse');
 
 	const timer = globalThis.setTimeout(() => {
 		pulseTarget.classList.remove('demo-focus-pulse');
+		pulseTarget.removeAttribute('data-focus-arrival');
 		focusPulseTimers.delete(pulseTarget);
 	}, FOCUS_PULSE_DURATION_MS);
 	focusPulseTimers.set(pulseTarget, timer);
