@@ -86,7 +86,11 @@ test('Work projects only its live scope, explicit denominators, and bounded rend
 
 test('the current-Work descriptor is closed, read-only, untrusted-content aware, and live', async () => {
 	let current = workView();
-	const tool = createCurrentWorkTool(() => current);
+	let reads = 0;
+	const tool = createCurrentWorkTool(() => {
+		reads += 1;
+		return current;
+	});
 	assert.equal(tool.name, WORK_CURRENT_TOOL_NAME);
 	assert.equal(tool.name, 'get_current_work_view');
 	assert.equal(tool.title, 'Get current Work view');
@@ -94,28 +98,48 @@ test('the current-Work descriptor is closed, read-only, untrusted-content aware,
 	assert.match(tool.description, /workspace, matching, shown, and remaining/u);
 	assert.deepEqual(tool.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
 	assert.deepEqual(tool.annotations, { readOnlyHint: true, openWorldHint: false, untrustedContentHint: true });
-	const first = await tool.execute({}, { signal: new AbortController().signal });
-	assert.deepEqual(first, current);
-	assert.notEqual(first, current);
-	assert.notEqual(first.items, current.items);
-	await assert.rejects(
-		() => tool.execute({ unexpected: true }, { signal: new AbortController().signal }),
-		/empty object/u
-	);
-	current = null;
-	assert.equal(await tool.execute({}), null);
+
 	const aborted = new AbortController();
 	aborted.abort();
-	await assert.rejects(() => tool.execute({}, { signal: aborted.signal }), { name: 'AbortError' });
+	await assert.rejects(() => tool.execute({ unexpected: true }, { signal: aborted.signal }), { name: 'AbortError' });
+	assert.equal(reads, 0);
+	await assert.rejects(() => tool.execute(), /empty object/u);
+	for (const malformed of [null, [], { unexpected: true }]) {
+		await assert.rejects(() => tool.execute(malformed), /empty object/u);
+	}
+	assert.equal(reads, 0);
+
+	const canonical = structuredClone(current);
+	const first = await tool.execute({}, { signal: new AbortController().signal });
+	assert.equal(reads, 1);
+	assert.deepEqual(first, current);
+	assert.notEqual(first, current);
+	assert.notEqual(first.scope, current.scope);
+	assert.notEqual(first.counts, current.counts);
+	assert.notEqual(first.items, current.items);
+	for (let index = 0; index < first.items.length; index += 1) {
+		assert.notEqual(first.items[index], current.items[index]);
+	}
+	first.scope.search = 'mutated result';
+	first.counts.workspace = 999;
+	first.items[0].title = 'Mutated first item';
+	first.items[1].owner = 'Mutated second owner';
+	first.items.push({ ...first.items[0], id: 'result-only' });
+	assert.deepEqual(current, canonical);
+
+	current = null;
+	assert.equal(await tool.execute({}), null);
+	assert.equal(reads, 2);
 	assert.throws(() => createCurrentWorkTool(null), /current-view getter/u);
 });
 
 test('the Work-search descriptor declares and verifies one reversible page-local interaction', async () => {
 	const calls = [];
+	const focusProof = { focused: true, focusVisible: true, inViewport: true, pulsed: true };
 	const tool = createShowWorkSearchTool(async (query) => {
 		calls.push(query);
 		const work = workView({ search: query });
-		return { changed: true, query, focus: { target: 'item', itemId: work.items[0].id }, work };
+		return { changed: true, query, focus: { target: 'item', itemId: work.items[0].id, ...focusProof }, work };
 	});
 	assert.equal(tool.name, WORK_SEARCH_TOOL_NAME);
 	assert.equal(tool.name, 'show_work_search');
@@ -142,10 +166,17 @@ test('the Work-search descriptor declares and verifies one reversible page-local
 	assert.deepEqual(calls, ['needle']);
 	assert.equal(result.changed, true);
 	assert.equal(result.query, 'needle');
-	assert.deepEqual(result.focus, { target: 'item', itemId: 'alpha / one' });
+	assert.deepEqual(result.focus, { target: 'item', itemId: 'alpha / one', ...focusProof });
 	assert.equal(result.work.scope.search, 'needle');
 	assert.equal(result.work.scope.appliedSearch, 'needle');
 	assert.notEqual(result.work, workView({ search: 'needle' }));
+	for (const field of Object.keys(focusProof)) {
+		const unverified = createShowWorkSearchTool(async () => ({
+			...structuredClone(result),
+			focus: { ...result.focus, [field]: false }
+		}));
+		await assert.rejects(() => unverified.execute({ query: 'needle' }), /verifiable page receipt/u);
+	}
 	await assert.rejects(() => tool.execute({ query: 'needle', status: 'active' }), /accepts only query/u);
 	await assert.rejects(() => tool.execute({ query: 42 }), /must be a string/u);
 	await assert.rejects(() => tool.execute({ query: 'line\nbreak' }), /control characters/u);
@@ -158,7 +189,7 @@ test('the Work-search descriptor declares and verifies one reversible page-local
 	const mismatched = createShowWorkSearchTool(async () => ({
 		changed: true,
 		query: 'needle',
-		focus: { target: 'item', itemId: 'beta' },
+		focus: { target: 'item', itemId: 'beta', ...focusProof },
 		work: workView({ search: 'needle' })
 	}));
 	await assert.rejects(() => mismatched.execute({ query: 'needle' }), /focus did not match/u);
@@ -166,10 +197,10 @@ test('the Work-search descriptor declares and verifies one reversible page-local
 	const empty = createShowWorkSearchTool(async () => ({
 		changed: true,
 		query: 'missing',
-		focus: { target: 'search', itemId: null },
+		focus: { target: 'search', itemId: null, ...focusProof },
 		work: emptyWork
 	}));
-	assert.deepEqual((await empty.execute({ query: 'missing' })).focus, { target: 'search', itemId: null });
+	assert.deepEqual((await empty.execute({ query: 'missing' })).focus, { target: 'search', itemId: null, ...focusProof });
 });
 
 test('Work renders and returns one canonical bounded view through its existing search owner', () => {
@@ -179,7 +210,7 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /let hideDone = \$state\(false\);/u);
 	assert.doesNotMatch(routeSource, /demo-hide-done/u);
 	assert.match(routeSource, /\{#each renderedVisible as pack, i \(pack\.id\)\}/u);
-	assert.match(routeSource, /async function showWorkSearchFromWebMcp\(nextQuery: string\) \{[\s\S]*?query = nextQuery;\s*debouncedQuery = nextQuery;[\s\S]*?webMcpSearchReceipt = \{[\s\S]*?await tick\(\);[\s\S]*?focusAndPulse\(destination, \{ behavior: 'auto', block: 'center' \}\);[\s\S]*?work: currentWorkView/u);
+	assert.match(routeSource, /async function showWorkSearchFromWebMcp\(nextQuery: string\) \{[\s\S]*?query = nextQuery;\s*debouncedQuery = nextQuery;[\s\S]*?webMcpSearchReceipt = \{[\s\S]*?await tick\(\);[\s\S]*?const focusReceipt = focusAndPulse\(destination, \{[\s\S]*?behavior: 'auto',[\s\S]*?block: 'center',[\s\S]*?requireVisibleFocus: true[\s\S]*?\}\);[\s\S]*?focus: firstItem[\s\S]*?target: 'item'[\s\S]*?\.\.\.focusReceipt[\s\S]*?target: 'search'[\s\S]*?\.\.\.focusReceipt[\s\S]*?work: currentWorkView/u);
 	assert.match(routeSource, /webMcpSearchReceipt = \{[\s\S]*?Agent narrowed Work[\s\S]*?Workspace data[\s\S]*?Unchanged/u);
 	assert.match(routeSource, /let workReceiptScopeKey = \$derived\([\s\S]*?currentWorkView\.scope[\s\S]*?currentWorkView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpSearchReceipt\.scopeKey !== workReceiptScopeKey[\s\S]*?webMcpSearchReceipt = null/u);

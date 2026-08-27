@@ -227,14 +227,19 @@
 		});
 	}
 
-	async function applyReviewScope(nextQuery: string, nextFilter: ReviewSubFilter, destination: 'filters' | 'results') {
+	async function applyReviewScope(
+		nextQuery: string,
+		nextFilter: ReviewSubFilter,
+		destination: 'filters' | 'results',
+		requireVisibleFocus = false
+	) {
 		const changed = query !== nextQuery || reviewSubFilter !== nextFilter;
 		query = nextQuery;
 		reviewSubFilter = nextFilter;
 		await tick();
 		if (destination === 'filters') {
 			document.getElementById('review-filter-query')?.focus();
-			return changed;
+			return { changed, focus: null };
 		}
 
 		const firstTitle = document.querySelector<HTMLElement>('.review-priority .demo-card-title');
@@ -242,10 +247,20 @@
 		const reviewList = document.querySelector<HTMLElement>('[data-review-list]');
 		const focusTarget = firstTitle || filterInput || reviewList;
 		if (!focusTarget) throw new Error('Review scope destination did not render.');
-		focusAndPulse(focusTarget, {
-			pulseTarget: firstTitle?.closest<HTMLElement>('.review-priority') || focusTarget
+		const itemId = firstTitle?.closest<HTMLElement>('[data-pack-id]')?.dataset.packId || null;
+		if (firstTitle && !itemId) throw new Error('Review scope destination is missing its work-item identity.');
+		const focusReceipt = focusAndPulse(focusTarget, {
+			pulseTarget: firstTitle?.closest<HTMLElement>('.review-priority') || focusTarget,
+			requireVisibleFocus
 		});
-		return changed;
+		return {
+			changed,
+			focus: firstTitle
+				? { target: 'item' as const, itemId: itemId as string, ...focusReceipt }
+				: focusTarget === filterInput
+					? { target: 'search' as const, itemId: null, ...focusReceipt }
+					: { target: 'queue' as const, itemId: null, ...focusReceipt }
+		};
 	}
 
 	async function clearReviewFilters() {
@@ -267,7 +282,8 @@
 		if (!filterAvailable) {
 			throw new Error(`Review filter "${nextFilter}" is not available for the current search.`);
 		}
-		const changed = await applyReviewScope(nextQuery, nextFilter, 'results');
+		const { changed, focus } = await applyReviewScope(nextQuery, nextFilter, 'results', true);
+		if (!focus) throw new Error('Review did not verify its visible scope destination.');
 		if (!currentReviewView) throw new Error('Review did not render the requested queue scope.');
 		const filterLabel = nextFilter === 'all'
 			? 'All review items'
@@ -286,7 +302,7 @@
 			],
 			scopeKey: reviewReceiptScopeKey
 		};
-		return { changed, review: currentReviewView };
+		return { changed, focus, review: currentReviewView };
 	}
 
 	let stopReviewWebMcp: (() => void) | null = null;

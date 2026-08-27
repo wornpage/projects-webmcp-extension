@@ -67,6 +67,7 @@ svelte-frontend/svelte.config.js
 svelte-frontend/tsconfig.json
 svelte-frontend/vite.config.ts
 tests/challenge-webmcp-page-contract.test.mjs
+tests/focus-pulse-webmcp-contract.test.mjs
 tests/next-webmcp-page-contract.test.mjs
 tests/review-webmcp-page-contract.test.mjs
 tests/webmcp-registration-contract.test.mjs

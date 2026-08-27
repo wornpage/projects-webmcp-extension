@@ -12,6 +12,8 @@ The public-edition baseline is commit `57d0fe1de5c3ef8d1d22a38cf363394968f0870c`
 
 ## Boundary of prior and new work
 
+The 14 pre-existing `@wornpage/*` packages are reused dependencies, not claimed as challenge-period authorship: `svelte-frontend/package.json` consumes their public archives at 40-character Git revisions, and `svelte-frontend/package-lock.json` records archive integrity. The challenge work claim remains the WebMCP orchestration, four-route judge experience, and focused verification described here.
+
 | Area | Existed before the challenge | Added or materially extended during the submission period |
 | --- | --- | --- |
 | Product concept | Work items with blockers, next actions, review, and proof | A browser-agent collaboration story grounded in the same visible pages |

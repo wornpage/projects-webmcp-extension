@@ -288,7 +288,7 @@ h3,
 }
 .demo-card-facts {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   margin-bottom: 6px;
   font-size: 12px;

@@ -12,7 +12,7 @@ const MAX_SEARCH_LENGTH = 120;
 /** @typedef {{ workspace: number, matching: number, shown: number, remaining: number, blocked: number }} WorkCountsView */
 /** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string | null, due: string | null, blocker: string | null }} WorkItemView */
 /** @typedef {{ scope: WorkScopeView, counts: WorkCountsView, items: WorkItemView[] }} WorkView */
-/** @typedef {{ target: 'item', itemId: string } | { target: 'search', itemId: null }} WorkSearchFocus */
+/** @typedef {{ target: 'item', itemId: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean } | { target: 'search', itemId: null, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }} WorkSearchFocus */
 /** @typedef {{ changed: boolean, query: string, focus: WorkSearchFocus, work: WorkView }} WorkSearchReceipt */
 
 /**
@@ -235,9 +235,16 @@ function workSearchReceipt(input) {
 function workSearchFocus(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
-	if (candidate.target === 'search' && candidate.itemId === null) return { target: 'search', itemId: null };
+	if (
+		candidate.focused !== true || candidate.focusVisible !== true ||
+		candidate.inViewport !== true || candidate.pulsed !== true
+	) return null;
+	const evidence = { focused: true, focusVisible: true, inViewport: true, pulsed: true };
+	if (candidate.target === 'search' && candidate.itemId === null) {
+		return { target: 'search', itemId: null, ...evidence };
+	}
 	const itemId = normalizedText(candidate.itemId);
-	return candidate.target === 'item' && itemId ? { target: 'item', itemId } : null;
+	return candidate.target === 'item' && itemId ? { target: 'item', itemId, ...evidence } : null;
 }
 
 /** @param {unknown} view @returns {WorkView | null} */

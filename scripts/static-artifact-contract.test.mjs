@@ -68,9 +68,13 @@ test('Svelte prerender validates one static adapter and no server output', () =>
 });
 
 test('static mode identifies its bounded routes without production fallbacks', () => {
+	const index = readFileSync(path.join(root, 'index.html'), 'utf8');
 	const landing = readFileSync(path.join(root, 'landing.html'), 'utf8');
 	const app = readFileSync(path.join(root, 'svelte-frontend', 'src', 'app.html'), 'utf8');
 	const headers = readFileSync(path.join(root, 'svelte-frontend', 'static', '_headers'), 'utf8');
+	for (const html of [index, landing, app]) {
+		assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive"/u);
+	}
 	assert.match(landing, /href="\/work"/u);
 	assert.match(landing, /href="\/review\?tour=landing"/u);
 	assert.match(landing, /Let an agent find the next move\. Keep the final say\./u);
@@ -99,6 +103,10 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	assert.equal(existsSync(path.join(artifactRoot, 'functions')), false);
 	assert.equal(collectFiles(artifactRoot).some((file) => file.endsWith('.map')), false);
 	assert.ok(existsSync(path.join(artifactRoot, 'THIRD_PARTY_LICENSES.txt')));
+	assert.match(
+		readFileSync(path.join(artifactRoot, '404.html'), 'utf8'),
+		/<meta name="robots" content="noindex,nofollow,noarchive"/u
+	);
 	const artifactText = collectText(artifactRoot).join('\n');
 	for (const pattern of deniedRuntimePatterns) assert.doesNotMatch(artifactText, pattern);
 });

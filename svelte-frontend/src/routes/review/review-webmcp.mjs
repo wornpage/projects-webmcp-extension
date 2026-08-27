@@ -9,7 +9,8 @@ const MAX_REASON_LENGTH = 240;
 /** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string, due: string | null, blocker: string | null, attentionReasons: string[] }} ReviewItemView */
 /** @typedef {{ totalReview: number, searchMatches: number, filtered: number, shown: number, remaining: number, blocked: number, missingNext: number, missingOwner: number }} ReviewCounts */
 /** @typedef {{ scope: { query: string, filter: ReviewFilter }, availableFilters: ReviewFilter[], counts: ReviewCounts, upNext: ReviewItemView | null, items: ReviewItemView[] }} ReviewView */
-/** @typedef {{ changed: boolean, review: ReviewView }} ReviewScopeReceipt */
+/** @typedef {{ target: 'item', itemId: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean } | { target: 'search' | 'queue', itemId: null, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }} ReviewScopeFocus */
+/** @typedef {{ changed: boolean, focus: ReviewScopeFocus, review: ReviewView }} ReviewScopeReceipt */
 
 /**
  * Project the exact bounded queue already rendered by Review. Raw packs,
@@ -196,10 +197,34 @@ function reviewScopeReceipt(input) {
 	}
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	const review = cloneReviewView(candidate.review);
-	if (typeof candidate.changed !== 'boolean' || !review) {
+	const focus = reviewScopeFocus(candidate.focus);
+	if (typeof candidate.changed !== 'boolean' || !review || !focus) {
 		throw new TypeError('Review did not return a verifiable page receipt.');
 	}
-	return { changed: candidate.changed, review };
+	const expectedItemId = review.upNext?.id ?? null;
+	const focusMatches = expectedItemId
+		? focus.target === 'item' && focus.itemId === expectedItemId
+		: review.counts.totalReview > 1 || review.scope.filter !== 'all'
+			? focus.target === 'search' && focus.itemId === null
+			: focus.target === 'queue' && focus.itemId === null;
+	if (!focusMatches) throw new TypeError('Review scope focus did not match the rendered destination.');
+	return { changed: candidate.changed, focus, review };
+}
+
+/** @param {unknown} input @returns {ReviewScopeFocus | null} */
+function reviewScopeFocus(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	if (
+		candidate.focused !== true || candidate.focusVisible !== true ||
+		candidate.inViewport !== true || candidate.pulsed !== true
+	) return null;
+	const evidence = { focused: true, focusVisible: true, inViewport: true, pulsed: true };
+	if ((candidate.target === 'search' || candidate.target === 'queue') && candidate.itemId === null) {
+		return { target: candidate.target, itemId: null, ...evidence };
+	}
+	const itemId = normalizedText(candidate.itemId);
+	return candidate.target === 'item' && itemId ? { target: 'item', itemId, ...evidence } : null;
 }
 
 /** @param {unknown} input @returns {{ query: string, filter: ReviewFilter } | null} */

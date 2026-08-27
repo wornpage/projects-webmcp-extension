@@ -14,7 +14,7 @@ const PREPARE_INPUT_KEYS = ['choice', 'expectedMode', 'expectedChoice', 'agentNo
 /** @typedef {{ summary: string, work: NextEditorWork, agentNote: string, preparedAction: string, workspaceChanged: false, requiresHumanSave: true }} NextPreparationReceipt */
 /** @typedef {{ work: NextEditorWork, presetChoices: string[], editor: NextEditorChoice, preview: NextEditorPreview, preparationReceipt: NextPreparationReceipt | null, canSave: boolean, busy: boolean }} NextEditorView */
 /** @typedef {{ choice: string, expectedMode: NextEditorMode, expectedChoice: string, agentNote: string }} PrepareNextActionInput */
-/** @typedef {{ changed: boolean, focus: { id: string }, next: NextEditorView }} PrepareNextActionReceipt */
+/** @typedef {{ changed: boolean, focus: { id: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }, next: NextEditorView }} PrepareNextActionReceipt */
 
 /**
  * Project only the current work item, choices, editor state, and preview already
@@ -228,7 +228,11 @@ function prepareNextActionReceipt(input, choice, agentNote) {
 	if (
 		typeof candidate.changed !== 'boolean' || !next || next.busy || !next.canSave ||
 		!focus || typeof focus !== 'object' || Array.isArray(focus) ||
-		/** @type {Record<string, unknown>} */ (focus).id !== NEXT_PREPARATION_RECEIPT_ID
+		/** @type {Record<string, unknown>} */ (focus).id !== NEXT_PREPARATION_RECEIPT_ID ||
+		/** @type {Record<string, unknown>} */ (focus).focused !== true ||
+		/** @type {Record<string, unknown>} */ (focus).focusVisible !== true ||
+		/** @type {Record<string, unknown>} */ (focus).inViewport !== true ||
+		/** @type {Record<string, unknown>} */ (focus).pulsed !== true
 	) {
 		throw new TypeError('Prepare next action did not return a verifiable page receipt.');
 	}
@@ -242,7 +246,17 @@ function prepareNextActionReceipt(input, choice, agentNote) {
 	) {
 		throw new TypeError('Prepare next action did not preserve the visible evidence receipt.');
 	}
-	return { changed: candidate.changed, focus: { id: NEXT_PREPARATION_RECEIPT_ID }, next };
+	return {
+		changed: candidate.changed,
+		focus: {
+			id: NEXT_PREPARATION_RECEIPT_ID,
+			focused: true,
+			focusVisible: true,
+			inViewport: true,
+			pulsed: true
+		},
+		next
+	};
 }
 
 /** @param {unknown} view @returns {NextEditorView | null} */

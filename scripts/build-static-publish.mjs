@@ -32,7 +32,7 @@ const STATIC_404_PAGE = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex,nofollow">
+<meta name="robots" content="noindex,nofollow,noarchive">
 <title>Not found — WebMCP Challenge</title>
 <style>
 body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f3ef; color: #21322b; font: 15px/1.5 system-ui, sans-serif; }

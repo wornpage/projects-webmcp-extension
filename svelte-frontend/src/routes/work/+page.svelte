@@ -451,13 +451,17 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		const firstItem = document.querySelector<HTMLElement>('[data-work-item][data-pack-id]');
 		const destination = firstItem ?? filterInput();
 		if (!destination) throw new Error('Work search is unavailable because no work list is rendered.');
-		focusAndPulse(destination, { behavior: 'auto', block: 'center' });
+		const focusReceipt = focusAndPulse(destination, {
+			behavior: 'auto',
+			block: 'center',
+			requireVisibleFocus: true
+		});
 		return {
 			changed,
 			query: nextQuery,
 			focus: firstItem
-				? { target: 'item' as const, itemId: firstItem.dataset.packId || '' }
-				: { target: 'search' as const, itemId: null },
+				? { target: 'item' as const, itemId: firstItem.dataset.packId || '', ...focusReceipt }
+				: { target: 'search' as const, itemId: null, ...focusReceipt },
 			work: currentWorkView
 		};
 	}

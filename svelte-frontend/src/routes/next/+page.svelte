@@ -261,11 +261,15 @@ let showingCustom = $state(false);
 		await tick();
 		const target = document.getElementById(NEXT_PREPARATION_RECEIPT_ID);
 		if (!(target instanceof HTMLElement)) throw new Error('Prepare next action could not find its visible preview.');
-		focusAndPulse(target, { behavior: 'smooth', block: 'center' });
+		const focusReceipt = focusAndPulse(target, {
+			behavior: 'auto',
+			block: 'center',
+			requireVisibleFocus: true
+		});
 		if (!currentNextEditor) throw new Error('Prepare next action could not verify the visible editor.');
 		return {
 			changed: !alreadyDesired || !receiptAlreadyDesired,
-			focus: { id: NEXT_PREPARATION_RECEIPT_ID },
+			focus: { id: NEXT_PREPARATION_RECEIPT_ID, ...focusReceipt },
 			next: currentNextEditor
 		};
 	}
@@ -511,9 +515,15 @@ let showingCustom = $state(false);
 		color: var(--worn-text-muted);
 		font-size: 12px;
 	}
+	.next-action-editor {
+		align-items: center;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
 	.next-action-editor > .demo-field {
-		flex: 1 1 auto;
+		grid-column: 1 / -1;
 		min-width: 0;
+		width: 100%;
 	}
 	.next-other-list {
 		margin-top: 8px;
@@ -527,15 +537,22 @@ let showingCustom = $state(false);
 	}
 	.next-save-help {
 		display: block;
-		flex: 1 1 220px;
+		min-width: 0;
 	}
 	.next-save-actions {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
 		justify-content: flex-end;
+		justify-self: end;
 	}
 	@media (max-width: 500px) {
+		.next-action-editor {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.next-action-editor > .demo-field {
+			grid-column: auto;
+		}
 		.demo-inline-form,
 		.demo-row.has-row-support {
 			align-items: stretch;
@@ -560,9 +577,13 @@ let showingCustom = $state(false);
 			align-items: stretch;
 			flex-direction: column;
 		}
+		.next-save-help {
+			flex: 0 0 auto;
+		}
 		.next-save-actions {
 			display: grid;
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+			justify-self: stretch;
 			width: 100%;
 		}
 	}

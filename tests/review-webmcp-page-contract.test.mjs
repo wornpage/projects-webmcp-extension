@@ -17,6 +17,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
+const demoCss = fs.readFileSync(path.join(repoRoot, 'assets/demo.css'), 'utf8');
 
 function queueView() {
 	return reviewPageView({
@@ -133,7 +134,11 @@ test('Review projects only its explicit rendered queue and denominators', () => 
 
 test('the current-review descriptor is closed, read-only, live, and clone-safe', async () => {
 	let current = queueView();
-	const tool = createCurrentReviewTool(() => current);
+	let reads = 0;
+	const tool = createCurrentReviewTool(() => {
+		reads += 1;
+		return current;
+	});
 	assert.equal(tool.name, REVIEW_CURRENT_TOOL_NAME);
 	assert.equal(tool.name, 'get_current_review_queue');
 	assert.equal(tool.title, 'Get current review queue');
@@ -141,28 +146,59 @@ test('the current-review descriptor is closed, read-only, live, and clone-safe',
 	assert.match(tool.description, /total, filtered, shown, and remaining counts/u);
 	assert.deepEqual(tool.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
 	assert.deepEqual(tool.annotations, { readOnlyHint: true, openWorldHint: false, untrustedContentHint: true });
-	const result = await tool.execute({}, { signal: new AbortController().signal });
-	assert.deepEqual(result, current);
-	assert.notEqual(result, current);
-	assert.notEqual(result.items, current.items);
-	await assert.rejects(
-		() => tool.execute({ unexpected: true }, { signal: new AbortController().signal }),
-		/empty object/u
-	);
-	current = null;
-	assert.equal(await tool.execute({}, { signal: new AbortController().signal }), null);
+
 	const aborted = new AbortController();
 	aborted.abort();
-	await assert.rejects(() => tool.execute({}, { signal: aborted.signal }), { name: 'AbortError' });
+	await assert.rejects(() => tool.execute({ unexpected: true }, { signal: aborted.signal }), { name: 'AbortError' });
+	assert.equal(reads, 0);
+	await assert.rejects(() => tool.execute(), /empty object/u);
+	for (const malformed of [null, [], { unexpected: true }]) {
+		await assert.rejects(() => tool.execute(malformed), /empty object/u);
+	}
+	assert.equal(reads, 0);
+
+	const canonical = structuredClone(current);
+	const result = await tool.execute({}, { signal: new AbortController().signal });
+	assert.equal(reads, 1);
+	assert.deepEqual(result, current);
+	assert.notEqual(result, current);
+	assert.notEqual(result.scope, current.scope);
+	assert.notEqual(result.availableFilters, current.availableFilters);
+	assert.notEqual(result.counts, current.counts);
+	assert.notEqual(result.upNext, current.upNext);
+	assert.notEqual(result.upNext.attentionReasons, current.upNext.attentionReasons);
+	assert.notEqual(result.items, current.items);
+	for (let index = 0; index < result.items.length; index += 1) {
+		assert.notEqual(result.items[index], current.items[index]);
+		assert.notEqual(result.items[index].attentionReasons, current.items[index].attentionReasons);
+	}
+	result.scope.query = 'mutated result';
+	result.availableFilters.push('owner-gap');
+	result.counts.totalReview = 999;
+	result.upNext.title = 'Mutated up next';
+	result.upNext.attentionReasons.push('Result-only reason.');
+	result.items[0].title = 'Mutated queue item';
+	result.items[0].attentionReasons.push('Another result-only reason.');
+	result.items.push(result.items[0]);
+	assert.deepEqual(current, canonical);
+
+	current = null;
+	assert.equal(await tool.execute({}, { signal: new AbortController().signal }), null);
+	assert.equal(reads, 2);
 	assert.throws(() => createCurrentReviewTool(null), /queue getter/u);
 });
 
 test('the Review scope descriptor declares and verifies one reversible page-state interaction', async () => {
 	const calls = [];
 	const view = queueView();
+	const focusProof = { focused: true, focusVisible: true, inViewport: true, pulsed: true };
 	const tool = createSetReviewScopeTool(async (scope) => {
 		calls.push(scope);
-		return { changed: true, review: view };
+		return {
+			changed: true,
+			focus: { target: 'item', itemId: view.upNext.id, ...focusProof },
+			review: view
+		};
 	});
 	assert.equal(tool.name, REVIEW_SCOPE_TOOL_NAME);
 	assert.equal(tool.name, 'set_review_scope');
@@ -192,8 +228,22 @@ test('the Review scope descriptor declares and verifies one reversible page-stat
 
 	const result = await tool.execute({ query: ' garage ', filter: 'blocked' }, { signal: new AbortController().signal });
 	assert.deepEqual(calls, [{ query: ' garage ', filter: 'blocked' }]);
-	assert.deepEqual(result, { changed: true, review: view });
+	assert.deepEqual(result, {
+		changed: true,
+		focus: { target: 'item', itemId: 'garage / one', ...focusProof },
+		review: view
+	});
 	assert.notEqual(result.review, view);
+	for (const field of Object.keys(focusProof)) {
+		const unverified = createSetReviewScopeTool(async () => ({
+			...structuredClone(result),
+			focus: { ...result.focus, [field]: false }
+		}));
+		await assert.rejects(
+			() => unverified.execute({ query: 'garage', filter: 'blocked' }),
+			/verifiable page receipt/u
+		);
+	}
 	await assert.rejects(() => tool.execute({ query: '', filter: 'unknown' }), /filter must be/u);
 	await assert.rejects(() => tool.execute({ query: '', filter: 'all', extra: true }), /accepts only query and filter/u);
 	await assert.rejects(() => tool.execute({ query: 42, filter: 'all' }), /query must be a string/u);
@@ -213,12 +263,14 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /function reviewItemForPageTool\([\s\S]*?reviewItemPageView\(\{[\s\S]*?title: workTitle\(pack\)[\s\S]*?workflow: workflowLabel\(pack\)[\s\S]*?owner: ownerLabel\(pack\.owner\)[\s\S]*?blocker: hasBlocker\(pack\) \? blockerText\(pack\) : null,[\s\S]*?attentionReasons: attentionReasons\(pack\)/u);
 	assert.match(routeSource, /class="review-reasons"[\s\S]*?Why this surfaced[\s\S]*?attentionReasons\(firstReview\)/u);
 	assert.match(routeSource, /async function applyReviewScope\([\s\S]*?query = nextQuery;\s*reviewSubFilter = nextFilter;\s*await tick\(\);[\s\S]*?focusAndPulse\(focusTarget/u);
-	assert.match(routeSource, /const requestedQueue = summarizeReviewQueue\(packs, nextQuery, 'all'\);[\s\S]*?nextFilter === reviewSubFilter[\s\S]*?const changed = await applyReviewScope\(nextQuery, nextFilter, 'results'\);[\s\S]*?return \{ changed, review: currentReviewView \};/u);
+	assert.match(routeSource, /const requestedQueue = summarizeReviewQueue\(packs, nextQuery, 'all'\);[\s\S]*?nextFilter === reviewSubFilter[\s\S]*?const \{ changed, focus \} = await applyReviewScope\(nextQuery, nextFilter, 'results', true\);[\s\S]*?if \(!focus\)[\s\S]*?return \{ changed, focus, review: currentReviewView \};/u);
+	assert.match(routeSource, /const focusReceipt = focusAndPulse\(focusTarget, \{[\s\S]*?requireVisibleFocus[\s\S]*?\}\);[\s\S]*?target: 'item'[\s\S]*?target: 'search'[\s\S]*?target: 'queue'/u);
 	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?Agent scoped Review[\s\S]*?Workspace data[\s\S]*?Unchanged/u);
 	assert.match(routeSource, /let reviewReceiptScopeKey = \$derived\([\s\S]*?currentReviewView\.scope[\s\S]*?currentReviewView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
 	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?scopeKey: reviewReceiptScopeKey/u);
 	assert.match(routeSource, /data-webmcp-receipt="review"[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}/u);
+	assert.doesNotMatch(demoCss, /\.demo-card-facts\s*\{[^}]*grid-template-columns:\s*repeat\(3,/u);
 	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\]\)/u);
 	assert.match(routeSource, /stopReviewWebMcp\?\.\(\);\s*stopReviewWebMcp = null;/u);
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);
