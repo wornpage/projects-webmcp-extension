@@ -42,17 +42,36 @@ function getAttribute(element, name) {
 	return match?.[1] ?? null;
 }
 
-function findCssBlock(css, atRulePattern) {
-	const match = atRulePattern.exec(css);
-	assert.ok(match, `built CSS contains ${atRulePattern}`);
-	const openBrace = css.indexOf('{', match.index);
-	let depth = 1;
-	for (let index = openBrace + 1; index < css.length; index += 1) {
-		if (css[index] === '{') depth += 1;
-		if (css[index] === '}') depth -= 1;
-		if (depth === 0) return css.slice(openBrace + 1, index);
+function findCssBlocks(css, atRuleName) {
+	const blocks = [];
+	let searchFrom = 0;
+	while (searchFrom < css.length) {
+		const atRuleIndex = css.indexOf(`@${atRuleName}`, searchFrom);
+		if (atRuleIndex === -1) break;
+		const openBrace = css.indexOf('{', atRuleIndex);
+		assert.notEqual(openBrace, -1, `built CSS opens @${atRuleName}`);
+		let depth = 1;
+		let closeBrace = openBrace + 1;
+		for (; closeBrace < css.length && depth > 0; closeBrace += 1) {
+			if (css[closeBrace] === '{') depth += 1;
+			if (css[closeBrace] === '}') depth -= 1;
+		}
+		assert.equal(depth, 0, `built CSS closes @${atRuleName}`);
+		blocks.push({
+			prelude: css.slice(atRuleIndex + atRuleName.length + 1, openBrace).trim(),
+			body: css.slice(openBrace + 1, closeBrace - 1)
+		});
+		searchFrom = closeBrace;
 	}
-	assert.fail(`built CSS closes ${atRulePattern}`);
+	return blocks;
+}
+
+function isCompactWidthMedia(prelude) {
+	const upperBounds = [
+		...[...prelude.matchAll(/max-width\s*:\s*(\d+(?:\.\d+)?)px/gu)].map((match) => Number(match[1])),
+		...[...prelude.matchAll(/width\s*<=\s*(\d+(?:\.\d+)?)px/gu)].map((match) => Number(match[1]))
+	];
+	return upperBounds.some((upperBound) => upperBound <= 700);
 }
 
 function parseCssRules(css) {
@@ -188,14 +207,28 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	const hoverRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)?:hover$/u);
 	assert.equal(hoverRule.declarations.get('background'), 'var(--worn-hover-bg)');
 
-	const compactRules = parseCssRules(findCssBlock(css, /@media\s*\(max-width:\s*700px\)/u));
-	const compactBrandRules = compactRules.filter(({ selectors }) =>
-		selectors.some((selector) => selector.includes('.challenge-brand'))
+	const compiledSvelteCss = collectCss(path.join(artifactRoot, '_app', 'immutable', 'assets'));
+	const compactMediaBlocks = findCssBlocks(compiledSvelteCss, 'media').filter(({ prelude }) =>
+		isCompactWidthMedia(prelude)
 	);
-	assert.deepEqual(
-		compactBrandRules,
-		[],
-		'compact CSS does not remove or override challenge-brand padding and text containment'
+	assert.ok(compactMediaBlocks.length > 0, 'compiled Svelte CSS contains compact width media blocks');
+	assert.ok(
+		compactMediaBlocks.some(({ prelude }) => /\(width<=700px\)/u.test(prelude)),
+		'compiled Svelte CSS contains the emitted @media (width<=700px) block'
 	);
+	for (const { prelude, body } of compactMediaBlocks) {
+		const compactBrandRules = parseCssRules(body).filter(({ selectors }) =>
+			selectors.some(
+				(selector) =>
+					/^\.challenge-brand(?:\.[\w-]+)?$/u.test(selector) ||
+					/^\.challenge-brand(?:\.[\w-]+)? span(?::where\([^)]*\))?$/u.test(selector)
+			)
+		);
+		assert.deepEqual(
+			compactBrandRules,
+			[],
+			`compact compiled Svelte CSS ${prelude} does not override challenge-brand padding or ellipsis containment`
+		);
+	}
 	for (const pattern of deniedRuntimePatterns) assert.doesNotMatch(artifactText, pattern);
 });
