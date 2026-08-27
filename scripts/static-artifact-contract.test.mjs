@@ -77,6 +77,8 @@ test('static mode identifies its bounded routes without production fallbacks', (
 	}
 	assert.match(landing, /href="\/work"/u);
 	assert.match(landing, /href="\/review\?tour=landing"/u);
+	assert.match(landing, /<a class="lp-skip" href="#main-content">Skip to main content<\/a>/u);
+	assert.match(landing, /<main id="main-content" tabindex="-1">/u);
 	assert.match(landing, /Let an agent find the next move\. Keep the final say\./u);
 	assert.match(landing, /No automatic saves/u);
 	assert.match(landing, /Confirm storage bin delivery/u);
