@@ -2,9 +2,9 @@
 
 A small, static edition of Wornpage Projects built for the 2026 WebMCP Challenge. People and browser agents operate the same visible Work, Review, and Next screens; the agent receives a bounded projection of what the person can already see.
 
-Protected preview: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
+Live submission: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
 
-Cloudflare Access currently requires authorization for that preview. It is not presented as a judge-accessible submission URL.
+The submission URL is publicly accessible without an account. Deployment-specific preview URLs remain separate from this production judge path.
 
 The deployment is intentionally static. It has no sign-in, payment flow, Worker Function, database, secret, or production API. Sample changes stay in this browser.
 
@@ -23,6 +23,29 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 | Next | `prepare_next_action` | Prepare an unsaved choice and concise evidence note for the person to review |
 
 The page owns registration and teardown through `document.modelContext.registerTool`. WebMCP actions are deliberately reversible presentation changes or unsaved preparation; each leaves a visible page receipt, while consequential saves remain visible, human-owned controls.
+
+## WebMCP implementation
+
+The challenge documentation's `search_products` descriptor illustrates the imperative API shape. Wornpage Projects registers project-specific tools instead. A minimal direct registration of the Guide reader has that same shape:
+
+```js
+const registrationController = new AbortController();
+
+document.modelContext.registerTool({
+	name: 'get_webmcp_challenge_guide',
+	description: 'Read the exact public judge guide rendered on this page.',
+	inputSchema: {
+		type: 'object',
+		properties: {},
+		additionalProperties: false
+	},
+	execute: async () => readRenderedWebMcpChallengeGuide(document)
+}, {
+	signal: registrationController.signal
+});
+```
+
+The shipped implementation adds exact-input rejection, validated current-page projections, truthful annotations, and complete descriptors in each route. It passes them to [`registerPageTools`](svelte-frontend/src/lib/webmcp.mjs), which performs this registration with one abort signal for the page-owned catalog. That lifecycle boundary removes the tools together when navigation leaves the page and aborts the catalog if any registration fails.
 
 ## Run locally
 

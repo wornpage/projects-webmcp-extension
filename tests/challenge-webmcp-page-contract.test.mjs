@@ -108,12 +108,13 @@ test('challenge route is prerendered and owns one public reader without navigati
 	assert.match(appDocument, /prepare an unsaved next action[\s\S]*?the person controls Save/u);
 	assert.match(appDocument, /<meta property="og:url" content="https:\/\/projects-webmcp-extension\.pages\.dev\/webmcp-challenge" \/>/u);
 	assert.match(webManifest, /human-controlled Work, Review, and Next loop/u);
-	assert.match(rootReadme, /^Protected preview: <https:\/\/projects-webmcp-extension\.pages\.dev\/webmcp-challenge>$/mu);
-	assert.match(rootReadme, /Cloudflare Access currently requires authorization[\s\S]*?not presented as a judge-accessible submission URL/u);
+	assert.match(rootReadme, /^Live submission: <https:\/\/projects-webmcp-extension\.pages\.dev\/webmcp-challenge>$/mu);
+	assert.match(rootReadme, /submission URL is publicly accessible without an account[\s\S]*?preview URLs remain separate/u);
+	assert.match(rootReadme, /document\.modelContext\.registerTool\(\{[\s\S]*?name: 'get_webmcp_challenge_guide'[\s\S]*?description:[\s\S]*?inputSchema:[\s\S]*?execute:/u);
 	assert.doesNotMatch(rootReadme, /^Judge URL:/mu);
 	assert.match(reviewerTests, /ChatGPT or Codex in-app browser, the demonstrated WebMCP client path/u);
-	assert.match(reviewerTests, /Historical protected preview endpoint \(not a judge-accessibility claim\)/u);
-	assert.doesNotMatch(reviewerTests, /Chrome with WebMCP testing enabled|Public judge URL:|\| Hosted status \|/u);
+	assert.match(reviewerTests, /Public judge URL \(no account required\)/u);
+	assert.doesNotMatch(reviewerTests, /Chrome with WebMCP testing enabled|\| Hosted status \|/u);
 	assert.match(pageSource, /navigator\.clipboard\.writeText\(recommendedPrompt\)/u);
 	assert.match(pageSource, /WornButton type="button" size="sm" onclick=\{copyRecommendedPrompt\}>Copy prompt<\/WornButton>/u);
 	assert.match(pageSource, /data-challenge-copy-status aria-live="polite"/u);

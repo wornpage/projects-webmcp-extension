@@ -34,7 +34,7 @@ That baseline preceded the dated hosted pass recorded below. This historical rec
 
 Verified at `2026-08-26T18:51:22-04:00` from source `c88575e0cfd9b24a4de3c958adc8bbeb70e6f9dc`. The main product pass is `fb2e7366f30e06683a8649e63472350ed3fdbf19`; `c88575e` is the narrow deterministic-Work follow-up.
 
-Historical protected preview endpoint (not a judge-accessibility claim): <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
+Public judge URL (no account required): <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
 
 | Gate | Exact result |
 | --- | --- |
