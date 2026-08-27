@@ -110,5 +110,11 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 		/<meta name="robots" content="noindex,nofollow,noarchive"/u
 	);
 	const artifactText = collectText(artifactRoot).join('\n');
+	for (const route of ['webmcp-challenge.html', 'work.html', 'review.html', 'next.html']) {
+		const html = readFileSync(path.join(artifactRoot, route), 'utf8');
+		assert.match(html, /class="challenge-brand\b/u, `${route} contains the shared brand`);
+		assert.match(html, /href="\/landing\.html"/u, `${route} preserves the landing route`);
+	}
+	assert.match(artifactText, /\.challenge-brand[^}]*\{[^}]*padding:0 12px/u);
 	for (const pattern of deniedRuntimePatterns) assert.doesNotMatch(artifactText, pattern);
 });
