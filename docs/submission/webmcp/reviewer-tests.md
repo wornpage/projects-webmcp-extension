@@ -53,6 +53,38 @@ Public judge URL: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
 | Public request ledger | 79/79 captured requests used `https://projects-webmcp-extension.pages.dev`; 0 `/api/` requests; 0 external requests; 0 browser errors or warnings |
 | Human authority | No tool called Save or wrote workspace data; `Approve and save` remained the only consequential boundary and was not invoked during verification |
 
+## Natural-prompt discovery recheck — August 26, 2026
+
+### Browser-observed evidence
+
+Observed in the Codex in-app browser against the local Vite server at `http://127.0.0.1:5197` from source `80f9804b265d48eb7829e0ac35bc4239556f5fa6`. This is browser evidence from the assigned worktree, not a hosted-access or automated-contract result.
+
+For each verbatim prompt below, the browser agent used only the current route catalog; the prompt itself did not contain a registered tool name. A pass required the catalog to supply the matching page capability, the returned projection to agree with the rendered page, and any page-local action to leave a visible receipt without saving workspace data.
+
+| # | Route | Natural prompt (verbatim; tool-name-free) | Browser-observed result |
+| --- | --- | --- | --- |
+| 1 | Guide | What does this demo recommend I do, and which decisions stay mine? | Returned 3/3 guide steps and 3/3 authority statements; approval, saving, and discard stayed person-owned. |
+| 2 | Work | How much work is visible right now, what is blocked, and what remains outside the visible page? | Returned 8 shown / 8 matching / 8 workspace / 0 remaining, with 3 blocked. |
+| 3 | Work | Show only the Garage reset work and keep the full workspace denominator visible. | Returned 4 shown / 4 matching / 8 workspace / 0 remaining, with 2 blocked; the visible receipt repeated `4 shown of 4 matching · 8 workspace` and `Workspace data: Unchanged`. |
+| 4 | Review | What currently needs attention in Review, and what are the total, filtered, shown, and remaining counts? | Returned 5 total review / 5 filtered / 5 shown / 0 remaining, with 3 blocked. |
+| 5 | Review | Narrow Review to blocked Garage reset items and tell me why each one needs attention. | Returned 2 shown / 2 filtered / 3 search matches / 5 total review / 0 remaining, with 2 blocked; visible reasons were `Waiting on storage bins` and `Donation center pickup is not confirmed`, and the receipt said workspace data was unchanged. |
+| 6 | Next | For Garage reset: sort shelves, what is currently in the next-action editor and what blocker is visible? | Returned custom action `Clear the garage floor`, blocker `Waiting on storage bins`, and no preparation receipt. |
+| 7 | Next | Prepare “Confirm storage bin delivery” for my review, with a short note that the floor is already done and shelf sorting still waits on storage bins. Stop before saving. | Returned `changed: true`, `workspaceChanged: false`, and `requiresHumanSave: true`; the visible receipt repeated the action and note and ended with `Authority: Awaiting your Save`. |
+
+| Route | Passed | Prompt denominator |
+| --- | ---: | ---: |
+| Guide | 1 | 1 |
+| Work | 2 | 2 |
+| Review | 2 | 2 |
+| Next | 2 | 2 |
+| **Total** | **7** | **7** |
+
+Result: 7/7 natural prompts passed; 0/7 prompts contained a registered tool name.
+
+### Automated contract evidence
+
+The automated contracts are a separate denominator and are not counted as natural-prompt passes. `npm run test:webmcp` reported 24 passed / 24 total / 0 failed after the focused manifest rework. Its manifest fixture checks every reserved root entry once as a file and once as a directory, keeps all seven same-named nested source files in the exact manifest, and confirms that adding one legitimate source file makes the stale-manifest gate fail in both fixture shapes.
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.
