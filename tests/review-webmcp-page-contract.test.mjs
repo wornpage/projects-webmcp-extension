@@ -270,6 +270,9 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
 	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?scopeKey: reviewReceiptScopeKey/u);
 	assert.match(routeSource, /data-webmcp-receipt="review"[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}/u);
+	assert.match(routeSource, /async function handoffToNext\(event: MouseEvent, packId: string \| undefined\)[\s\S]*?event\.preventDefault\(\);[\s\S]*?await goto\(`\/next\?pack=\$\{encodeURIComponent\(packId\)\}`\);[\s\S]*?\[data-next-preview\][\s\S]*?requireVisibleFocus: true/u);
+	assert.match(routeSource, /data-review-next-action[\s\S]*?onclick=\{\(event\) => handoffToNext\(event, firstReview\.id\)\}/u);
+	assert.match(routeSource, /data-pack=\{pack\.id\}[\s\S]*?onclick=\{\(event\) => handoffToNext\(event, pack\.id\)\}/u);
 	assert.doesNotMatch(demoCss, /\.demo-card-facts\s*\{[^}]*grid-template-columns:\s*repeat\(3,/u);
 	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\]\)/u);
 	assert.match(routeSource, /stopReviewWebMcp\?\.\(\);\s*stopReviewWebMcp = null;/u);

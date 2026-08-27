@@ -376,6 +376,16 @@ function handleCardKeys(e: KeyboardEvent) {
   if (e.key === 'Enter') { e.preventDefault(); goto('/next?pack=' + encodeURIComponent(packId)); return; }
 }
 
+	async function handoffToNext(event: MouseEvent, packId: string | undefined) {
+		if (!packId) return;
+		event.preventDefault();
+		await goto(`/next?pack=${encodeURIComponent(packId)}`);
+		await tick();
+		const preview = document.querySelector<HTMLElement>('[data-next-preview]');
+		if (!preview) return;
+		focusAndPulse(preview, { behavior: 'auto', block: 'center', requireVisibleFocus: true });
+	}
+
 	async function doAction(pack: DemoPack, action: string) {
 		if (!pack.id || busyId) return;
 		busyId = pack.id;
@@ -474,7 +484,7 @@ function handleCardKeys(e: KeyboardEvent) {
 		<article class="review-priority" data-pack-id={firstReview.id}>
 			<div class="review-priority-head">
 				<div>
-					<div class="review-priority-title"><a class="demo-card-title" data-action="select" data-pack={firstReview.id} title="Set the next action for {workTitle(firstReview)}" aria-label="Set the next action for {workTitle(firstReview)}" href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`}>{workTitle(firstReview)}</a></div>
+					<div class="review-priority-title"><a class="demo-card-title" data-action="select" data-pack={firstReview.id} title="Set the next action for {workTitle(firstReview)}" aria-label="Set the next action for {workTitle(firstReview)}" href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(event, firstReview.id)}>{workTitle(firstReview)}</a></div>
 				</div>
 				<WornBadge label={workflowLabel(firstReview)} />
 				{#if firstValidation}<WornBadge variant="warn" label={firstValidation.label} title={firstValidation.title} />{/if}
@@ -488,7 +498,7 @@ function handleCardKeys(e: KeyboardEvent) {
 					</WornButton>
 				{/if}
 				{#if firstCommand.action !== 'set-next'}
-					<WornButton data-review-next-action href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`}>Set next action</WornButton>
+					<WornButton data-review-next-action href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(event, firstReview.id)}>Set next action</WornButton>
 				{/if}
 			</div>
 			{#if hasBlocker(firstReview)}
@@ -557,7 +567,7 @@ function handleCardKeys(e: KeyboardEvent) {
 				<WornFoldedSurface as="article" reveal="hover" draggable="true" tabindex={0} class={`demo-review-card ${cardCls}${pack.id === $demoState?.selectedId ? ' selected' : ''}`} data-review-card data-pack-id={pack.id} onkeydown={handleCardKeys}
 					aria-label="Review {workTitle(pack)}" aria-keyshortcuts="ArrowUp ArrowDown Enter Space">
 					<div class="demo-card-head demo-review-card-head">
-						<a class="demo-card-title" data-action="select" data-pack={pack.id} title="Set the next action for {workTitle(pack)}" aria-label="Set the next action for {workTitle(pack)}" href={`/next?pack=${encodeURIComponent(pack.id || '')}`}>{workTitle(pack)}</a>
+						<a class="demo-card-title" data-action="select" data-pack={pack.id} title="Set the next action for {workTitle(pack)}" aria-label="Set the next action for {workTitle(pack)}" href={`/next?pack=${encodeURIComponent(pack.id || '')}`} onclick={(event) => handoffToNext(event, pack.id)}>{workTitle(pack)}</a>
 						<WornBadge label={workflow} />
 						{#if validation}<WornBadge variant="warn" label={validation.label} title={validation.title} />{/if}
 					</div>
