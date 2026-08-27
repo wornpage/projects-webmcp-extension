@@ -12,17 +12,17 @@ The public-edition baseline is commit `57d0fe1de5c3ef8d1d22a38cf363394968f0870c`
 
 ## Development lineage
 
-The public repositories show the development story without making the private
-production repository part of the submission:
+This public repository explains the development story without making either
+private product repository part of the submission:
 
-1. **Pre-app:** [`wornpage/projects-web-demo`](https://github.com/wornpage/projects-web-demo)
-   records the earlier blocker-first product, human interaction model, and broad
-   static demo. Its history predates the challenge and is not claimed as new
-   competition work.
+1. **Pre-app:** a private predecessor records the earlier blocker-first product,
+   human interaction model, and broad application history. Its work predates the
+   challenge and is not claimed as new competition work.
 2. **WebMCP extension:** this repository is the independently buildable public
-   extension created during the challenge period. It narrows the product to the
-   Guide → Work → Review → Next loop and adds the page-owned WebMCP catalog,
-   visible receipts, human-controlled save boundary, and focused evidence.
+   and sanitized extension created during the challenge period. It narrows the
+   product to the Guide → Work → Review → Next loop and adds the page-owned
+   WebMCP catalog, visible receipts, human-controlled save boundary, and focused
+   evidence.
 3. **Current production app:** later product development remains private and is
    neither a build dependency nor evidence required to judge this submission.
 

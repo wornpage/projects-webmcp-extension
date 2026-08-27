@@ -10,15 +10,16 @@ The deployment is intentionally static. It has no sign-in, payment flow, Worker 
 
 ## Where this edition came from
 
-Projects was not invented during the challenge. The [open-source Projects
-pre-app](https://github.com/wornpage/projects-web-demo) records the earlier,
-human-operated workflow and broad static demo. During the submission period,
-that foundation was extended in this separate repository with page-scoped
-WebMCP tools, a bounded four-route judge experience, lifecycle and fallback
-contracts, and an independently buildable static artifact.
+Projects was not invented during the challenge. A private predecessor records
+the earlier, human-operated workflow and broad application history. During the
+submission period, that foundation was extended in this separate, sanitized
+public repository with page-scoped WebMCP tools, a bounded four-route judge
+experience, lifecycle and fallback contracts, and an independently buildable
+static artifact.
 
-The current production application evolved separately and remains private. It
-is not needed to build, run, or verify this submission. The exact boundary
+The predecessor and current production application remain private because their
+broader history and application logic are outside the submission boundary.
+Neither is needed to build, run, or verify this submission. The exact boundary
 between prior work and challenge-period work is recorded in
 [SOURCE_PROVENANCE.md](SOURCE_PROVENANCE.md), alongside the dated commit history.
 
