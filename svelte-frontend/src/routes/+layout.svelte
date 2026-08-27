@@ -109,6 +109,7 @@
 		line-height: 1.15;
 		min-height: 44px;
 		min-width: 0;
+		padding: 0 12px;
 		place-content: center start;
 		text-decoration: none;
 	}
