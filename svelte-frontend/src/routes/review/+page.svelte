@@ -356,7 +356,7 @@
 		});
 	});
 
-function handleCardKeys(e: KeyboardEvent) {
+async function handleCardKeys(e: KeyboardEvent) {
   // Ignore keys aimed at inner controls (buttons, inputs): space on a focused
   // button must activate it, not navigate the card.
   const target = e.target as HTMLElement | null;
@@ -372,17 +372,17 @@ function handleCardKeys(e: KeyboardEvent) {
   if (current < 0) return;
   const packId = (cards[current] as HTMLElement)?.dataset?.packId;
   if (!packId) return;
-  if (e.key === ' ' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); goto('/next?pack=' + encodeURIComponent(packId)); return; }
-  if (e.key === 'Enter') { e.preventDefault(); goto('/next?pack=' + encodeURIComponent(packId)); return; }
+  if (e.key === ' ' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); await handoffToNext(packId); return; }
+  if (e.key === 'Enter') { e.preventDefault(); await handoffToNext(packId); return; }
 }
 
-	async function handoffToNext(event: MouseEvent, packId: string | undefined) {
+	async function handoffToNext(packId: string | undefined, event?: MouseEvent) {
 		if (!packId) return;
-		event.preventDefault();
+		event?.preventDefault();
 		await goto(`/next?pack=${encodeURIComponent(packId)}`);
 		await tick();
 		const preview = document.querySelector<HTMLElement>('[data-next-preview]');
-		if (!preview) return;
+		if (!preview) throw new Error('Next preview did not render.');
 		focusAndPulse(preview, { behavior: 'auto', block: 'center', requireVisibleFocus: true });
 	}
 
@@ -484,21 +484,21 @@ function handleCardKeys(e: KeyboardEvent) {
 		<article class="review-priority" data-pack-id={firstReview.id}>
 			<div class="review-priority-head">
 				<div>
-					<div class="review-priority-title"><a class="demo-card-title" data-action="select" data-pack={firstReview.id} title="Set the next action for {workTitle(firstReview)}" aria-label="Set the next action for {workTitle(firstReview)}" href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(event, firstReview.id)}>{workTitle(firstReview)}</a></div>
+					<div class="review-priority-title"><a class="demo-card-title" data-action="select" data-pack={firstReview.id} title="Set the next action for {workTitle(firstReview)}" aria-label="Set the next action for {workTitle(firstReview)}" href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(firstReview.id, event)}>{workTitle(firstReview)}</a></div>
 				</div>
 				<WornBadge label={workflowLabel(firstReview)} />
 				{#if firstValidation}<WornBadge variant="warn" label={firstValidation.label} title={firstValidation.title} />{/if}
 			</div>
 			<div class="review-priority-actions">
 				{#if firstCommandHref}
-					<WornButton data-review-primary-action data-review-priority-navigation variant="primary" href={firstCommandHref}>{firstCommand.label}</WornButton>
+					<WornButton data-review-primary-action data-review-priority-navigation variant="primary" href={firstCommandHref} onclick={firstCommand.action === 'set-next' ? (event) => handoffToNext(firstReview.id, event) : undefined}>{firstCommand.label}</WornButton>
 				{:else}
 					<WornButton data-review-primary-action data-review-priority-mutation type="button" variant="primary" disabled={busyId === firstReview.id} onclick={() => doAction(firstReview, firstCommand.action)}>
 						{busyId === firstReview.id ? 'Running…' : firstCommand.label}
 					</WornButton>
 				{/if}
 				{#if firstCommand.action !== 'set-next'}
-					<WornButton data-review-next-action href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(event, firstReview.id)}>Set next action</WornButton>
+					<WornButton data-review-next-action href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(firstReview.id, event)}>Set next action</WornButton>
 				{/if}
 			</div>
 			{#if hasBlocker(firstReview)}
@@ -567,7 +567,7 @@ function handleCardKeys(e: KeyboardEvent) {
 				<WornFoldedSurface as="article" reveal="hover" draggable="true" tabindex={0} class={`demo-review-card ${cardCls}${pack.id === $demoState?.selectedId ? ' selected' : ''}`} data-review-card data-pack-id={pack.id} onkeydown={handleCardKeys}
 					aria-label="Review {workTitle(pack)}" aria-keyshortcuts="ArrowUp ArrowDown Enter Space">
 					<div class="demo-card-head demo-review-card-head">
-						<a class="demo-card-title" data-action="select" data-pack={pack.id} title="Set the next action for {workTitle(pack)}" aria-label="Set the next action for {workTitle(pack)}" href={`/next?pack=${encodeURIComponent(pack.id || '')}`} onclick={(event) => handoffToNext(event, pack.id)}>{workTitle(pack)}</a>
+						<a class="demo-card-title" data-action="select" data-pack={pack.id} title="Set the next action for {workTitle(pack)}" aria-label="Set the next action for {workTitle(pack)}" href={`/next?pack=${encodeURIComponent(pack.id || '')}`} onclick={(event) => handoffToNext(pack.id, event)}>{workTitle(pack)}</a>
 						<WornBadge label={workflow} />
 						{#if validation}<WornBadge variant="warn" label={validation.label} title={validation.title} />{/if}
 					</div>
@@ -579,7 +579,7 @@ function handleCardKeys(e: KeyboardEvent) {
 						{/if}
 						<div class="demo-review-card-actions">
 							{#if commandHref}
-								<WornButton data-review-primary-action data-review-card-navigation variant="primary" href={commandHref}>{command.label}</WornButton>
+								<WornButton data-review-primary-action data-review-card-navigation variant="primary" href={commandHref} onclick={command.action === 'set-next' ? (event) => handoffToNext(pack.id, event) : undefined}>{command.label}</WornButton>
 							{:else}
 								<WornButton data-review-primary-action data-review-card-mutation type="button" variant="primary" disabled={busyId === pack.id} onclick={() => doAction(pack, command.action)}>
 									{busyId === pack.id ? 'Running…' : command.label}
