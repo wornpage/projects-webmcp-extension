@@ -30,6 +30,52 @@ function collectText(directory) {
 		.map((file) => readFileSync(file, 'utf8'));
 }
 
+function collectCss(directory) {
+	return collectFiles(directory)
+		.filter((file) => file.endsWith('.css'))
+		.map((file) => readFileSync(file, 'utf8'))
+		.join('\n');
+}
+
+function getAttribute(element, name) {
+	const match = element.match(new RegExp(`\\b${name}="([^"]*)"`, 'u'));
+	return match?.[1] ?? null;
+}
+
+function findCssBlock(css, atRulePattern) {
+	const match = atRulePattern.exec(css);
+	assert.ok(match, `built CSS contains ${atRulePattern}`);
+	const openBrace = css.indexOf('{', match.index);
+	let depth = 1;
+	for (let index = openBrace + 1; index < css.length; index += 1) {
+		if (css[index] === '{') depth += 1;
+		if (css[index] === '}') depth -= 1;
+		if (depth === 0) return css.slice(openBrace + 1, index);
+	}
+	assert.fail(`built CSS closes ${atRulePattern}`);
+}
+
+function parseCssRules(css) {
+	return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)].map((match) => ({
+		selectors: match[1].split(',').map((selector) => selector.trim()),
+		declarations: new Map(
+			match[2]
+				.split(';')
+				.filter(Boolean)
+				.map((declaration) => {
+					const colon = declaration.indexOf(':');
+					return [declaration.slice(0, colon).trim(), declaration.slice(colon + 1).trim()];
+				})
+		)
+	}));
+}
+
+function findRule(rules, selectorPattern) {
+	const rule = rules.find(({ selectors }) => selectors.some((selector) => selectorPattern.test(selector)));
+	assert.ok(rule, `built CSS contains a rule matching ${selectorPattern}`);
+	return rule;
+}
+
 test('static artifact publishes the complete challenge input and security metadata', () => {
 	for (const file of [
 		'index.html',
@@ -112,9 +158,44 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	const artifactText = collectText(artifactRoot).join('\n');
 	for (const route of ['webmcp-challenge.html', 'work.html', 'review.html', 'next.html']) {
 		const html = readFileSync(path.join(artifactRoot, route), 'utf8');
-		assert.match(html, /class="challenge-brand\b/u, `${route} contains the shared brand`);
-		assert.match(html, /href="\/landing\.html"/u, `${route} preserves the landing route`);
+		const brand = html.match(/<a\b[^>]*\bclass="[^"]*\bchallenge-brand\b[^"]*"[^>]*>[\s\S]*?<\/a>/u)?.[0];
+		assert.ok(brand, `${route} contains the interactive challenge-brand anchor`);
+		assert.equal(getAttribute(brand, 'href'), '/landing.html', `${route} preserves the landing route`);
+		assert.equal(
+			getAttribute(brand, 'aria-label'),
+			'Wornpage Projects landing page',
+			`${route} preserves the brand accessible name`
+		);
+		assert.match(brand, /<span[^>]*>Wornpage Projects<\/span>/u, `${route} preserves the visible brand name`);
 	}
-	assert.match(artifactText, /\.challenge-brand[^}]*\{[^}]*padding:0 12px/u);
+
+	const css = collectCss(artifactRoot);
+	const rules = parseCssRules(css);
+	const brandRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)?$/u);
+	assert.equal(brandRule.declarations.get('min-height'), '44px');
+	assert.equal(brandRule.declarations.get('padding'), '0 12px');
+	assert.equal(brandRule.declarations.get('min-width'), '0');
+
+	const brandTextRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)? span(?::where\([^)]*\))?$/u);
+	assert.equal(brandTextRule.declarations.get('overflow'), 'hidden');
+	assert.equal(brandTextRule.declarations.get('text-overflow'), 'ellipsis');
+	assert.equal(brandTextRule.declarations.get('white-space'), 'nowrap');
+
+	const focusRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)?:focus-visible$/u);
+	assert.equal(focusRule.declarations.get('outline'), '2px dashed var(--worn-focus)');
+	assert.equal(focusRule.declarations.get('outline-offset'), '2px');
+
+	const hoverRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)?:hover$/u);
+	assert.equal(hoverRule.declarations.get('background'), 'var(--worn-hover-bg)');
+
+	const compactRules = parseCssRules(findCssBlock(css, /@media\s*\(max-width:\s*700px\)/u));
+	const compactBrandRules = compactRules.filter(({ selectors }) =>
+		selectors.some((selector) => selector.includes('.challenge-brand'))
+	);
+	assert.deepEqual(
+		compactBrandRules,
+		[],
+		'compact CSS does not remove or override challenge-brand padding and text containment'
+	);
 	for (const pattern of deniedRuntimePatterns) assert.doesNotMatch(artifactText, pattern);
 });
