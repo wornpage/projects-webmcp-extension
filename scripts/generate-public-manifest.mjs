@@ -16,12 +16,12 @@ const excludedEntries = new Set([
 	'coverage'
 ]);
 
-async function collect(directory, files = []) {
+async function collect(directory, files = [], isRoot = true) {
 	for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
-		if (excludedEntries.has(entry.name)) continue;
+		if (excludedEntries.has(entry.name) && (isRoot || entry.isDirectory())) continue;
 		const absolute = path.join(directory, entry.name);
 		if (entry.isDirectory()) {
-			await collect(absolute, files);
+			await collect(absolute, files, false);
 		} else if (entry.isFile()) {
 			files.push(path.relative(root, absolute).split(path.sep).join('/'));
 		}
