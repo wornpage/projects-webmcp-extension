@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { WornButton, WornPage } from '$lib/components';
 	import { registerPageTools } from '$lib/webmcp.mjs';
-	import { createWebMcpChallengeGuideTool } from './webmcp-challenge-webmcp.mjs';
+	import { createWebMcpChallengeGuideTool, readRenderedWebMcpChallengeGuide } from './webmcp-challenge-webmcp.mjs';
 
 	const recommendedPrompt = 'As you move through Work, Review, and Next, use each page’s WebMCP tools to show only “Garage reset” work, notice that the floor is already done while shelf sorting still waits on storage bins, narrow Review to blocked Garage-reset items, and prepare “Confirm storage bin delivery” with a brief evidence-based note for my review. Do not save or change workspace data.';
 	const steps = [
@@ -41,26 +41,8 @@
 		}
 	}
 
-	function readChallengeGuide() {
-		const root = document.querySelector<HTMLElement>('[data-webmcp-challenge-guide]');
-		const renderedSteps = Array.from(document.querySelectorAll<HTMLElement>('[data-webmcp-challenge-step]')).map((step, index) => ({
-			position: index + 1,
-			title: step.querySelector<HTMLElement>('h2')?.textContent?.trim() ?? '',
-			description: step.querySelector<HTMLElement>('p')?.textContent?.trim() ?? '',
-			href: step.querySelector<HTMLAnchorElement>('a')?.getAttribute('href') ?? ''
-		}));
-		const renderedSafety = Array.from(document.querySelectorAll<HTMLElement>('[data-webmcp-challenge-safety] li')).map((item) => item.textContent?.trim() ?? '');
-		return {
-			title: root?.dataset.webmcpChallengeTitle ?? '',
-			purpose: root?.dataset.webmcpChallengePurpose ?? '',
-			prompt: root?.dataset.webmcpChallengePrompt ?? '',
-			steps: renderedSteps,
-			safety: renderedSafety
-		};
-	}
-
 	onMount(() => registerPageTools(document, [
-		createWebMcpChallengeGuideTool(readChallengeGuide)
+		createWebMcpChallengeGuideTool(() => readRenderedWebMcpChallengeGuide(document))
 	]));
 </script>
 
@@ -84,11 +66,11 @@
 			<div class="challenge-intro">
 				<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
 				<p class="challenge-purpose">A browser agent reads and narrows the same work you see, then prepares an unsaved next action while you keep the final say.</p>
-				<div class="challenge-facts" aria-label="Challenge build facts">
-					<div><strong>7</strong><span>route-owned tools</span></div>
-					<div><strong>3</strong><span>reversible page actions</span></div>
-					<div><strong>0</strong><span>automatic saves</span></div>
-				</div>
+				<dl class="challenge-facts" aria-label="What the demo allows">
+					<div><dt>Page tools</dt><dd>7</dd></div>
+					<div><dt>Actions you can undo</dt><dd>3</dd></div>
+					<div><dt>Automatic saves</dt><dd>0</dd></div>
+				</dl>
 			</div>
 			<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">
 				<div class="challenge-prompt-head">
@@ -149,7 +131,7 @@
 	.challenge-kicker {
 		color: var(--worn-text-secondary);
 		font-family: var(--font-typewriter);
-		font-size: 12px;
+		font-size: 13px;
 		font-weight: 700;
 		letter-spacing: 0.04em;
 		margin: 0;
@@ -172,14 +154,17 @@
 		gap: 2px;
 		padding-top: 8px;
 	}
-	.challenge-facts strong {
+	.challenge-facts dt {
+		color: var(--worn-text-secondary);
+		font-size: 13px;
+		line-height: 1.45;
+		order: 2;
+	}
+	.challenge-facts dd {
 		font-family: var(--font-typewriter);
 		font-size: 20px;
-	}
-	.challenge-facts span {
-		color: var(--worn-text-muted);
-		font-size: 11px;
-		line-height: 1.35;
+		margin: 0;
+		order: 1;
 	}
 	.challenge-prompt {
 		background: var(--worn-bg-secondary);
@@ -205,14 +190,13 @@
 	}
 	.challenge-prompt blockquote {
 		color: var(--worn-text);
-		font-family: var(--font-typewriter);
-		font-size: 14px;
-		line-height: 1.6;
+		font-size: 16px;
+		line-height: 1.65;
 		margin: 0;
 	}
 	.challenge-copy-status {
 		color: var(--worn-text-secondary);
-		font-size: 13px;
+		font-size: 14px;
 		margin: 8px 0 0;
 		min-height: 1.4em;
 	}
@@ -247,13 +231,13 @@
 		width: 28px;
 	}
 	.challenge-steps h2 {
-		font-size: 16px;
+		font-size: 17px;
 		margin: 0;
 	}
 	.challenge-steps p,
 	.challenge-browser-note {
 		color: var(--worn-text-secondary);
-		font-size: 14px;
+		font-size: 15px;
 		line-height: 1.55;
 		margin: 3px 0 0;
 	}
@@ -267,7 +251,7 @@
 	}
 	.challenge-safety ul {
 		color: var(--worn-text-secondary);
-		font-size: 14px;
+		font-size: 15px;
 		line-height: 1.6;
 		margin: 0;
 		padding-left: 20px;
