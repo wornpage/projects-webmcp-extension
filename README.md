@@ -8,6 +8,20 @@ The submission URL is publicly accessible without an account. Deployment-specifi
 
 The deployment is intentionally static. It has no sign-in, payment flow, Worker Function, database, secret, or production API. Sample changes stay in this browser.
 
+## Where this edition came from
+
+Projects was not invented during the challenge. The [open-source Projects
+pre-app](https://github.com/wornpage/projects-web-demo) records the earlier,
+human-operated workflow and broad static demo. During the submission period,
+that foundation was extended in this separate repository with page-scoped
+WebMCP tools, a bounded four-route judge experience, lifecycle and fallback
+contracts, and an independently buildable static artifact.
+
+The current production application evolved separately and remains private. It
+is not needed to build, run, or verify this submission. The exact boundary
+between prior work and challenge-period work is recorded in
+[SOURCE_PROVENANCE.md](SOURCE_PROVENANCE.md), alongside the dated commit history.
+
 ## Why WebMCP fits
 
 Ordinary browser automation has to infer meaning from layout and scrape a page that was designed for people. This demo lets each page publish a small, explicit tool catalog instead:
