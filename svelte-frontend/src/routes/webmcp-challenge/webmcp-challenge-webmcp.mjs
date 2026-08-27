@@ -4,6 +4,31 @@ const ALLOWED_ROUTES = new Set(['/work', '/review', '/next']);
 const TEXT_LIMIT = 1_000;
 
 /**
+ * Read the guide from the public page instead of duplicating its values for
+ * the tool. That keeps the browser-reader result aligned with the visible
+ * guide while leaving the ordinary links usable without WebMCP.
+ *
+ * @param {{ querySelector: (selector: string) => any, querySelectorAll: (selector: string) => Iterable<any> }} documentRef
+ */
+export function readRenderedWebMcpChallengeGuide(documentRef) {
+	const root = documentRef.querySelector('[data-webmcp-challenge-guide]');
+	const renderedSteps = Array.from(documentRef.querySelectorAll('[data-webmcp-challenge-step]')).map((step, index) => ({
+		position: index + 1,
+		title: step.querySelector('h2')?.textContent?.trim() ?? '',
+		description: step.querySelector('p')?.textContent?.trim() ?? '',
+		href: step.querySelector('a')?.getAttribute('href') ?? ''
+	}));
+	const renderedSafety = Array.from(documentRef.querySelectorAll('[data-webmcp-challenge-safety] li')).map((item) => item.textContent?.trim() ?? '');
+	return {
+		title: root?.dataset.webmcpChallengeTitle ?? '',
+		purpose: root?.dataset.webmcpChallengePurpose ?? '',
+		prompt: root?.dataset.webmcpChallengePrompt ?? '',
+		steps: renderedSteps,
+		safety: renderedSafety
+	};
+}
+
+/**
  * Validate the exact public guide rendered by the challenge page. The guide
  * contains no workspace data and offers no navigation or write authority.
  *

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import {
 	WEBMCP_CHALLENGE_GUIDE_TOOL_NAME,
 	createWebMcpChallengeGuideTool,
+	readRenderedWebMcpChallengeGuide,
 	webMcpChallengeGuideView
 } from '../svelte-frontend/src/routes/webmcp-challenge/webmcp-challenge-webmcp.mjs';
 
@@ -62,13 +63,41 @@ test('challenge guide descriptor is closed, read-only, live, and abort-aware', a
 	await assert.rejects(tool.execute({}, { signal: controller.signal }), /abort/iu);
 });
 
+test('guide reader projects the rendered guide exactly and ordinary links remain the fallback', async () => {
+	const fixture = guideFixture();
+	const stepElements = fixture.steps.map((step) => ({
+		querySelector(selector) {
+			if (selector === 'h2') return { textContent: step.title };
+			if (selector === 'p') return { textContent: step.description };
+			if (selector === 'a') return { getAttribute: (attribute) => attribute === 'href' ? step.href : null };
+			return null;
+		}
+	}));
+	const guide = readRenderedWebMcpChallengeGuide({
+		querySelector(selector) {
+			return selector === '[data-webmcp-challenge-guide]'
+				? { dataset: { webmcpChallengeTitle: fixture.title, webmcpChallengePurpose: fixture.purpose, webmcpChallengePrompt: fixture.prompt } }
+				: null;
+		},
+		querySelectorAll(selector) {
+			if (selector === '[data-webmcp-challenge-step]') return stepElements;
+			if (selector === '[data-webmcp-challenge-safety] li') return fixture.safety.map((textContent) => ({ textContent }));
+			return [];
+		}
+	});
+	assert.deepEqual(guide, fixture);
+	assert.deepEqual(await createWebMcpChallengeGuideTool(() => guide).execute({}), fixture);
+	assert.match(pageSource, /<WornButton href=\{step\.href\} size="sm">\{step\.action\}<\/WornButton>/u);
+	assert.match(pageSource, /If WebMCP is unavailable, the ordinary page and browser-local sample remain usable/u);
+});
+
 test('challenge route is prerendered and owns one public reader without navigation or write authority', () => {
 	assert.match(pageConfig, /prerender\s*=\s*true/u);
 	for (const route of ['/webmcp-challenge', '/work', '/review', '/next']) {
 		assert.match(svelteConfig, new RegExp(`prerender:[\\s\\S]*?${route.replaceAll('/', '\\/')}`, 'u'));
 	}
 	assert.match(pageSource, /registerPageTools\(document/u);
-	assert.match(pageSource, /createWebMcpChallengeGuideTool\(readChallengeGuide\)/u);
+	assert.match(pageSource, /createWebMcpChallengeGuideTool\(\(\) => readRenderedWebMcpChallengeGuide\(document\)\)/u);
 	assert.match(pageSource, /WebMCP project workspace · live sample · no login/u);
 	assert.match(pageSource, /Person: approve, save, or discard every workspace change/u);
 	assert.match(pageSource, /prepare “Confirm storage bin delivery” with a brief evidence-based note/u);
@@ -89,6 +118,7 @@ test('challenge route is prerendered and owns one public reader without navigati
 	assert.match(pageSource, /WornButton type="button" size="sm" onclick=\{copyRecommendedPrompt\}>Copy prompt<\/WornButton>/u);
 	assert.match(pageSource, /data-challenge-copy-status aria-live="polite"/u);
 	assert.match(pageSource, /<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">[\s\S]*?<h2 id="challenge-prompt-title">Run the judged path<\/h2>[\s\S]*?<\/section>/u);
+	assert.match(pageSource, /<dl class="challenge-facts" aria-label="What the demo allows">[\s\S]*?<dt>Page tools<\/dt><dd>7<\/dd>[\s\S]*?<dt>Actions you can undo<\/dt><dd>3<\/dd>[\s\S]*?<dt>Automatic saves<\/dt><dd>0<\/dd>[\s\S]*?<\/dl>/u);
 	assert.match(pageSource, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/u);
 	assert.match(pageSource, /\.challenge-kicker \{\s*color: var\(--worn-text-secondary\);/u);
 	assert.doesNotMatch(pageSource, /\.challenge-kicker \{[^}]*color: var\(--worn-accent\);/u);
