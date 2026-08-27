@@ -10,6 +10,26 @@ This repository's Git history is intentionally new and is never backdated. Its d
 
 The public-edition baseline is commit `57d0fe1de5c3ef8d1d22a38cf363394968f0870c`, created August 26, 2026 at 5:31:15 p.m. EDT (`2026-08-26T17:31:15-04:00`). It records the complete challenge-only source after the official submission period opened.
 
+## Development lineage
+
+The public repositories show the development story without making the private
+production repository part of the submission:
+
+1. **Pre-app:** [`wornpage/projects-web-demo`](https://github.com/wornpage/projects-web-demo)
+   records the earlier blocker-first product, human interaction model, and broad
+   static demo. Its history predates the challenge and is not claimed as new
+   competition work.
+2. **WebMCP extension:** this repository is the independently buildable public
+   extension created during the challenge period. It narrows the product to the
+   Guide → Work → Review → Next loop and adds the page-owned WebMCP catalog,
+   visible receipts, human-controlled save boundary, and focused evidence.
+3. **Current production app:** later product development remains private and is
+   neither a build dependency nor evidence required to judge this submission.
+
+This is an extension of a pre-existing project, not an edition label applied to
+old work. The competition claim is the new browser-agent orchestration and the
+bounded public implementation that makes it reviewable.
+
 ## Boundary of prior and new work
 
 The 14 pre-existing `@wornpage/*` packages are reused dependencies, not claimed as challenge-period authorship: `svelte-frontend/package.json` consumes their public archives at 40-character Git revisions, and `svelte-frontend/package-lock.json` records archive integrity. The challenge work claim remains the WebMCP orchestration, four-route judge experience, and focused verification described here.
