@@ -61,7 +61,7 @@ test('required visible focus accepts an on-screen target taller than a tiny view
 	assert.equal(target.getAttribute('data-focus-arrival'), 'true');
 });
 
-test('the route arrival treatment is explicit, lasts long enough to notice, and clears cleanly', (t) => {
+test('the route arrival treatment is calm, perceptible, and clears cleanly', (t) => {
 	let scheduled;
 	t.mock.method(globalThis, 'setTimeout', (callback) => {
 		scheduled = callback;
@@ -76,11 +76,13 @@ test('the route arrival treatment is explicit, lasts long enough to notice, and 
 	scheduled();
 	assert.equal(target.getAttribute('data-focus-arrival'), null);
 	assert.equal(target.classList.contains('demo-focus-pulse'), false);
-	assert.match(focusPulseSource, /FOCUS_PULSE_DURATION_MS = 4200/u);
+	assert.match(focusPulseSource, /FOCUS_PULSE_DURATION_MS = 2400/u);
 	assert.match(layoutSource, /\.demo-focus-pulse\[data-focus-arrival='true'\]/u);
-	assert.match(layoutSource, /content: 'Focused item'/u);
-	assert.match(layoutSource, /outline: 3px solid var\(--worn-focus\)/u);
-	assert.match(layoutSource, /box-shadow:/u);
+	assert.match(layoutSource, /outline: 2px solid var\(--worn-focus\) !important;/u);
+	assert.match(layoutSource, /outline-offset: 2px;/u);
+	assert.doesNotMatch(layoutSource, /content: 'Focused item'/u);
+	assert.doesNotMatch(layoutSource, /inset 5px 0 0 var\(--worn-accent\)/u);
+	assert.doesNotMatch(layoutSource, /0 10px 24px rgb\(0 0 0 \/ 0\.28\)/u);
 });
 
 test('required visible focus still rejects fit-sized clipping and wholly off-screen oversized targets', (t) => {
