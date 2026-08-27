@@ -1,7 +1,7 @@
 {
   "name": "Wornpage Projects — WebMCP Challenge",
   "short_name": "WebMCP Demo",
-  "description": "Static, browser-local WebMCP demonstration for Work, Review, and Next.",
+  "description": "Static, browser-local WebMCP guide for a human-controlled Work, Review, and Next loop.",
   "start_url": "/webmcp-challenge",
   "display": "standalone",
   "theme_color": "#e8ebe9",

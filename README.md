@@ -33,7 +33,7 @@ npm run verify
 npm --prefix svelte-frontend run dev
 ```
 
-Open the URL printed by Vite, then visit `/webmcp-challenge` in the ChatGPT/Codex in-app browser or another WebMCP-capable browser.
+Open the URL printed by Vite, then visit `/webmcp-challenge` in the ChatGPT or Codex in-app browser for WebMCP tool discovery. If WebMCP is unavailable, the ordinary page remains usable with browser-local sample data.
 
 `npm run build` creates the complete static deployment in `dist/static-publish`. That directory can be uploaded directly to Cloudflare Pages; no Pages Functions or Worker are required.
 

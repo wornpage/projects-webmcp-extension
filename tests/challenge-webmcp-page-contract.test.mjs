@@ -14,6 +14,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const pageSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/webmcp-challenge/+page.svelte'), 'utf8');
 const pageConfig = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.ts'), 'utf8');
 const svelteConfig = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/svelte.config.js'), 'utf8');
+const appDocument = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/app.html'), 'utf8');
+const webManifest = fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8');
 
 function guideFixture() {
 	return {
@@ -68,7 +70,12 @@ test('challenge route is prerendered and owns one public reader without navigati
 	assert.match(pageSource, /WebMCP project workspace · live sample · no login/u);
 	assert.match(pageSource, /Person: approve, save, or discard every workspace change/u);
 	assert.match(pageSource, /prepare “Confirm storage bin delivery” with a brief evidence-based note/u);
-	assert.match(pageSource, /Codex and ChatGPT in-app browsers/u);
+	assert.match(pageSource, /ChatGPT or Codex in-app browser for the demonstrated WebMCP path/u);
+	assert.match(pageSource, /ordinary page and browser-local sample remain usable/u);
+	assert.doesNotMatch(pageSource, /Chrome/u);
+	assert.match(appDocument, /tools read, narrow, and prepare while you control Save/u);
+	assert.match(appDocument, /prepare an unsaved next action[\s\S]*?the person controls Save/u);
+	assert.match(webManifest, /human-controlled Work, Review, and Next loop/u);
 	assert.match(pageSource, /navigator\.clipboard\.writeText\(recommendedPrompt\)/u);
 	assert.match(pageSource, /WornButton type="button" size="sm" onclick=\{copyRecommendedPrompt\}>Copy prompt<\/WornButton>/u);
 	assert.match(pageSource, /data-challenge-copy-status aria-live="polite"/u);
