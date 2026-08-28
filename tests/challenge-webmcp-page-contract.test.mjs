@@ -7,12 +7,14 @@ import { fileURLToPath } from 'node:url';
 import {
 	PROJECTS_HANDOFF_GUIDE_TOOL_NAME,
 	createWebMcpChallengeGuideTool,
+	deriveGuideWorkScopeCatalog,
 	readRenderedWebMcpChallengeGuide,
 	webMcpChallengeGuideView
 } from '../svelte-frontend/src/routes/webmcp-challenge/webmcp-challenge-webmcp.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pageSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/webmcp-challenge/+page.svelte'), 'utf8');
+const layoutSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.svelte'), 'utf8');
 const pageConfig = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.ts'), 'utf8');
 const svelteConfig = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/svelte.config.js'), 'utf8');
 const appDocument = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/app.html'), 'utf8');
@@ -21,13 +23,22 @@ const rootReadme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
 const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmcp/reviewer-tests.md'), 'utf8');
 const editorSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/AgentBriefEditor.svelte'), 'utf8');
 
-test('Projects workflow surfaces use durable accessible product labels', () => {
-	const layoutSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.svelte'), 'utf8');
-	assert.match(layoutSource, /<nav aria-label="Projects workflow navigation">/u);
-	assert.doesNotMatch(layoutSource, /aria-label="Challenge pages"/u);
-	assert.match(pageSource, /<dl class="challenge-facts" aria-label="Projects workflow capabilities">/u);
-	assert.doesNotMatch(pageSource, /aria-label="What the demo allows"/u);
-});
+function scopeFixture() {
+	return {
+		workspaceCount: 8,
+		visibleCount: 8,
+		discoveredChoiceCount: 2,
+		shownChoiceCount: 2,
+		omittedChoiceCount: 0,
+		choices: [
+			{ id: 'all', kind: 'all', label: 'All visible work', query: '', matchingCount: 8 },
+			{ id: 'area-1', kind: 'derived', label: 'Household', query: 'Household', matchingCount: 4 },
+			{ id: 'area-2', kind: 'derived', label: 'Research', query: 'Research', matchingCount: 4 },
+			{ id: 'custom', kind: 'custom', label: 'Custom', query: null, matchingCount: null }
+		],
+		selected: { id: 'all', kind: 'all', label: 'All visible work', query: '', matchingCount: 8 }
+	};
+}
 
 function guideFixture() {
 	return {
@@ -40,34 +51,173 @@ function guideFixture() {
 		],
 		safety: ['Sample data stays local.', 'Page state is bounded.', 'Humans retain decisions.'],
 		agentBrief: 'Read the visible project state.\nDo not save workspace data.',
-		workQuery: 'Garden study'
+		workQuery: '',
+		workScope: scopeFixture()
 	};
 }
 
-test('Projects handoff guide projects one exact public three-step workflow', () => {
-	assert.deepEqual(webMcpChallengeGuideView(guideFixture()), guideFixture());
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), steps: guideFixture().steps.slice(0, 2) }), null);
-	assert.equal(webMcpChallengeGuideView({
-		...guideFixture(),
-		steps: guideFixture().steps.map((step, index) => index === 2 ? { ...step, href: '/billing' } : step)
-	}), null);
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), safety: ['Only one'] }), null);
-	assert.deepEqual(
-		webMcpChallengeGuideView({ ...guideFixture(), agentBrief: 'Line one\r\nLine two\rLine three\tready' }),
-		{ ...guideFixture(), agentBrief: 'Line one\nLine two\nLine three\tready' }
-	);
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: '  kept  ' })?.agentBrief, 'kept');
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: '' })?.agentBrief, '');
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: 'x'.repeat(1001) }), null);
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: 'Unsafe\u0007control' }), null);
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: '' })?.workQuery, '');
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: '  Garden study  ' })?.workQuery, 'Garden study');
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: 'x'.repeat(121) }), null);
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: 'Garden\nstudy' }), null);
-	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: undefined }), null);
+function selectedGuide({ id, kind, label, query, matchingCount }) {
+	const guide = guideFixture();
+	return {
+		...guide,
+		workQuery: query,
+		workScope: {
+			...guide.workScope,
+			selected: { id, kind, label, query, matchingCount }
+		}
+	};
+}
+
+function renderedGuideDocument(fixture) {
+	const root = {
+		dataset: {
+			webmcpChallengeTitle: fixture.title,
+			webmcpChallengePurpose: fixture.purpose
+		}
+	};
+	const briefInput = { value: fixture.agentBrief };
+	const scopeChooser = {
+		dataset: {
+			workspaceCount: String(fixture.workScope.workspaceCount),
+			visibleCount: String(fixture.workScope.visibleCount),
+			discoveredChoiceCount: String(fixture.workScope.discoveredChoiceCount),
+			shownChoiceCount: String(fixture.workScope.shownChoiceCount),
+			omittedChoiceCount: String(fixture.workScope.omittedChoiceCount),
+			selectedScopeId: fixture.workScope.selected.id,
+			selectedScopeKind: fixture.workScope.selected.kind,
+			selectedScopeLabel: fixture.workScope.selected.label,
+			selectedWorkQuery: fixture.workScope.selected.query,
+			selectedMatchCount: String(fixture.workScope.selected.matchingCount)
+		}
+	};
+	const choices = fixture.workScope.choices.map((choice) => ({
+		dataset: {
+			scopeId: choice.id,
+			scopeKind: choice.kind,
+			scopeLabel: choice.label,
+			...(choice.query === null ? {} : { scopeQuery: choice.query }),
+			...(choice.matchingCount === null ? {} : { scopeMatchCount: String(choice.matchingCount) })
+		}
+	}));
+	const steps = fixture.steps.map((step) => ({
+		querySelector(selector) {
+			if (selector === 'h2') return { textContent: step.title };
+			if (selector === 'p') return { textContent: step.description };
+			if (selector === 'a') return { getAttribute: (attribute) => attribute === 'href' ? step.href : null };
+			return null;
+		}
+	}));
+	return {
+		root,
+		briefInput,
+		scopeChooser,
+		querySelector(selector) {
+			if (selector === '[data-webmcp-challenge-guide]') return root;
+			if (selector === '[data-agent-brief-input]') return briefInput;
+			if (selector === '[data-agent-scope-chooser]') return scopeChooser;
+			return null;
+		},
+		querySelectorAll(selector) {
+			if (selector === '[data-agent-scope-choice]') return choices;
+			if (selector === '[data-webmcp-challenge-step]') return steps;
+			if (selector === '[data-webmcp-challenge-safety] li') return fixture.safety.map((textContent) => ({ textContent }));
+			return [];
+		}
+	};
+}
+
+test('Projects workflow surfaces keep the Guide compact and product-labeled', () => {
+	assert.match(layoutSource, /<nav aria-label="Projects workflow navigation">/u);
+	assert.doesNotMatch(layoutSource, /aria-label="Challenge pages"/u);
+	assert.match(pageSource, /Choose visible work and edit the brief; the browser agent can inspect and prepare while you control Save\./u);
+	assert.match(pageSource, /<WornAccordion label="Authority and browser status">/u);
+	assert.doesNotMatch(pageSource, /challenge-facts|Projects workflow capabilities/u);
+	assert.match(editorSource, /All visible work is ready by default; choose a counted scope or Custom, then ask:/u);
 });
 
-test('Projects handoff guide descriptor is closed, read-only, live, and abort-aware', async () => {
+test('Guide derives bounded scope choices from stable fields and the supplied Work search counter', () => {
+	const queries = [];
+	const visible = [
+		{ id: 'a', area: 'Research' },
+		{ id: 'b', area: 'Household' },
+		{ id: 'c', area: 'research' },
+		{ id: 'd' }
+	];
+	const catalog = deriveGuideWorkScopeCatalog(5, visible, (query) => {
+		queries.push(query);
+		return query === 'Household' ? 1 : 2;
+	});
+	assert.deepEqual(queries, ['Household', 'Research']);
+	assert.deepEqual(catalog, {
+		workspaceCount: 5,
+		visibleCount: 4,
+		discoveredChoiceCount: 2,
+		shownChoiceCount: 2,
+		omittedChoiceCount: 0,
+		choices: [
+			{ id: 'area-1', kind: 'derived', label: 'Household', query: 'Household', matchingCount: 1 },
+			{ id: 'area-2', kind: 'derived', label: 'Research', query: 'Research', matchingCount: 2 }
+		]
+	});
+	const many = Array.from({ length: 30 }, (_, index) => ({ area: `Area ${String(index).padStart(2, '0')}` }));
+	const bounded = deriveGuideWorkScopeCatalog(30, many, () => 1);
+	assert.equal(bounded.discoveredChoiceCount, 30);
+	assert.equal(bounded.shownChoiceCount, 24);
+	assert.equal(bounded.omittedChoiceCount, 6);
+	assert.equal(bounded.choices.length, 24);
+	assert.throws(() => deriveGuideWorkScopeCatalog(3, visible, () => 1), /denominators/u);
+	assert.throws(() => deriveGuideWorkScopeCatalog(4, visible, () => 5), /count/u);
+});
+
+test('Projects handoff guide accepts default, derived, and honest zero-match Custom scopes', () => {
+	const all = guideFixture();
+	assert.deepEqual(webMcpChallengeGuideView(all), all);
+	const derived = selectedGuide({ id: 'area-2', kind: 'derived', label: 'Research', query: 'Research', matchingCount: 4 });
+	assert.deepEqual(webMcpChallengeGuideView(derived), derived);
+	const noMatch = selectedGuide({ id: 'custom', kind: 'custom', label: 'Custom', query: 'Definitely absent', matchingCount: 0 });
+	assert.deepEqual(webMcpChallengeGuideView(noMatch), noMatch);
+	const normalized = selectedGuide({ id: 'custom', kind: 'custom', label: 'Custom', query: '  another term  ', matchingCount: 0 });
+	assert.equal(webMcpChallengeGuideView(normalized)?.workQuery, 'another term');
+	assert.equal(webMcpChallengeGuideView(normalized)?.workScope.selected.query, 'another term');
+	const emptyCustom = selectedGuide({ id: 'custom', kind: 'custom', label: 'Custom', query: '', matchingCount: 8 });
+	assert.deepEqual(webMcpChallengeGuideView(emptyCustom), emptyCustom);
+});
+
+test('Projects handoff guide rejects malformed, duplicate, negative, and mismatched scope projections', () => {
+	const fixture = guideFixture();
+	assert.equal(webMcpChallengeGuideView({ ...fixture, workScope: undefined }), null);
+	assert.equal(webMcpChallengeGuideView({ ...fixture, steps: fixture.steps.slice(0, 2) }), null);
+	assert.equal(webMcpChallengeGuideView({ ...fixture, safety: ['Only one'] }), null);
+	assert.equal(webMcpChallengeGuideView({ ...fixture, agentBrief: 'x'.repeat(1001) }), null);
+	assert.equal(webMcpChallengeGuideView({ ...fixture, agentBrief: 'Unsafe\u0007control' }), null);
+	const duplicate = structuredClone(fixture);
+	duplicate.workScope.choices[2].id = 'area-1';
+	assert.equal(webMcpChallengeGuideView(duplicate), null);
+	const duplicateQuery = structuredClone(fixture);
+	duplicateQuery.workScope.choices[2].query = 'HOUSEHOLD';
+	assert.equal(webMcpChallengeGuideView(duplicateQuery), null);
+	const negative = structuredClone(fixture);
+	negative.workScope.selected.matchingCount = -1;
+	assert.equal(webMcpChallengeGuideView(negative), null);
+	const denominator = structuredClone(fixture);
+	denominator.workScope.visibleCount = 9;
+	assert.equal(webMcpChallengeGuideView(denominator), null);
+	const arithmetic = structuredClone(fixture);
+	 arithmetic.workScope.omittedChoiceCount = 1;
+	assert.equal(webMcpChallengeGuideView(arithmetic), null);
+	const mismatchedCount = selectedGuide({ id: 'area-2', kind: 'derived', label: 'Research', query: 'Research', matchingCount: 3 });
+	assert.equal(webMcpChallengeGuideView(mismatchedCount), null);
+	const mismatchedQuery = selectedGuide({ id: 'area-2', kind: 'derived', label: 'Research', query: 'Household', matchingCount: 4 });
+	assert.equal(webMcpChallengeGuideView(mismatchedQuery), null);
+	const emptyCustomMismatch = selectedGuide({ id: 'custom', kind: 'custom', label: 'Custom', query: '', matchingCount: 0 });
+	assert.equal(webMcpChallengeGuideView(emptyCustomMismatch), null);
+	const tooLong = selectedGuide({ id: 'custom', kind: 'custom', label: 'Custom', query: 'x'.repeat(121), matchingCount: 0 });
+	assert.equal(webMcpChallengeGuideView(tooLong), null);
+	const control = selectedGuide({ id: 'custom', kind: 'custom', label: 'Custom', query: 'line\nbreak', matchingCount: 0 });
+	assert.equal(webMcpChallengeGuideView(control), null);
+});
+
+test('Projects handoff guide descriptor is closed, read-only, live, clone-safe, and abort-aware', async () => {
 	let guide = guideFixture();
 	const tool = createWebMcpChallengeGuideTool(() => guide);
 	assert.equal(tool.name, PROJECTS_HANDOFF_GUIDE_TOOL_NAME);
@@ -78,13 +228,12 @@ test('Projects handoff guide descriptor is closed, read-only, live, and abort-aw
 		untrustedContentHint: true
 	});
 	assert.deepEqual(await tool.execute({}), guide);
-	guide = { ...guide, purpose: 'Updated visible purpose.' };
-	assert.equal((await tool.execute({})).purpose, 'Updated visible purpose.');
-	guide = { ...guide, agentBrief: 'Edited current brief.' };
-	assert.equal((await tool.execute({})).agentBrief, 'Edited current brief.');
-	guide = { ...guide, workQuery: 'Changed live Work scope' };
+	guide = selectedGuide({ id: 'area-1', kind: 'derived', label: 'Household', query: 'Household', matchingCount: 4 });
+	assert.deepEqual(await tool.execute({}), guide);
+	guide = selectedGuide({ id: 'custom', kind: 'custom', label: 'Custom', query: 'No such work', matchingCount: 0 });
 	const liveResult = await tool.execute({});
-	assert.equal(liveResult.workQuery, 'Changed live Work scope');
+	assert.equal(liveResult.workQuery, 'No such work');
+	assert.equal(liveResult.workScope.selected.matchingCount, 0);
 	assert.deepEqual(structuredClone(liveResult), liveResult);
 	await assert.rejects(tool.execute({ extra: true }), /empty object/u);
 	const controller = new AbortController();
@@ -92,94 +241,78 @@ test('Projects handoff guide descriptor is closed, read-only, live, and abort-aw
 	await assert.rejects(tool.execute({}, { signal: controller.signal }), /abort/iu);
 });
 
-test('guide reader projects the rendered guide exactly and ordinary links remain the fallback', async () => {
+test('guide reader projects live DOM scope choices, selection, and denominators exactly', async () => {
 	const fixture = guideFixture();
-	const stepElements = fixture.steps.map((step) => ({
-		querySelector(selector) {
-			if (selector === 'h2') return { textContent: step.title };
-			if (selector === 'p') return { textContent: step.description };
-			if (selector === 'a') return { getAttribute: (attribute) => attribute === 'href' ? step.href : null };
-			return null;
-		}
-	}));
-	const guide = readRenderedWebMcpChallengeGuide({
-		querySelector(selector) {
-			return selector === '[data-webmcp-challenge-guide]'
-				? { dataset: { webmcpChallengeTitle: fixture.title, webmcpChallengePurpose: fixture.purpose } }
-				: selector === '[data-agent-brief-input]'
-					? { value: fixture.agentBrief }
-					: selector === '[data-agent-work-query-input]'
-						? { value: fixture.workQuery }
-					: null;
-		},
-		querySelectorAll(selector) {
-			if (selector === '[data-webmcp-challenge-step]') return stepElements;
-			if (selector === '[data-webmcp-challenge-safety] li') return fixture.safety.map((textContent) => ({ textContent }));
-			return [];
-		}
+	const documentRef = renderedGuideDocument(fixture);
+	const tool = createWebMcpChallengeGuideTool(() => readRenderedWebMcpChallengeGuide(documentRef));
+	assert.deepEqual(await tool.execute({}), fixture);
+	documentRef.briefInput.value = 'Edited live brief.';
+	Object.assign(documentRef.scopeChooser.dataset, {
+		selectedScopeId: 'area-2',
+		selectedScopeKind: 'derived',
+		selectedScopeLabel: 'Research',
+		selectedWorkQuery: 'Research',
+		selectedMatchCount: '4'
 	});
-	assert.deepEqual(guide, fixture);
-	assert.deepEqual(await createWebMcpChallengeGuideTool(() => guide).execute({}), fixture);
+	const changed = await tool.execute({});
+	assert.equal(changed.agentBrief, 'Edited live brief.');
+	assert.deepEqual(changed.workScope.selected, {
+		id: 'area-2', kind: 'derived', label: 'Research', query: 'Research', matchingCount: 4
+	});
+	Object.assign(documentRef.scopeChooser.dataset, {
+		selectedScopeId: 'custom',
+		selectedScopeKind: 'custom',
+		selectedScopeLabel: 'Custom',
+		selectedWorkQuery: 'Definitely absent',
+		selectedMatchCount: '0'
+	});
+	const noMatch = await tool.execute({});
+	assert.equal(noMatch.workQuery, 'Definitely absent');
+	assert.equal(noMatch.workScope.selected.matchingCount, 0);
 	assert.match(pageSource, /<WornButton href=\{step\.href\} size="sm">\{step\.action\}<\/WornButton>/u);
-	assert.match(pageSource, /Reader API unavailable[\s\S]*?Copy brief[\s\S]*?three visible buttons[\s\S]*?browser-local sample remains usable without WebMCP/u);
+	assert.match(pageSource, /Reader API unavailable[\s\S]*?Copy brief[\s\S]*?three visible route buttons remain usable/u);
 });
 
-test('handoff route is prerendered and owns one public reader without navigation or write authority', () => {
+test('handoff route owns one data-backed reader without navigation, write, or model authority', () => {
 	assert.match(pageConfig, /prerender\s*=\s*true/u);
 	for (const route of ['/webmcp-challenge', '/work', '/review', '/next']) {
 		assert.match(svelteConfig, new RegExp(`prerender:[\\s\\S]*?${route.replaceAll('/', '\\/')}`, 'u'));
 	}
-	assert.match(pageSource, /registerPageTools\(document/u);
 	assert.match(pageSource, /createWebMcpChallengeGuideTool\(\(\) => readRenderedWebMcpChallengeGuide\(document\)\)/u);
-	assert.match(pageSource, /Projects workflow · guided handoff/u);
+	assert.match(pageSource, /guidePacks = \$derived\(\(\$demoState\?\.packs \?\? seedPacks\) as DemoPack\[\]\)/u);
+	assert.match(pageSource, /guideVisiblePacks = \$derived\(filterPacks\(guidePacks, 'all', ''\)\)/u);
+	assert.match(pageSource, /deriveGuideWorkScopeCatalog\([\s\S]*?\(query\) => filterPacks\(guidePacks, 'all', query\)\.length/u);
+	assert.match(pageSource, /selectedMatchingCount = \$derived\(filterPacks\(guidePacks, 'all', workQuery\)\.length\)/u);
+	assert.match(layoutSource, /shared workspace shell hydrates the one browser-local state owner[\s\S]*?refreshDemoState\(\{ reuseRecent: true \}\)/u);
+	assert.match(pageSource, /<AgentBriefEditor scopeCatalog=\{guideScopeCatalog\} bind:selectedScopeId bind:workQuery \{selectedMatchingCount\} \/>/u);
 	assert.match(pageSource, /Person: approve, save, or discard every workspace change/u);
-	assert.match(pageSource, /prepare a clear next action with an evidence note/u);
-	assert.match(pageSource, /Shared work loses time when people reconstruct blockers and next actions from scattered handoffs/u);
-	assert.match(pageSource, /browser agent narrow the same visible workspace and prepare—not decide—the next handoff/u);
-	assert.match(pageSource, /Guide reader in this browser/u);
 	assert.match(pageSource, /typeof webMcpDocument\.modelContext\?\.registerTool === 'function'/u);
-	assert.match(pageSource, /Reader API detected[\s\S]*?Leave scope empty for all visible work[\s\S]*?enter an existing work term[\s\S]*?Follow the brief on this page\.[\s\S]*?one Guide tool reads the visible guide, current brief, and optional Work scope only; it cannot navigate, save, or change workspace data[\s\S]*?does not confirm registration success/u);
-	assert.match(pageSource, /Reader API unavailable[\s\S]*?Copy brief[\s\S]*?three visible buttons[\s\S]*?browser-local sample remains usable without WebMCP/u);
-	assert.doesNotMatch(pageSource, /Chrome/u);
+	assert.doesNotMatch(pageSource, /fetch\(|apiFetch|localStorage|sessionStorage|\.click\(|goto\(/u);
+	assert.doesNotMatch(editorSource, /fetch\(|apiFetch|localStorage|sessionStorage|modelContext|goto\(/u);
+	assert.doesNotMatch(`${pageSource}\n${editorSource}`, /Garage reset|Garden study|Household|Research/u);
 	assert.match(appDocument, /Projects handoff workflow/u);
 	assert.match(appDocument, /human-controlled saves/u);
-	assert.match(appDocument, /<meta property="og:url" content="https:\/\/projects-webmcp-extension\.pages\.dev\/webmcp-challenge" \/>/u);
 	assert.match(webManifest, /read visible work, narrow review, and prepare a draft/u);
 	assert.match(rootReadme, /^Live submission: <https:\/\/projects-webmcp-extension\.pages\.dev\/webmcp-challenge>$/mu);
-	assert.match(rootReadme, /submission URL is publicly accessible without an account[\s\S]*?preview URLs remain separate/u);
-	assert.match(rootReadme, /document\.modelContext\.registerTool\(\{[\s\S]*?inputSchema:[\s\S]*?execute:/u);
-	assert.doesNotMatch(rootReadme, /^Judge URL:/mu);
-	assert.match(reviewerTests, /ChatGPT or Codex in-app browser, the demonstrated WebMCP client path/u);
 	assert.match(reviewerTests, /Public judge URL \(no account required\)/u);
-	assert.doesNotMatch(reviewerTests, /Chrome with WebMCP testing enabled|\| Hosted status \|/u);
-	assert.match(pageSource, /import AgentBriefEditor from '\$lib\/AgentBriefEditor\.svelte';/u);
-	assert.match(pageSource, /<AgentBriefEditor \/>/u);
-	assert.doesNotMatch(pageSource, /A useful handoff, in order/u);
-	assert.match(pageSource, /<dl class="challenge-facts" aria-label="Projects workflow capabilities">[\s\S]*?<dt>Page tools<\/dt><dd>7<\/dd>[\s\S]*?<dt>Actions you can undo<\/dt><dd>3<\/dd>[\s\S]*?<dt>Automatic saves<\/dt><dd>0<\/dd>[\s\S]*?<\/dl>/u);
-	assert.match(pageSource, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/u);
-	assert.match(pageSource, /\.challenge-kicker \{\s*color: var\(--worn-text-secondary\);/u);
-	assert.doesNotMatch(pageSource, /\.challenge-kicker \{[^}]*color: var\(--worn-accent\);/u);
-	assert.doesNotMatch(pageSource, /fetch\(|apiFetch|localStorage|sessionStorage|\.click\(/u);
-	for (const source of [pageSource, appDocument, webManifest]) {
-		assert.doesNotMatch(source, /judge|contest|recording|garage reset|copy prompt|run the judged path/iu);
-	}
-	assert.match(editorSource, /data-agent-brief-input/u);
-	assert.match(editorSource, /data-agent-work-query-input/u);
-	assert.match(editorSource, /Work to focus on \(optional\)/u);
-	assert.match(editorSource, /maxlength="120"/u);
-	assert.match(editorSource, /maxlength="1000"/u);
-	assert.match(editorSource, /aria-live="polite"/u);
-	assert.match(editorSource, /navigator\.clipboard\?\.writeText/u);
-	assert.match(editorSource, /briefInput\?\.focus\(\);[\s\S]*?briefInput\?\.select\(\);/u);
+	assert.match(editorSource, /data-agent-scope-chooser/u);
+	assert.match(editorSource, /data-agent-scope-choice/u);
+	assert.match(editorSource, /data-workspace-count=\{scopeCatalog\.workspaceCount\}/u);
+	assert.match(editorSource, /data-selected-work-query=\{workQuery\}/u);
+	assert.match(editorSource, /WornChip label=\{`All visible work · \$\{scopeCatalog\.visibleCount\}`\}[\s\S]*?pressed=\{selectedScopeId === 'all'\}/u);
+	assert.match(editorSource, /WornChip label="Custom…"[\s\S]*?pressed=\{selectedScopeId === 'custom'\}/u);
+	assert.match(editorSource, /\{#if selectedScopeId === 'custom'\}[\s\S]*?data-agent-work-query-input[\s\S]*?maxlength="120"/u);
+	assert.match(editorSource, /an unmatched term stays at zero/u);
+	assert.match(editorSource, /aria-live="polite" data-agent-scope-result/u);
+	assert.match(editorSource, /Local draft · not saved · workspace unchanged/u);
 	assert.match(editorSource, /@media \(max-width: 520px\)/u);
-	assert.doesNotMatch(editorSource, /fetch\(|localStorage|sessionStorage|modelContext/u);
 });
 
-test('editable Guide fallback copies optional Work scope without changing authority', () => {
+test('editable Guide fallback preserves composite copy, all semantics, and manual-copy focus', () => {
 	assert.match(editorSource, /const scopedQuery = workQuery\.trim\(\);/u);
 	assert.match(editorSource, /scopedQuery\s*\? `Brief for the browser agent:\\n\$\{brief\}\\n\\nWork to focus on:\\n\$\{scopedQuery\}`\s*:\s*brief/u);
 	assert.match(editorSource, /navigator\.clipboard\.writeText\(copyText\)/u);
-	assert.match(editorSource, /workQuery = '';/u);
+	assert.match(editorSource, /selectedScopeId = 'all';\s*workQuery = '';/u);
 	assert.match(editorSource, /brief = DEFAULT_AGENT_BRIEF;/u);
 	assert.match(editorSource, /briefInput\?\.focus\(\);[\s\S]*?briefInput\?\.select\(\);/u);
 	assert.doesNotMatch(editorSource, /fetch\(|localStorage|sessionStorage|modelContext|goto\(/u);

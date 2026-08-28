@@ -191,14 +191,17 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	}
 	const guideHtml = readFileSync(path.join(artifactRoot, 'webmcp-challenge.html'), 'utf8');
 	assert.match(guideHtml, /data-agent-brief-input/u);
-	assert.match(guideHtml, /data-agent-work-query-input/u);
+	assert.match(guideHtml, /data-agent-scope-chooser/u);
 	assert.match(guideHtml, /maxlength="1000"/u);
-	assert.match(guideHtml, /maxlength="120"/u);
-	assert.match(guideHtml, /Work to focus on \(optional\)/u);
-	assert.match(guideHtml, /Leave work scope empty for all visible work/u);
+	assert.doesNotMatch(guideHtml, /data-agent-work-query-input/u);
+	assert.match(guideHtml, /All visible work is ready by default/u);
 	assert.match(guideHtml, /Follow the brief on this page\./u);
 	assert.match(guideHtml, /Local draft · not saved · workspace unchanged/u);
-	assert.match(guideHtml, /The Guide tool reads both fields; Copy brief is the fallback/u);
+	assert.match(guideHtml, /Authority and browser status/u);
+	assert.doesNotMatch(guideHtml, /challenge-facts|Projects workflow capabilities/u);
+	assert.match(artifactText, /data-agent-work-query-input/u);
+	assert.match(artifactText, /Custom Work search term \(optional\)/u);
+	assert.match(artifactText, /an unmatched term stays at zero/u);
 	assert.doesNotMatch(guideHtml, /A useful handoff, in order/u);
 
 	const css = collectCss(artifactRoot);
@@ -244,4 +247,19 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 		);
 	}
 	for (const pattern of deniedRuntimePatterns) assert.doesNotMatch(artifactText, pattern);
+});
+
+test('built Guide publishes exact default and discovered scope denominators', () => {
+	const guideHtml = readFileSync(path.join(artifactRoot, 'webmcp-challenge.html'), 'utf8');
+	assert.match(
+		guideHtml,
+		/data-agent-scope-chooser=""[^>]*data-workspace-count="8"[^>]*data-visible-count="8"[^>]*data-discovered-choice-count="2"[^>]*data-shown-choice-count="2"[^>]*data-omitted-choice-count="0"[^>]*data-selected-scope-id="all"[^>]*data-selected-scope-kind="all"[^>]*data-selected-work-query=""[^>]*data-selected-match-count="8"/u
+	);
+	assert.match(guideHtml, /8 visible of 8 workspace/u);
+	assert.match(guideHtml, /data-scope-id="all"[^>]*data-scope-kind="all"[^>]*data-scope-match-count="8"[\s\S]*?All visible work · 8/u);
+	assert.match(guideHtml, /data-scope-kind="derived"[^>]*data-scope-label="Household"[^>]*data-scope-query="Household"[^>]*data-scope-match-count="4"[\s\S]*?Household · 4/u);
+	assert.match(guideHtml, /data-scope-kind="derived"[^>]*data-scope-label="Research"[^>]*data-scope-query="Research"[^>]*data-scope-match-count="4"[\s\S]*?Research · 4/u);
+	assert.match(guideHtml, /data-scope-id="custom"[^>]*data-scope-kind="custom"[^>]*data-scope-label="Custom"[\s\S]*?Custom…/u);
+	assert.match(guideHtml, /8 matching of 8 workspace · All visible work/u);
+	assert.match(guideHtml, /aria-pressed="true"[\s\S]*?All visible work · 8/u);
 });

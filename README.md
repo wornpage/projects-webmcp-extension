@@ -29,7 +29,7 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 
 | Page | Tool | Authority |
 | --- | --- | --- |
-| Guide | `get_projects_handoff_guide` | Read the visible guide and its current editable brief |
+| Guide | `get_projects_handoff_guide` | Read the visible guide, editable brief, discovered Work scopes, selected query, and exact workspace denominator |
 | Work | `get_current_work_view` | Read the bounded, filtered list and its denominators |
 | Work | `show_work_search` | Change only the visible search scope |
 | Review | `get_current_review_queue` | Read the bounded queue, denominators, and visible reasons each item surfaced |
@@ -39,7 +39,7 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 
 The page owns registration and teardown through `document.modelContext.registerTool`. Every successful tool invocation leaves a polite, screen-reader-announced receipt naming the tool and what it read or prepared. Read receipts mark page presentation unchanged; reversible actions describe their page-local effect; all receipts report that saved workspace changes are `None`. Consequential saves remain visible, human-owned controls.
 
-On the Guide, the browser-specific status distinguishes an exposed reader API from the ordinary fallback. An exposed API means only that this browser can offer the one public Guide reader; it does **not** claim that registration succeeded. That reader returns the visible guide and the exact current text in its editable brief. Because that text is person-supplied page content, the descriptor truthfully marks it as untrusted; the tool still has no navigation, persistence, server, telemetry, or decision authority. When the API is unavailable, Copy brief and the three ordinary route buttons remain usable.
+On the Guide, **All visible work** is selected immediately with the full workspace denominator. Compact alternatives are derived from the current workspace's area fields and counted through the same shared text search used by Work; no sample family name is embedded in the chooser logic. **Custom** reveals the bounded query input only when a person wants another visible term or an honest zero-match result. The collapsed browser status distinguishes an exposed reader API from registration success. The reader returns those exact live DOM choices, selection, counts, query, and editable brief, but has no navigation, persistence, server, telemetry, or decision authority. When the API is unavailable, Copy brief and the three ordinary route buttons remain usable.
 
 ## WebMCP implementation
 
@@ -67,7 +67,7 @@ document.modelContext.registerTool({
 });
 ```
 
-The shipped implementation adds exact-input rejection, validated current-page projections, truthful annotations, and complete descriptors in each route. The Guide projection normalizes line endings, accepts an empty brief, permits only normal text plus tabs and newlines, and limits the brief to 1,000 characters. Beside it, `workQuery` is an explicit single-line Work-search scope: it trims boundary whitespace, accepts empty for all visible work, rejects control characters, and is limited to 120 characters. It passes descriptors to [`registerPageTools`](svelte-frontend/src/lib/webmcp.mjs), which performs registration with one abort signal for the page-owned catalog. That lifecycle boundary removes the tools together when navigation leaves the page and aborts the catalog if any registration fails.
+The shipped implementation adds exact-input rejection, validated current-page projections, truthful annotations, and complete descriptors in each route. The Guide projection normalizes line endings, accepts an empty brief, permits only normal text plus tabs and newlines, and limits the brief to 1,000 characters. Its scope catalog is bounded to 24 derived choices and exposes shown, discovered, omitted, visible, matching, and workspace counts without hiding denominator changes. `workQuery` remains the deterministic Work-search mapping: All maps to empty, a derived choice maps to its displayed area text, and Custom maps to the bounded input. It trims boundary whitespace, accepts empty for all visible work, rejects control characters, and is limited to 120 characters. Duplicate, negative, inconsistent, or selected-choice-mismatched DOM projections are rejected. [`registerPageTools`](svelte-frontend/src/lib/webmcp.mjs) performs registration with one abort signal for the page-owned catalog; navigation removes the page tools together and any registration failure aborts the catalog.
 
 ## Run locally
 
@@ -96,10 +96,11 @@ The Pages build script performs the nested locked frontend install before buildi
 
 ## Reviewer path
 
-1. Open `/webmcp-challenge`. Leave **Work to focus on (optional)** empty to include all visible work, or enter an existing visible work term. Editing is not required for the default all-work path.
+1. Open `/webmcp-challenge`. Keep the selected **All visible work** default, or choose one of the displayed counted scopes. No workspace taxonomy knowledge or editing is required.
 2. In a compatible browser, ask the browser agent: `Follow the brief on this page.`
-3. Verify the Guide result includes the exact current `agentBrief` and normalized `workQuery`, and that no workspace data changed.
-4. If the reader API is unavailable, use Copy brief; a nonempty Work scope is included with the brief. Continue through the three visible route buttons instead.
+3. Verify the Guide result includes the exact current `agentBrief`, `workQuery`, selected scope, matching count, and workspace denominator, and that no workspace data changed.
+4. Optional: choose **Custom** to enter another visible term or a deliberately absent term. A no-match query must stay at zero on Work.
+5. If the reader API is unavailable, use Copy brief; a nonempty Work scope is included with the brief. Continue through the three visible route buttons instead.
 
 ## Repository boundary
 
@@ -123,7 +124,7 @@ There is no `server/`, `worker/`, Pages Functions, or hidden compatibility route
 npm run verify
 ```
 
-The gate runs Svelte diagnostics, focused WebMCP contracts, static-artifact contracts, and a production prerender. Current expected denominators are 79/79 public source paths, 40/40 WebMCP contracts, and 4/4 static-artifact contracts. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
+The gate runs Svelte diagnostics, focused WebMCP contracts, static-artifact contracts, and a production prerender. Current expected denominators are 79/79 public source paths, 42/42 WebMCP contracts, and 5/5 static-artifact contracts. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
 
 ## License and trademarks
 

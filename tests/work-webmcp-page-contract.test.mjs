@@ -20,7 +20,7 @@ const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/ro
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 
-function workView({ search = '', items = null } = {}) {
+function workView({ search = '', items = null, workspace = 4, matching = 3, blocked = 1 } = {}) {
 	const projectedItems = items ?? [
 		{ id: 'alpha / one', title: 'Alpha', workflow: 'Active', owner: 'Avery', due: null, blocker: null, purpose: 'not exposed' },
 		{ id: 'beta', title: 'Beta', workflow: 'Blocked', owner: 'Blake', due: 'Aug 25', blocker: 'Waiting for proof', memory: ['not exposed'] }
@@ -41,7 +41,7 @@ function workView({ search = '', items = null } = {}) {
 			density: 'grid',
 			notExposed: true
 		},
-		counts: { workspace: 4, matching: 3, shown: projectedItems.length, remaining: 3 - projectedItems.length, blocked: 1 },
+		counts: { workspace, matching, shown: projectedItems.length, remaining: matching - projectedItems.length, blocked },
 		items: projectedItems,
 		rawPacks: [{ secret: 'not exposed' }]
 	});
@@ -195,14 +195,17 @@ test('the Work-search descriptor declares and verifies one reversible page-local
 		work: workView({ search: 'needle' })
 	}));
 	await assert.rejects(() => mismatched.execute({ query: 'needle' }), /focus did not match/u);
-	const emptyWork = workView({ search: 'missing', items: [] });
+	const emptyWork = workView({ search: 'missing', items: [], matching: 0, blocked: 0 });
 	const empty = createShowWorkSearchTool(async () => ({
 		changed: true,
 		query: 'missing',
 		focus: { target: 'search', itemId: null, ...focusProof },
 		work: emptyWork
 	}));
-	assert.deepEqual((await empty.execute({ query: 'missing' })).focus, { target: 'search', itemId: null, ...focusProof });
+	const noMatch = await empty.execute({ query: 'missing' });
+	assert.deepEqual(noMatch.focus, { target: 'search', itemId: null, ...focusProof });
+	assert.deepEqual(noMatch.work.counts, { workspace: 4, matching: 0, shown: 0, remaining: 0, blocked: 0 });
+	assert.deepEqual(noMatch.work.items, []);
 });
 
 test('Work receipt insertion is followed by strict revalidation and failure clears the provisional receipt', async () => {
