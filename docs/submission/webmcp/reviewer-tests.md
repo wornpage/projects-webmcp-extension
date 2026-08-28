@@ -134,7 +134,9 @@ This record follows the merged reviewer-readiness work at `0284712edfd08d3f5cf02
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.
-   - Discover `get_webmcp_challenge_guide`.
+   - Read **Guide reader in this browser** before using a tool. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The one Guide reader can read the visible guide only and cannot navigate, save, or change workspace data.
+   - If it says `Reader API unavailable`, use the ordinary judge path instead: copy the prompt and follow the three visible buttons. The browser-local sample remains usable without WebMCP.
+   - In a compatible browser, discover `get_webmcp_challenge_guide`.
    - Confirm its result matches the visible three-step prompt and safety copy.
 2. Open `/work`.
    - Discover `get_current_work_view` and `show_work_search` only.

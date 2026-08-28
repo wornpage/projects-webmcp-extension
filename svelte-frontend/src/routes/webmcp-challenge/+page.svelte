@@ -35,6 +35,7 @@
 		'Person: approve, save, or discard every workspace change.'
 	] as const;
 	let copyStatus = $state('');
+	let webMcpGuideReaderAvailable = $state(false);
 	let webMcpGuideReceipt = $state<{
 		summary: string;
 		cells: Array<{ label: string; value: string }>;
@@ -50,9 +51,14 @@
 		}
 	}
 
-	onMount(() => registerPageTools(document, [
-		createWebMcpChallengeGuideTool(() => readRenderedWebMcpChallengeGuide(document))
-	], {
+	onMount(() => {
+		// This is intentionally capability detection, not a registration-success claim.
+		// registerPageTools continues to own registration, failure handling, and teardown.
+		const webMcpDocument = document as Document & { modelContext?: { registerTool?: unknown } };
+		webMcpGuideReaderAvailable = typeof webMcpDocument.modelContext?.registerTool === 'function';
+		return registerPageTools(document, [
+			createWebMcpChallengeGuideTool(() => readRenderedWebMcpChallengeGuide(document))
+		], {
 		onInvocationError: async () => {
 			webMcpGuideReceipt = null;
 			await tick();
@@ -73,7 +79,8 @@
 			};
 			await tick();
 		}
-	}));
+		});
+	});
 </script>
 
 <svelte:head>
@@ -95,7 +102,7 @@
 		<div class="challenge-hero">
 			<div class="challenge-intro">
 				<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
-				<p class="challenge-purpose">A browser agent reads and narrows the same work you see, then prepares an unsaved next action while you keep the final say.</p>
+				<p class="challenge-purpose">Shared work loses time when people reconstruct blockers and next actions from scattered handoffs. Wornpage Projects lets a browser agent narrow the same visible workspace and prepare—not decide—the next handoff.</p>
 				<dl class="challenge-facts" aria-label="What the demo allows">
 					<div><dt>Page tools</dt><dd>7</dd></div>
 					<div><dt>Actions you can undo</dt><dd>3</dd></div>
@@ -145,9 +152,14 @@
 				</ul>
 			</section>
 
-			<p class="challenge-browser-note">
-				Open this demo in the ChatGPT or Codex in-app browser for the demonstrated WebMCP path. If WebMCP is unavailable, the ordinary page and browser-local sample remain usable.
-			</p>
+			<section class="challenge-browser-note" data-webmcp-guide-reader-status aria-live="polite" aria-labelledby="challenge-browser-note-title">
+				<h2 id="challenge-browser-note-title">Guide reader in this browser</h2>
+				{#if webMcpGuideReaderAvailable}
+					<p><strong>Reader API detected.</strong> This browser exposes the Guide reader API. Its one tool reads this visible guide only; it cannot navigate, save, or change workspace data. This status does not confirm registration success.</p>
+				{:else}
+					<p><strong>Reader API unavailable.</strong> Use the ordinary judge path: copy the prompt and follow the three visible buttons. The browser-local sample remains usable without WebMCP.</p>
+				{/if}
+			</section>
 		</div>
 	</div>
 </WornPage>
@@ -274,8 +286,7 @@
 		font-size: 17px;
 		margin: 0;
 	}
-	.challenge-steps p,
-	.challenge-browser-note {
+	.challenge-steps p {
 		color: var(--worn-text-secondary);
 		font-size: 15px;
 		line-height: 1.55;
@@ -298,8 +309,17 @@
 	}
 	.challenge-browser-note {
 		border-left: 3px solid var(--worn-accent);
-		margin: 0;
 		padding-left: 12px;
+	}
+	.challenge-browser-note h2 {
+		font-size: 14px;
+		margin: 0 0 8px;
+	}
+	.challenge-browser-note p {
+		color: var(--worn-text-secondary);
+		font-size: 15px;
+		line-height: 1.55;
+		margin: 0;
 	}
 	@media (max-width: 860px) {
 		.challenge-hero,

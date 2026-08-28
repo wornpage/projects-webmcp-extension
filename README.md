@@ -39,6 +39,8 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 
 The page owns registration and teardown through `document.modelContext.registerTool`. Every successful tool invocation leaves a polite, screen-reader-announced receipt naming the tool and what it read or prepared. Read receipts mark page presentation unchanged; reversible actions describe their page-local effect; all receipts report that saved workspace changes are `None`. Consequential saves remain visible, human-owned controls.
 
+On the Guide, the browser-specific status distinguishes an exposed reader API from the ordinary fallback. An exposed API means only that this browser can offer the one public Guide reader; it does **not** claim that registration succeeded. That reader returns the visible guide and has no navigation, persistence, server, telemetry, or decision authority. When the API is unavailable, the same prompt and three ordinary route buttons remain the judge path.
+
 ## WebMCP implementation
 
 The challenge documentation's `search_products` descriptor illustrates the imperative API shape. Wornpage Projects registers project-specific tools instead. A minimal direct registration of the Guide reader has that same shape:
@@ -73,7 +75,7 @@ npm run verify
 npm --prefix svelte-frontend run dev
 ```
 
-Open the URL printed by Vite, then visit `/webmcp-challenge` in the ChatGPT or Codex in-app browser for WebMCP tool discovery. If WebMCP is unavailable, the ordinary page remains usable with browser-local sample data.
+Open the URL printed by Vite, then visit `/webmcp-challenge` in a compatible browser for WebMCP tool discovery. The Guide reports whether the reader API is exposed without treating that as registration proof. If it is unavailable, the ordinary page remains usable with browser-local sample data.
 
 `npm run build` creates the complete static deployment in `dist/static-publish`. That directory can be uploaded directly to Cloudflare Pages; no Pages Functions or Worker are required.
 
