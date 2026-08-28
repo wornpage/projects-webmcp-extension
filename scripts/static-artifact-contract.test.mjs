@@ -172,6 +172,13 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	assert.equal(existsSync(path.join(artifactRoot, 'functions')), false);
 	assert.equal(collectFiles(artifactRoot).some((file) => file.endsWith('.map')), false);
 	assert.ok(existsSync(path.join(artifactRoot, 'THIRD_PARTY_LICENSES.txt')));
+	const guideArtifact = readFileSync(path.join(artifactRoot, 'webmcp-challenge.html'), 'utf8');
+	assert.match(guideArtifact, /data-agent-brief-editor/u);
+	assert.match(guideArtifact, /Brief the browser agent/u);
+	assert.match(guideArtifact, /Use the WebMCP tools on Work, Review, and Next/u);
+	assert.match(guideArtifact, /Local draft · not saved · workspace unchanged/u);
+	assert.match(guideArtifact, />Copy brief</u);
+	assert.doesNotMatch(guideArtifact, /A useful handoff, in order/u);
 	assert.match(
 		readFileSync(path.join(artifactRoot, '404.html'), 'utf8'),
 		/<meta name="robots" content="noindex,nofollow,noarchive"/u

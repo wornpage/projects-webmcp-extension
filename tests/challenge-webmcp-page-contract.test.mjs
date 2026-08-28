@@ -13,6 +13,7 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pageSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/webmcp-challenge/+page.svelte'), 'utf8');
+const agentBriefEditorSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/AgentBriefEditor.svelte'), 'utf8');
 const pageConfig = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.ts'), 'utf8');
 const svelteConfig = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/svelte.config.js'), 'utf8');
 const appDocument = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/app.html'), 'utf8');
@@ -126,13 +127,21 @@ test('handoff route is prerendered and owns one public reader without navigation
 	assert.match(reviewerTests, /ChatGPT or Codex in-app browser, the demonstrated WebMCP client path/u);
 	assert.match(reviewerTests, /Public judge URL \(no account required\)/u);
 	assert.doesNotMatch(reviewerTests, /Chrome with WebMCP testing enabled|\| Hosted status \|/u);
-	assert.match(pageSource, /<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">[\s\S]*?<h2 id="challenge-prompt-title">A useful handoff, in order<\/h2>[\s\S]*?<\/section>/u);
+	assert.match(pageSource, /const defaultAgentBrief = 'Use the WebMCP tools on Work, Review, and Next[\s\S]*?Do not save or change workspace data\.'/u);
+	assert.match(pageSource, /<AgentBriefEditor initialValue=\{defaultAgentBrief\} \/>/u);
+	assert.match(agentBriefEditorSource, /<textarea[\s\S]*?value=\{brief\}[\s\S]*?oninput=\{updateBrief\}[\s\S]*?data-agent-brief-input/u);
+	assert.match(agentBriefEditorSource, /Local draft · not saved · workspace unchanged/u);
+	assert.match(agentBriefEditorSource, /data-agent-brief-copy onclick=\{copyBrief\}>Copy brief<\/WornButton>/u);
+	assert.match(agentBriefEditorSource, /data-agent-brief-reset onclick=\{resetBrief\}>Reset<\/WornButton>/u);
+	assert.match(agentBriefEditorSource, /role="status" aria-live="polite" aria-atomic="true"/u);
+	assert.match(agentBriefEditorSource, /briefField\?\.focus\(\);[\s\S]*?briefField\?\.select\(\);/u);
+	assert.doesNotMatch(agentBriefEditorSource, /fetch\(|localStorage|sessionStorage|document\.modelContext/u);
 	assert.match(pageSource, /<dl class="challenge-facts" aria-label="Projects workflow capabilities">[\s\S]*?<dt>Page tools<\/dt><dd>7<\/dd>[\s\S]*?<dt>Actions you can undo<\/dt><dd>3<\/dd>[\s\S]*?<dt>Automatic saves<\/dt><dd>0<\/dd>[\s\S]*?<\/dl>/u);
 	assert.match(pageSource, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/u);
 	assert.match(pageSource, /\.challenge-kicker \{\s*color: var\(--worn-text-secondary\);/u);
 	assert.doesNotMatch(pageSource, /\.challenge-kicker \{[^}]*color: var\(--worn-accent\);/u);
 	assert.doesNotMatch(pageSource, /fetch\(|apiFetch|localStorage|sessionStorage|\.click\(/u);
-	for (const source of [pageSource, appDocument, webManifest]) {
+	for (const source of [pageSource, agentBriefEditorSource, appDocument, webManifest]) {
 		assert.doesNotMatch(source, /judge|contest|recording|garage reset|copy prompt|run the judged path/iu);
 	}
 });

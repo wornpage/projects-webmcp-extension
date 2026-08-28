@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import AgentBriefEditor from '$lib/AgentBriefEditor.svelte';
 	import { WornButton, WornPage, WornReceipt } from '$lib/components';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import {
@@ -33,6 +34,7 @@
 		'Agent: change page-local scope and prepare an unsaved draft.',
 		'Person: approve, save, or discard every workspace change.'
 	] as const;
+	const defaultAgentBrief = 'Use the WebMCP tools on Work, Review, and Next to inspect the visible project state, narrow the items that need attention, and prepare an evidence-based next action for my review. Do not save or change workspace data.';
 	let webMcpGuideReaderAvailable = $state(false);
 	let webMcpGuideReceipt = $state<{
 		summary: string;
@@ -97,10 +99,7 @@
 					<div><dt>Automatic saves</dt><dd>0</dd></div>
 				</dl>
 			</div>
-			<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">
-				<h2 id="challenge-prompt-title">A useful handoff, in order</h2>
-				<p>Start with the work that is already visible, explain what needs attention, and prepare a draft for the person who owns the decision.</p>
-			</section>
+			<AgentBriefEditor initialValue={defaultAgentBrief} />
 		</div>
 
 		{#if webMcpGuideReceipt}
@@ -202,13 +201,6 @@
 		margin: 0;
 		order: 1;
 	}
-	.challenge-prompt {
-		background: var(--worn-bg-secondary);
-		border: 1px solid var(--worn-border);
-		border-radius: var(--worn-radius);
-		padding: 16px;
-	}
-	.challenge-prompt h2,
 	.challenge-safety h2 {
 		font-size: 14px;
 		margin: 0 0 8px;
