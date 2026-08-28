@@ -1,4 +1,4 @@
-// The challenge landing page keeps behavior in one external file so its CSP
+// The landing page keeps behavior in one external file so its CSP
 // can reject inline scripts.
 (function () {
   var footerScope = document.getElementById("lp-footer-scope");
@@ -19,9 +19,9 @@
   var timer = null;
   var index = -1;
   var stepNotes = [
-    "Observed the exact visible queue — Garage reset: sort shelves is blocked, waiting on storage bins.",
-    "Narrowed Work and Review to Garage-reset items — the denominators stay visible and workspace data is unchanged.",
-    "Prepared “Confirm storage bin delivery” because clearing the floor is already done — the draft is still unsaved.",
+    "Observed the exact visible queue — a client handoff is blocked while details are pending.",
+    "Narrowed Work and Review to the relevant items — the denominators stay visible and workspace data is unchanged.",
+    "Prepared a next action with an evidence note — the draft is still unsaved.",
     "Decision stays with the person — approve and save the draft, edit it, or discard it."
   ];
 
