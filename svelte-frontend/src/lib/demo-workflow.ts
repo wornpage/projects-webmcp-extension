@@ -414,6 +414,7 @@ export function filterPacks(
 		const memory = (pack.memory || []).map((note) => activityTextWithoutActor(note)).join(' ');
 		return [
 			pack.title,
+			pack.type,
 			pack.next,
 			pack.owner,
 			pack.due,

@@ -18,8 +18,9 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/work-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
+const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 
-function workView({ search = '', items = null } = {}) {
+function workView({ search = '', items = null, workspace = 4, matching = 3, blocked = 1 } = {}) {
 	const projectedItems = items ?? [
 		{ id: 'alpha / one', title: 'Alpha', workflow: 'Active', owner: 'Avery', due: null, blocker: null, purpose: 'not exposed' },
 		{ id: 'beta', title: 'Beta', workflow: 'Blocked', owner: 'Blake', due: 'Aug 25', blocker: 'Waiting for proof', memory: ['not exposed'] }
@@ -40,7 +41,7 @@ function workView({ search = '', items = null } = {}) {
 			density: 'grid',
 			notExposed: true
 		},
-		counts: { workspace: 4, matching: 3, shown: projectedItems.length, remaining: 3 - projectedItems.length, blocked: 1 },
+		counts: { workspace, matching, shown: projectedItems.length, remaining: matching - projectedItems.length, blocked },
 		items: projectedItems,
 		rawPacks: [{ secret: 'not exposed' }]
 	});
@@ -194,14 +195,17 @@ test('the Work-search descriptor declares and verifies one reversible page-local
 		work: workView({ search: 'needle' })
 	}));
 	await assert.rejects(() => mismatched.execute({ query: 'needle' }), /focus did not match/u);
-	const emptyWork = workView({ search: 'missing', items: [] });
+	const emptyWork = workView({ search: 'missing', items: [], matching: 0, blocked: 0 });
 	const empty = createShowWorkSearchTool(async () => ({
 		changed: true,
 		query: 'missing',
 		focus: { target: 'search', itemId: null, ...focusProof },
 		work: emptyWork
 	}));
-	assert.deepEqual((await empty.execute({ query: 'missing' })).focus, { target: 'search', itemId: null, ...focusProof });
+	const noMatch = await empty.execute({ query: 'missing' });
+	assert.deepEqual(noMatch.focus, { target: 'search', itemId: null, ...focusProof });
+	assert.deepEqual(noMatch.work.counts, { workspace: 4, matching: 0, shown: 0, remaining: 0, blocked: 0 });
+	assert.deepEqual(noMatch.work.items, []);
 });
 
 test('Work receipt insertion is followed by strict revalidation and failure clears the provisional receipt', async () => {
@@ -276,4 +280,11 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);
 	assert.doesNotMatch(`${routeSource}\n${helperSource}\n${registrationSource}`, /\/api\/mcp-proxy|jsonrpc|tools\/call|unregisterTool/u);
 	assert.doesNotMatch(helperSource, /\.\.\.(?:pack|item|work)|purpose:|memory:|sources:|activity:/u);
+});
+
+test('Work text search includes the visible work type with every existing search field', () => {
+	const searchHaystack = workflowSource.match(/return \[\s*pack\.title,[\s\S]*?memory\s*\]\s*\.join\(' '\)\.toLowerCase\(\)\.includes\(q\);/u)?.[0] ?? '';
+	for (const field of ['pack.title', 'pack.type', 'pack.next', 'pack.owner', 'pack.due', 'pack.blocker', 'pack.area', "(pack.sources || []).join(' ')", 'pack.purpose', 'memory']) {
+		assert.match(searchHaystack, new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
+	}
 });

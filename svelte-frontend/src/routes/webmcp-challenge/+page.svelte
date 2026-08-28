@@ -1,10 +1,15 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { WornButton, WornPage, WornReceipt } from '$lib/components';
+	import { WornAccordion, WornButton, WornPage, WornReceipt } from '$lib/components';
+	import AgentBriefEditor from '$lib/AgentBriefEditor.svelte';
+	import { demoState } from '$lib/demo-client';
+	import { filterPacks, type DemoPack } from '$lib/demo-workflow';
 	import { registerPageTools } from '$lib/webmcp.mjs';
+	import seedPacks from '../../../../data/demo-packs.json';
 	import {
 		PROJECTS_HANDOFF_GUIDE_TOOL_NAME,
 		createWebMcpChallengeGuideTool,
+		deriveGuideWorkScopeCatalog,
 		readRenderedWebMcpChallengeGuide
 	} from './webmcp-challenge-webmcp.mjs';
 
@@ -39,6 +44,16 @@
 		cells: Array<{ label: string; value: string }>;
 	} | null>(null);
 	let webMcpInvocationCount = $state(0);
+	let selectedScopeId = $state('all');
+	let workQuery = $state('');
+	let guidePacks = $derived(($demoState?.packs ?? seedPacks) as DemoPack[]);
+	let guideVisiblePacks = $derived(filterPacks(guidePacks, 'all', ''));
+	let guideScopeCatalog = $derived.by(() => deriveGuideWorkScopeCatalog(
+		guidePacks.length,
+		guideVisiblePacks,
+		(query) => filterPacks(guidePacks, 'all', query).length
+	));
+	let selectedMatchingCount = $derived(filterPacks(guidePacks, 'all', workQuery).length);
 
 	onMount(() => {
 		// This is intentionally capability detection, not a registration-success claim.
@@ -54,14 +69,26 @@
 		},
 		onResult: async ({ toolName, result }) => {
 			if (toolName !== PROJECTS_HANDOFF_GUIDE_TOOL_NAME) return;
-			const guide = result as { steps?: unknown[] };
+			const guide = result as {
+				steps?: unknown[];
+				agentBrief?: unknown;
+				workQuery?: unknown;
+				workScope?: {
+					workspaceCount?: unknown;
+					selected?: { label?: unknown; matchingCount?: unknown };
+				};
+			};
 			webMcpInvocationCount += 1;
 			webMcpGuideReceipt = {
-				summary: 'WebMCP read the Projects handoff guide.',
+				summary: 'WebMCP read the current Guide, brief, and visible Work scope.',
 				cells: [
 					{ label: 'Tool', value: toolName },
 					{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
 					{ label: 'What it read', value: `${guide.steps?.length ?? 0} workflow steps and the visible authority boundary` },
+					{ label: 'Editable brief', value: typeof guide.agentBrief === 'string' ? guide.agentBrief : 'Unavailable' },
+					{ label: 'Work scope', value: typeof guide.workScope?.selected?.label === 'string' ? guide.workScope.selected.label : 'Unavailable' },
+					{ label: 'Work query', value: typeof guide.workQuery === 'string' && guide.workQuery ? guide.workQuery : 'Any text' },
+					{ label: 'Matches', value: typeof guide.workScope?.selected?.matchingCount === 'number' && typeof guide.workScope.workspaceCount === 'number' ? `${guide.workScope.selected.matchingCount} of ${guide.workScope.workspaceCount} workspace` : 'Unavailable' },
 					{ label: 'Page-local presentation', value: 'Unchanged' },
 					{ label: 'Saved workspace changes', value: 'None' }
 				]
@@ -90,17 +117,9 @@
 		<div class="challenge-hero">
 			<div class="challenge-intro">
 				<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
-				<p class="challenge-purpose">Shared work loses time when people reconstruct blockers and next actions from scattered handoffs. Wornpage Projects lets a browser agent narrow the same visible workspace and prepare—not decide—the next handoff.</p>
-				<dl class="challenge-facts" aria-label="Projects workflow capabilities">
-					<div><dt>Page tools</dt><dd>7</dd></div>
-					<div><dt>Actions you can undo</dt><dd>3</dd></div>
-					<div><dt>Automatic saves</dt><dd>0</dd></div>
-				</dl>
+				<p class="challenge-purpose">Choose visible work and edit the brief; the browser agent can inspect and prepare while you control Save.</p>
 			</div>
-			<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">
-				<h2 id="challenge-prompt-title">A useful handoff, in order</h2>
-				<p>Start with the work that is already visible, explain what needs attention, and prepare a draft for the person who owns the decision.</p>
-			</section>
+			<AgentBriefEditor scopeCatalog={guideScopeCatalog} bind:selectedScopeId bind:workQuery {selectedMatchingCount} />
 		</div>
 
 		{#if webMcpGuideReceipt}
@@ -126,25 +145,27 @@
 			{/each}
 		</ol>
 
-		<div class="challenge-boundary-grid">
-			<section class="challenge-safety" data-webmcp-challenge-safety aria-labelledby="challenge-safety-title">
-				<h2 id="challenge-safety-title">Authority boundary</h2>
-				<ul>
-					{#each safety as guarantee (guarantee)}
-						<li>{guarantee}</li>
-					{/each}
-				</ul>
-			</section>
+		<WornAccordion label="Authority and browser status">
+			<div class="challenge-boundary-grid">
+				<section class="challenge-safety" data-webmcp-challenge-safety aria-labelledby="challenge-safety-title">
+					<h2 id="challenge-safety-title">Authority boundary</h2>
+					<ul>
+						{#each safety as guarantee (guarantee)}
+							<li>{guarantee}</li>
+						{/each}
+					</ul>
+				</section>
 
-			<section class="challenge-browser-note" data-webmcp-guide-reader-status aria-live="polite" aria-labelledby="challenge-browser-note-title">
-				<h2 id="challenge-browser-note-title">Guide reader in this browser</h2>
-				{#if webMcpGuideReaderAvailable}
-					<p><strong>Reader API detected.</strong> This browser exposes the Guide reader API. Its one tool reads this visible guide only; it cannot navigate, save, or change workspace data. This status does not confirm registration success.</p>
-				{:else}
-					<p><strong>Reader API unavailable.</strong> Follow the three visible buttons instead. The browser-local sample remains usable without WebMCP.</p>
-				{/if}
-			</section>
-		</div>
+				<section class="challenge-browser-note" data-webmcp-guide-reader-status aria-live="polite" aria-labelledby="challenge-browser-note-title">
+					<h2 id="challenge-browser-note-title">Guide reader in this browser</h2>
+					{#if webMcpGuideReaderAvailable}
+						<p><strong>Reader API detected.</strong> The Guide tool reads the visible guide, current brief, scope choices, and exact denominator only; it cannot navigate, save, or change workspace data. Detection does not confirm registration success.</p>
+					{:else}
+						<p><strong>Reader API unavailable.</strong> Copy brief keeps any nonempty Work scope, and the three visible route buttons remain usable.</p>
+					{/if}
+				</section>
+			</div>
+		</WornAccordion>
 	</div>
 </WornPage>
 
@@ -179,36 +200,6 @@
 		line-height: 1.6;
 		margin: 0;
 	}
-	.challenge-facts {
-		display: grid;
-		gap: 8px;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-	.challenge-facts div {
-		border-top: 2px solid var(--worn-accent);
-		display: grid;
-		gap: 2px;
-		padding-top: 8px;
-	}
-	.challenge-facts dt {
-		color: var(--worn-text-secondary);
-		font-size: 13px;
-		line-height: 1.45;
-		order: 2;
-	}
-	.challenge-facts dd {
-		font-family: var(--font-typewriter);
-		font-size: 20px;
-		margin: 0;
-		order: 1;
-	}
-	.challenge-prompt {
-		background: var(--worn-bg-secondary);
-		border: 1px solid var(--worn-border);
-		border-radius: var(--worn-radius);
-		padding: 16px;
-	}
-	.challenge-prompt h2,
 	.challenge-safety h2 {
 		font-size: 14px;
 		margin: 0 0 8px;
@@ -288,11 +279,6 @@
 			grid-template-columns: minmax(0, 1fr);
 		}
 		.challenge-steps {
-			grid-template-columns: minmax(0, 1fr);
-		}
-	}
-	@media (max-width: 520px) {
-		.challenge-facts {
 			grid-template-columns: minmax(0, 1fr);
 		}
 	}

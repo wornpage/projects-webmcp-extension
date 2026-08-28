@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { toasts } from '$lib/demo-client';
+	import { refreshDemoState, toasts } from '$lib/demo-client';
 	import WornToast from '$lib/components/WornToast.svelte';
 
 	type RouteItem = {
@@ -18,6 +19,12 @@
 	let { children }: { children: any } = $props();
 	let pathname = $derived($page.url.pathname);
 	let routeLabel = $derived(ROUTES.find((item) => item.href === pathname)?.label ?? 'WebMCP demo');
+
+	onMount(() => {
+		// The shared workspace shell hydrates the one browser-local state owner.
+		// Guide only derives and renders that state; it owns no fetch or storage path.
+		void refreshDemoState({ reuseRecent: true });
+	});
 
 	function dismissToast(id: string) {
 		toasts.update((items) => items.filter((item) => item.id !== id));

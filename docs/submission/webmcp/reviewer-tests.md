@@ -121,23 +121,30 @@ The root and frontend locked installs completed from empty dependency directorie
 
 Supported-client denominator: 1 tested / 1 supported. Independent Chrome-family denominator: 0 observable / 3 attempted paths (connected Chrome, local Chrome, installed Edge). The independent denominator is deliberately not combined with the in-app browser pass and does not imply Chrome WebMCP support.
 
-## Current merged reviewer-readiness state — August 26, 2026
+## Current assigned-worktree reviewer-readiness state — August 28, 2026
 
-This record follows the merged reviewer-readiness work at `0284712edfd08d3f5cf02b9d76ac11b3d1297075`. It supersedes the current-source counts in the earlier dated records without rewriting their historical observations.
+This record covers the discoverable Guide scope rework on top of the earlier reviewer-readiness work. It supersedes the current-source counts in the earlier dated records without rewriting their historical observations.
 
 | Gate | Current result |
 | --- | --- |
-| Public source boundary | 77 tracked public paths after removing the inactive GitHub Actions workflow; no replacement CI or compatibility path remains. |
-| Local automated gate | `npm run verify` passed with 0 Svelte errors, 0 warnings, 25 WebMCP contracts, 4 static-artifact contracts, and a completed static build. |
+| Public source boundary | 79 tracked public paths, including the route-owned editable Guide brief and scope chooser; no replacement CI or compatibility path remains. |
+| Local automated gate | `npm run verify` passes with 0 Svelte errors, 0 warnings, 42 WebMCP contracts, 5 static-artifact contracts, and a completed static build. |
+| Guide default | `All visible work` is selected immediately and shows 8 matching of 8 workspace in the current sample. |
+| Discovered choices | The current sample renders `Household · 4` and `Research · 4` from observed area data and Work's shared search counter; these names are not fixed chooser behavior. |
+| Custom truth | Custom keeps the 120-character/control-character validation and projects an unmatched term as 0 matching of 8 workspace without fallback or invented work. |
 | Focused arrival state | `/work?focus=garage-reset-sort-shelves` focuses and centers the matching card, applies a selected-surface wash, accent rail, 4px ring, and `Focused item` label for 4.2 seconds, then removes the arrival treatment while visible keyboard focus remains. |
 
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.
-   - Read **Guide reader in this browser** before using a tool. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The one Guide reader can read the visible guide only and cannot navigate, save, or change workspace data.
-   - If it says `Reader API unavailable`, use the ordinary judge path instead: copy the prompt and follow the three visible buttons. The browser-local sample remains usable without WebMCP.
+   - Keep **All visible work** selected. It is the default and displays its matching count beside the explicit workspace denominator; no taxonomy knowledge or editing is needed.
+   - Ask the browser agent: `Follow the brief on this page.` Verify the returned projection contains the exact default `agentBrief`, empty `workQuery`, selected All scope, 8 matching, and 8 workspace for the current sample.
+   - Choose one displayed alternative. In the current sample, the observed data-backed choices are `Household · 4` and `Research · 4`; verify the selected label, deterministic query, 4 matching, and 8 workspace agree in the visible Guide and tool result.
+   - Optional Custom variation: choose **Custom**, enter `Definitely absent work term`, then ask `Follow the brief on this page.` Verify the Guide returns the exact normalized query with 0 matching of 8 workspace and Work reports 0 matching and 0 shown, preserves the full denominator, and invents no result.
+   - Expand **Authority and browser status** only when needed. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The Guide reader cannot navigate, save, or change workspace data.
+   - If it says `Reader API unavailable`, use Copy brief and follow the three visible buttons. A nonempty derived or Custom scope must remain in the copied instructions.
    - In a compatible browser, discover `get_projects_handoff_guide`.
-   - Confirm its result matches the visible three-step prompt and safety copy.
+   - Confirm its result matches the visible three-step workflow, safety copy, current editable brief, every displayed scope choice and count, the selected query, and the workspace denominator.
 2. Open `/work`.
    - Discover `get_current_work_view` and `show_work_search` only.
    - Read the view; verify workspace, matching, shown, and remaining denominators are explicit.
