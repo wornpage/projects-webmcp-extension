@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { WornButton, WornPage, WornReceipt } from '$lib/components';
+	import AgentBriefEditor from '$lib/AgentBriefEditor.svelte';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import {
 		PROJECTS_HANDOFF_GUIDE_TOOL_NAME,
@@ -54,14 +55,15 @@
 		},
 		onResult: async ({ toolName, result }) => {
 			if (toolName !== PROJECTS_HANDOFF_GUIDE_TOOL_NAME) return;
-			const guide = result as { steps?: unknown[] };
+			const guide = result as { steps?: unknown[]; agentBrief?: unknown };
 			webMcpInvocationCount += 1;
 			webMcpGuideReceipt = {
-				summary: 'WebMCP read the Projects handoff guide.',
+				summary: 'WebMCP read the current Guide and editable brief.',
 				cells: [
 					{ label: 'Tool', value: toolName },
 					{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
 					{ label: 'What it read', value: `${guide.steps?.length ?? 0} workflow steps and the visible authority boundary` },
+					{ label: 'Editable brief', value: typeof guide.agentBrief === 'string' ? guide.agentBrief : 'Unavailable' },
 					{ label: 'Page-local presentation', value: 'Unchanged' },
 					{ label: 'Saved workspace changes', value: 'None' }
 				]
@@ -97,10 +99,7 @@
 					<div><dt>Automatic saves</dt><dd>0</dd></div>
 				</dl>
 			</div>
-			<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">
-				<h2 id="challenge-prompt-title">A useful handoff, in order</h2>
-				<p>Start with the work that is already visible, explain what needs attention, and prepare a draft for the person who owns the decision.</p>
-			</section>
+			<AgentBriefEditor />
 		</div>
 
 		{#if webMcpGuideReceipt}
@@ -139,9 +138,9 @@
 			<section class="challenge-browser-note" data-webmcp-guide-reader-status aria-live="polite" aria-labelledby="challenge-browser-note-title">
 				<h2 id="challenge-browser-note-title">Guide reader in this browser</h2>
 				{#if webMcpGuideReaderAvailable}
-					<p><strong>Reader API detected.</strong> This browser exposes the Guide reader API. Its one tool reads this visible guide only; it cannot navigate, save, or change workspace data. This status does not confirm registration success.</p>
+					<p><strong>Reader API detected.</strong> This browser exposes the Guide reader API. Its one tool reads this visible guide and current editable brief only; it cannot navigate, save, or change workspace data. This status does not confirm registration success.</p>
 				{:else}
-					<p><strong>Reader API unavailable.</strong> Follow the three visible buttons instead. The browser-local sample remains usable without WebMCP.</p>
+					<p><strong>Reader API unavailable.</strong> Copy the brief, then follow the three visible buttons instead. The browser-local sample remains usable without WebMCP.</p>
 				{/if}
 			</section>
 		</div>
@@ -202,13 +201,6 @@
 		margin: 0;
 		order: 1;
 	}
-	.challenge-prompt {
-		background: var(--worn-bg-secondary);
-		border: 1px solid var(--worn-border);
-		border-radius: var(--worn-radius);
-		padding: 16px;
-	}
-	.challenge-prompt h2,
 	.challenge-safety h2 {
 		font-size: 14px;
 		margin: 0 0 8px;

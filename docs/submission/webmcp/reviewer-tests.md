@@ -127,17 +127,18 @@ This record follows the merged reviewer-readiness work at `0284712edfd08d3f5cf02
 
 | Gate | Current result |
 | --- | --- |
-| Public source boundary | 77 tracked public paths after removing the inactive GitHub Actions workflow; no replacement CI or compatibility path remains. |
-| Local automated gate | `npm run verify` passed with 0 Svelte errors, 0 warnings, 25 WebMCP contracts, 4 static-artifact contracts, and a completed static build. |
+| Public source boundary | 79 tracked public paths, including the route-owned editable Guide brief; no replacement CI or compatibility path remains. |
+| Local automated gate | `npm run verify` passed with 0 Svelte errors, 0 warnings, 38 WebMCP contracts, 4 static-artifact contracts, and a completed static build. |
 | Focused arrival state | `/work?focus=garage-reset-sort-shelves` focuses and centers the matching card, applies a selected-surface wash, accent rail, 4px ring, and `Focused item` label for 4.2 seconds, then removes the arrival treatment while visible keyboard focus remains. |
 
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.
-   - Read **Guide reader in this browser** before using a tool. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The one Guide reader can read the visible guide only and cannot navigate, save, or change workspace data.
-   - If it says `Reader API unavailable`, use the ordinary judge path instead: copy the prompt and follow the three visible buttons. The browser-local sample remains usable without WebMCP.
+   - Read **Guide reader in this browser** before using a tool. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The one Guide reader can read the visible guide and its current editable brief only; it cannot navigate, save, or change workspace data.
+   - Edit the brief, then ask the browser agent: `Follow the brief on this page.` Verify that the returned projection contains the exact current `agentBrief`.
+   - If it says `Reader API unavailable`, use Copy brief and follow the three visible buttons. The browser-local sample remains usable without WebMCP.
    - In a compatible browser, discover `get_projects_handoff_guide`.
-   - Confirm its result matches the visible three-step prompt and safety copy.
+   - Confirm its result matches the visible three-step workflow, safety copy, and current editable brief.
 2. Open `/work`.
    - Discover `get_current_work_view` and `show_work_search` only.
    - Read the view; verify workspace, matching, shown, and remaining denominators are explicit.

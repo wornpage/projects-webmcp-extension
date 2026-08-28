@@ -12,6 +12,7 @@ const TEXT_LIMIT = 1_000;
  */
 export function readRenderedWebMcpChallengeGuide(documentRef) {
 	const root = documentRef.querySelector('[data-webmcp-challenge-guide]');
+	const agentBriefInput = documentRef.querySelector('[data-agent-brief-input]');
 	const renderedSteps = Array.from(documentRef.querySelectorAll('[data-webmcp-challenge-step]')).map((step, index) => ({
 		position: index + 1,
 		title: step.querySelector('h2')?.textContent?.trim() ?? '',
@@ -23,7 +24,8 @@ export function readRenderedWebMcpChallengeGuide(documentRef) {
 		title: root?.dataset.webmcpChallengeTitle ?? '',
 		purpose: root?.dataset.webmcpChallengePurpose ?? '',
 		steps: renderedSteps,
-		safety: renderedSafety
+		safety: renderedSafety,
+		agentBrief: agentBriefInput?.value
 	};
 }
 
@@ -37,7 +39,8 @@ export function webMcpChallengeGuideView(input) {
 	if (!isRecord(input) || !Array.isArray(input.steps) || !Array.isArray(input.safety)) return null;
 	const title = normalizedText(input.title);
 	const purpose = normalizedText(input.purpose);
-	if (!title || !purpose || input.steps.length !== 3 || input.safety.length !== 3) return null;
+	const agentBrief = normalizedAgentBrief(input.agentBrief);
+	if (!title || !purpose || agentBrief === null || input.steps.length !== 3 || input.safety.length !== 3) return null;
 
 	const steps = input.steps.map((entry, index) => challengeStep(entry, index + 1));
 	const safety = input.safety.map(normalizedText);
@@ -49,7 +52,8 @@ export function webMcpChallengeGuideView(input) {
 		title,
 		purpose,
 		steps: validSteps,
-		safety: /** @type {string[]} */ (safety)
+		safety: /** @type {string[]} */ (safety),
+		agentBrief
 	};
 }
 
@@ -59,12 +63,12 @@ export function createWebMcpChallengeGuideTool(getGuide) {
 	return {
 		name: PROJECTS_HANDOFF_GUIDE_TOOL_NAME,
 		title: 'Get Projects handoff guide',
-		description: 'Read the current Projects handoff guide, including its three workflow routes and visible authority boundaries. This does not navigate, fetch, or write.',
+		description: 'Read the current Projects handoff guide, including its editable browser-agent brief, three workflow routes, and visible authority boundaries. This does not navigate, fetch, or write.',
 		inputSchema: { type: 'object', properties: {}, additionalProperties: false },
 		annotations: {
 			readOnlyHint: true,
 			openWorldHint: false,
-			untrustedContentHint: false
+			untrustedContentHint: true
 		},
 		/** @param {unknown} input @param {{ signal?: AbortSignal }} [options] */
 		async execute(input, options = {}) {
@@ -94,6 +98,14 @@ function normalizedText(value) {
 	if (typeof value !== 'string') return null;
 	const text = value.trim();
 	return text && text.length <= TEXT_LIMIT && !/\p{Cc}/u.test(text) ? text : null;
+}
+
+/** @param {unknown} value */
+function normalizedAgentBrief(value) {
+	if (typeof value !== 'string') return null;
+	const text = value.replace(/\r\n?/gu, '\n');
+	if (text.length > TEXT_LIMIT || /[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/u.test(text)) return null;
+	return text;
 }
 
 /** @param {unknown} value @returns {value is Record<string, any>} */
