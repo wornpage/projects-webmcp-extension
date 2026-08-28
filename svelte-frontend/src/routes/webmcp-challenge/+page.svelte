@@ -3,28 +3,27 @@
 	import { WornButton, WornPage, WornReceipt } from '$lib/components';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import {
-		WEBMCP_CHALLENGE_GUIDE_TOOL_NAME,
+		PROJECTS_HANDOFF_GUIDE_TOOL_NAME,
 		createWebMcpChallengeGuideTool,
 		readRenderedWebMcpChallengeGuide
 	} from './webmcp-challenge-webmcp.mjs';
 
-	const recommendedPrompt = 'As you move through Work, Review, and Next, use each page’s WebMCP tools to show only “Garage reset” work, notice that the floor is already done while shelf sorting still waits on storage bins, narrow Review to blocked Garage-reset items, and prepare “Confirm storage bin delivery” with a brief evidence-based note for my review. Do not save or change workspace data.';
 	const steps = [
 		{
 			title: 'Observe the workspace',
-			description: 'On Work, read the full denominator and show only Garage-reset work.',
+			description: 'On Work, read the visible items, priorities, and explicit counts.',
 			action: 'Start in Work',
 			href: '/work'
 		},
 		{
 			title: 'Explain what needs attention',
-			description: 'On Review, narrow to blocked Garage-reset items and surface “Waiting on storage bins.”',
+			description: 'On Review, narrow the queue and surface the evidence behind each priority.',
 			action: 'Continue to Review',
 			href: '/review'
 		},
 		{
 			title: 'Prepare the handoff',
-			description: 'On Next, replace the stale floor-clearing action with “Confirm storage bin delivery,” add a short evidence note, then stop before Save.',
+			description: 'On Next, prepare a clear next action with an evidence note, then stop before Save.',
 			action: 'Open the draft editor',
 			href: '/next'
 		}
@@ -34,22 +33,12 @@
 		'Agent: change page-local scope and prepare an unsaved draft.',
 		'Person: approve, save, or discard every workspace change.'
 	] as const;
-	let copyStatus = $state('');
 	let webMcpGuideReaderAvailable = $state(false);
 	let webMcpGuideReceipt = $state<{
 		summary: string;
 		cells: Array<{ label: string; value: string }>;
 	} | null>(null);
 	let webMcpInvocationCount = $state(0);
-
-	async function copyRecommendedPrompt() {
-		try {
-			await navigator.clipboard.writeText(recommendedPrompt);
-			copyStatus = 'Prompt copied.';
-		} catch {
-			copyStatus = 'Copy unavailable. Select the prompt text instead.';
-		}
-	}
 
 	onMount(() => {
 		// This is intentionally capability detection, not a registration-success claim.
@@ -64,15 +53,15 @@
 			await tick();
 		},
 		onResult: async ({ toolName, result }) => {
-			if (toolName !== WEBMCP_CHALLENGE_GUIDE_TOOL_NAME) return;
+			if (toolName !== PROJECTS_HANDOFF_GUIDE_TOOL_NAME) return;
 			const guide = result as { steps?: unknown[] };
 			webMcpInvocationCount += 1;
 			webMcpGuideReceipt = {
-				summary: 'WebMCP read the public judge guide.',
+				summary: 'WebMCP read the Projects handoff guide.',
 				cells: [
 					{ label: 'Tool', value: toolName },
 					{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
-					{ label: 'What it read', value: `${guide.steps?.length ?? 0} judge steps and the visible authority boundary` },
+					{ label: 'What it read', value: `${guide.steps?.length ?? 0} workflow steps and the visible authority boundary` },
 					{ label: 'Page-local presentation', value: 'Unchanged' },
 					{ label: 'Saved workspace changes', value: 'None' }
 				]
@@ -84,38 +73,33 @@
 </script>
 
 <svelte:head>
-	<title>WebMCP Challenge guide — Wornpage Projects™</title>
+	<title>Projects handoff guide — Wornpage Projects™</title>
 	<meta
 		name="description"
-		content="A browser-local WebMCP guide for Work, Review, and Next: tools read, narrow, and prepare while you control Save."
+	content="A practical Projects handoff workflow: WebMCP tools read visible work, narrow review, and prepare a draft while you control Save."
 	/>
 </svelte:head>
 
-<WornPage sectionLabel="Judge path · about 90 seconds" title="WebMCP Challenge guide">
+<WornPage sectionLabel="Projects workflow · guided handoff" title="Projects handoff guide">
 	<div
 		class="challenge-guide"
 		data-webmcp-challenge-guide
-		data-webmcp-challenge-title="WebMCP Challenge guide"
+		data-webmcp-challenge-title="Projects handoff guide"
 		data-webmcp-challenge-purpose="People and browser agents share the same live project page while consequential decisions remain human-owned."
-		data-webmcp-challenge-prompt={recommendedPrompt}
 	>
 		<div class="challenge-hero">
 			<div class="challenge-intro">
 				<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
 				<p class="challenge-purpose">Shared work loses time when people reconstruct blockers and next actions from scattered handoffs. Wornpage Projects lets a browser agent narrow the same visible workspace and prepare—not decide—the next handoff.</p>
-				<dl class="challenge-facts" aria-label="What the demo allows">
+				<dl class="challenge-facts" aria-label="Projects workflow capabilities">
 					<div><dt>Page tools</dt><dd>7</dd></div>
 					<div><dt>Actions you can undo</dt><dd>3</dd></div>
 					<div><dt>Automatic saves</dt><dd>0</dd></div>
 				</dl>
 			</div>
 			<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">
-				<div class="challenge-prompt-head">
-					<h2 id="challenge-prompt-title">Run the judged path</h2>
-					<WornButton type="button" size="sm" onclick={copyRecommendedPrompt}>Copy prompt</WornButton>
-				</div>
-				<blockquote>{recommendedPrompt}</blockquote>
-				<p class="challenge-copy-status" data-challenge-copy-status aria-live="polite">{copyStatus}</p>
+				<h2 id="challenge-prompt-title">A useful handoff, in order</h2>
+				<p>Start with the work that is already visible, explain what needs attention, and prepare a draft for the person who owns the decision.</p>
 			</section>
 		</div>
 
@@ -129,7 +113,7 @@
 			</div>
 		{/if}
 
-		<ol class="challenge-steps" aria-label="Three-step WebMCP demonstration">
+		<ol class="challenge-steps" aria-label="Three-step Projects handoff workflow">
 			{#each steps as step, index (step.href)}
 				<li data-webmcp-challenge-step>
 					<span class="challenge-number" aria-hidden="true">{index + 1}</span>
@@ -157,7 +141,7 @@
 				{#if webMcpGuideReaderAvailable}
 					<p><strong>Reader API detected.</strong> This browser exposes the Guide reader API. Its one tool reads this visible guide only; it cannot navigate, save, or change workspace data. This status does not confirm registration success.</p>
 				{:else}
-					<p><strong>Reader API unavailable.</strong> Use the ordinary judge path: copy the prompt and follow the three visible buttons. The browser-local sample remains usable without WebMCP.</p>
+					<p><strong>Reader API unavailable.</strong> Follow the three visible buttons instead. The browser-local sample remains usable without WebMCP.</p>
 				{/if}
 			</section>
 		</div>
@@ -228,29 +212,6 @@
 	.challenge-safety h2 {
 		font-size: 14px;
 		margin: 0 0 8px;
-	}
-	.challenge-prompt-head {
-		align-items: center;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px 12px;
-		justify-content: space-between;
-		margin-bottom: 8px;
-	}
-	.challenge-prompt-head h2 {
-		margin: 0;
-	}
-	.challenge-prompt blockquote {
-		color: var(--worn-text);
-		font-size: 16px;
-		line-height: 1.65;
-		margin: 0;
-	}
-	.challenge-copy-status {
-		color: var(--worn-text-secondary);
-		font-size: 14px;
-		margin: 8px 0 0;
-		min-height: 1.4em;
 	}
 	.challenge-steps {
 		display: grid;

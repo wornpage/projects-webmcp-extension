@@ -146,7 +146,9 @@ test('static mode identifies its bounded routes without production fallbacks', (
 	assert.match(landing, /<main id="main-content" tabindex="-1">/u);
 	assert.match(landing, /Let an agent find the next move\. Keep the final say\./u);
 	assert.match(landing, /No automatic saves/u);
-	assert.match(landing, /Confirm storage bin delivery/u);
+	assert.match(landing, /Open the handoff workflow/u);
+	assert.match(landing, /Public static sample, no login, no backend, and four focused workflow pages/u);
+	assert.doesNotMatch(landing, /judge|contest|garage reset|recording/iu);
 	assert.doesNotMatch(`${landing}\n${app}`, /projectsdemo\.org|\/agents|\/billing/u);
 	assert.match(headers, /X-Content-Type-Options: nosniff/u);
 	assert.match(headers, /X-Robots-Tag: noindex, nofollow, noarchive/u);
