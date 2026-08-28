@@ -13,6 +13,31 @@ const MAX_REASON_LENGTH = 240;
 /** @typedef {{ changed: boolean, focus: ReviewScopeFocus, review: ReviewView }} ReviewScopeReceipt */
 
 /**
+ * Give client-side navigation scroll restoration and the route's rendered
+ * layout two paints to settle between the positioning pass and the strict
+ * visible-focus proof. The strict pass remains authoritative and may throw;
+ * this helper never manufactures or relaxes its receipt.
+ *
+ * @template T
+ * @param {(requireVisibleFocus: boolean) => T} focus
+ * @param {() => Promise<void>} [nextFrame]
+ * @returns {Promise<T>}
+ */
+export async function settleReviewScopeFocus(focus, nextFrame = waitForAnimationFrame) {
+	if (typeof focus !== 'function') throw new TypeError('Review scope focus requires a focus function.');
+	if (typeof nextFrame !== 'function') throw new TypeError('Review scope focus requires a frame waiter.');
+	focus(false);
+	await nextFrame();
+	await nextFrame();
+	return focus(true);
+}
+
+/** @returns {Promise<void>} */
+function waitForAnimationFrame() {
+	return new Promise((resolve) => globalThis.requestAnimationFrame(() => resolve()));
+}
+
+/**
  * Project the exact bounded queue already rendered by Review. Raw packs,
  * memory, purpose, sources, and mutation payloads never cross this boundary.
  *
