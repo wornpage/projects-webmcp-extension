@@ -243,6 +243,7 @@
 	async function recordWorkWebMcpResult({ toolName, result }: { toolName: string; result: unknown }) {
 		const outcome = result as {
 			changed?: boolean;
+			focus?: ReturnType<typeof focusWorkSearchDestination>;
 			query?: string;
 			work?: typeof currentWorkView;
 			counts?: typeof currentWorkView extends null ? never : NonNullable<typeof currentWorkView>['counts'];
@@ -274,6 +275,12 @@
 			scopeKey: JSON.stringify({ scope: view.scope, counts: view.counts })
 		};
 		await tick();
+		if (toolName === WORK_SEARCH_TOOL_NAME) {
+			const finalFocus = focusWorkSearchDestination(true);
+			if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
+				throw new Error('Work receipt focus did not match the rendered search destination.');
+			}
+		}
 	}
 
 	async function clearFailedWorkWebMcpReceipt() {
@@ -476,6 +483,19 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	function filterInput(): HTMLInputElement | null {
 		return document.querySelector<HTMLInputElement>(FILTER_INPUT);
 	}
+	function focusWorkSearchDestination(requireVisibleFocus: boolean) {
+		const firstItem = document.querySelector<HTMLElement>('[data-work-item][data-pack-id]');
+		const destination = firstItem ?? filterInput();
+		if (!destination) throw new Error('Work search is unavailable because no work list is rendered.');
+		const focusReceipt = focusAndPulse(destination, {
+			behavior: 'auto',
+			block: 'center',
+			requireVisibleFocus
+		});
+		return firstItem
+			? { target: 'item' as const, itemId: firstItem.dataset.packId || '', ...focusReceipt }
+			: { target: 'search' as const, itemId: null, ...focusReceipt };
+	}
 	async function showWorkSearchFromWebMcp(nextQuery: string) {
 		const changed = query !== nextQuery || debouncedQuery !== nextQuery;
 		query = nextQuery;
@@ -484,20 +504,10 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		if (!currentWorkView || currentWorkView.scope.search !== nextQuery) {
 			throw new Error('Work did not render the requested search.');
 		}
-		const firstItem = document.querySelector<HTMLElement>('[data-work-item][data-pack-id]');
-		const destination = firstItem ?? filterInput();
-		if (!destination) throw new Error('Work search is unavailable because no work list is rendered.');
-		const focusReceipt = focusAndPulse(destination, {
-			behavior: 'auto',
-			block: 'center',
-			requireVisibleFocus: true
-		});
 		return {
 			changed,
 			query: nextQuery,
-			focus: firstItem
-				? { target: 'item' as const, itemId: firstItem.dataset.packId || '', ...focusReceipt }
-				: { target: 'search' as const, itemId: null, ...focusReceipt },
+			focus: focusWorkSearchDestination(true),
 			work: currentWorkView
 		};
 	}
