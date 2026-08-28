@@ -29,7 +29,8 @@
 		createCurrentReviewTool,
 		createSetReviewScopeTool,
 		reviewItemPageView,
-		reviewPageView
+		reviewPageView,
+		settleReviewScopeFocus
 	} from './review-webmcp.mjs';
 	import {
 		PACK_ACTIONS,
@@ -195,7 +196,11 @@
 	}
 
 	async function recordReviewWebMcpResult({ toolName, result }: { toolName: string; result: unknown }) {
-		const outcome = result as { changed?: boolean; review?: typeof currentReviewView };
+		const outcome = result as {
+			changed?: boolean;
+			focus?: Awaited<ReturnType<typeof focusReviewScopeDestination>>;
+			review?: typeof currentReviewView;
+		};
 		const view = toolName === REVIEW_CURRENT_TOOL_NAME ? result as NonNullable<typeof currentReviewView> : outcome.review;
 		if (!view) throw new Error(`Review could not present a receipt for ${toolName}.`);
 		const changed = outcome.changed === true;
@@ -222,6 +227,12 @@
 			scopeKey: JSON.stringify({ scope: view.scope, counts: view.counts })
 		};
 		await tick();
+		if (toolName === REVIEW_SCOPE_TOOL_NAME) {
+			const finalFocus = await focusReviewScopeDestination(true);
+			if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
+				throw new Error('Review receipt focus did not match the rendered scope destination.');
+			}
+		}
 	}
 
 	async function clearFailedReviewWebMcpReceipt() {
@@ -295,25 +306,31 @@
 			return { changed, focus: null };
 		}
 
-		const firstTitle = document.querySelector<HTMLElement>('.review-priority .demo-card-title');
+		const focus = await focusReviewScopeDestination(requireVisibleFocus);
+		return { changed, focus };
+	}
+
+	async function focusReviewScopeDestination(requireVisibleFocus: boolean) {
+		const firstTitle = document.querySelector<HTMLElement>('.review-priority[data-pack-id] .demo-card-title');
 		const filterInput = document.getElementById('review-filter-query');
 		const reviewList = document.querySelector<HTMLElement>('[data-review-list]');
 		const focusTarget = firstTitle || filterInput || reviewList;
 		if (!focusTarget) throw new Error('Review scope destination did not render.');
 		const itemId = firstTitle?.closest<HTMLElement>('[data-pack-id]')?.dataset.packId || null;
 		if (firstTitle && !itemId) throw new Error('Review scope destination is missing its work-item identity.');
-		const focusReceipt = focusAndPulse(focusTarget, {
-			pulseTarget: firstTitle?.closest<HTMLElement>('.review-priority') || focusTarget,
-			requireVisibleFocus
+		const pulseTarget = firstTitle?.closest<HTMLElement>('.review-priority') || focusTarget;
+		const runFocus = (verify: boolean) => focusAndPulse(focusTarget, {
+			pulseTarget,
+			requireVisibleFocus: verify
 		});
-		return {
-			changed,
-			focus: firstTitle
+		const focusReceipt = requireVisibleFocus
+			? await settleReviewScopeFocus(runFocus)
+			: runFocus(false);
+		return firstTitle
 				? { target: 'item' as const, itemId: itemId as string, ...focusReceipt }
 				: focusTarget === filterInput
 					? { target: 'search' as const, itemId: null, ...focusReceipt }
-					: { target: 'queue' as const, itemId: null, ...focusReceipt }
-		};
+					: { target: 'queue' as const, itemId: null, ...focusReceipt };
 	}
 
 	async function clearReviewFilters() {

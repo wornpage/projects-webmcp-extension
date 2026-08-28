@@ -10,7 +10,8 @@ import {
 	createCurrentReviewTool,
 	createSetReviewScopeTool,
 	reviewItemPageView,
-	reviewPageView
+	reviewPageView,
+	settleReviewScopeFocus
 } from '../svelte-frontend/src/routes/review/review-webmcp.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -253,6 +254,47 @@ test('the Review scope descriptor declares and verifies one reversible page-stat
 	assert.throws(() => createSetReviewScopeTool(null), /scope setter/u);
 });
 
+test('Work-to-Review retained scroll settles before strict visible-focus proof', async () => {
+	let inViewport = false;
+	const calls = [];
+	const nextFrame = async () => {
+		calls.push('frame');
+		inViewport = true;
+	};
+	const receipt = await settleReviewScopeFocus((requireVisibleFocus) => {
+		calls.push(requireVisibleFocus ? 'strict' : 'position');
+		const proof = {
+			focused: true,
+			focusVisible: true,
+			inViewport,
+			pulsed: true
+		};
+		if (requireVisibleFocus && !proof.inViewport) {
+			throw new Error(`Visible focus verification failed: ${JSON.stringify(proof)}`);
+		}
+		return proof;
+	}, nextFrame);
+
+	assert.deepEqual(calls, ['position', 'frame', 'frame', 'strict']);
+	assert.deepEqual(receipt, {
+		focused: true,
+		focusVisible: true,
+		inViewport: true,
+		pulsed: true
+	});
+
+	await assert.rejects(
+		() => settleReviewScopeFocus((requireVisibleFocus) => {
+			const proof = { focused: true, focusVisible: true, inViewport: false, pulsed: true };
+			if (requireVisibleFocus) {
+				throw new Error(`Visible focus verification failed: ${JSON.stringify(proof)}`);
+			}
+			return proof;
+		}, async () => {}),
+		/Visible focus verification failed: .*"inViewport":false/u
+	);
+});
+
 test('every visible Review to Next activation uses one canonical focused handoff', () => {
 	assert.match(routeSource, /async function handoffToNext\(packId: string \| undefined, event\?: MouseEvent\)[\s\S]*?event\?\.preventDefault\(\);[\s\S]*?await goto\(`\/next\?pack=\$\{encodeURIComponent\(packId\)\}`\);[\s\S]*?await tick\(\);[\s\S]*?document\.querySelector<HTMLElement>\('\[data-next-preview\]'\)[\s\S]*?if \(!preview\) throw new Error\('Next preview did not render\.'\);[\s\S]*?focusAndPulse\(preview, \{ behavior: 'auto', block: 'center', requireVisibleFocus: true \}\);/u);
 	assert.equal(routeSource.match(/await goto\(`\/next\?pack=/gu)?.length, 1);
@@ -280,10 +322,11 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.doesNotMatch(routeSource, /This item is in the review queue/u);
 	assert.match(routeSource, /function reviewItemForPageTool\([\s\S]*?reviewItemPageView\(\{[\s\S]*?title: workTitle\(pack\)[\s\S]*?workflow: workflowLabel\(pack\)[\s\S]*?owner: ownerLabel\(pack\.owner\)[\s\S]*?blocker: hasBlocker\(pack\) \? blockerText\(pack\) : null,[\s\S]*?attentionReasons: attentionReasons\(pack\)/u);
 	assert.match(routeSource, /class="review-reasons"[\s\S]*?Why this surfaced[\s\S]*?attentionReasons\(firstReview\)/u);
-	assert.match(routeSource, /async function applyReviewScope\([\s\S]*?query = nextQuery;\s*reviewSubFilter = nextFilter;\s*await tick\(\);[\s\S]*?focusAndPulse\(focusTarget/u);
+	assert.match(routeSource, /async function applyReviewScope\([\s\S]*?query = nextQuery;\s*reviewSubFilter = nextFilter;\s*await tick\(\);[\s\S]*?await focusReviewScopeDestination\(requireVisibleFocus\)/u);
 	assert.match(routeSource, /const requestedQueue = summarizeReviewQueue\(packs, nextQuery, 'all'\);[\s\S]*?nextFilter === reviewSubFilter[\s\S]*?const \{ changed, focus \} = await applyReviewScope\(nextQuery, nextFilter, 'results', true\);[\s\S]*?if \(!focus\)[\s\S]*?return \{ changed, focus, review: currentReviewView \};/u);
-	assert.match(routeSource, /const focusReceipt = focusAndPulse\(focusTarget, \{[\s\S]*?requireVisibleFocus[\s\S]*?\}\);[\s\S]*?target: 'item'[\s\S]*?target: 'search'[\s\S]*?target: 'queue'/u);
+	assert.match(routeSource, /async function focusReviewScopeDestination\(requireVisibleFocus: boolean\)[\s\S]*?\.review-priority\[data-pack-id\] \.demo-card-title[\s\S]*?focusAndPulse\(focusTarget, \{[\s\S]*?requireVisibleFocus: verify[\s\S]*?await settleReviewScopeFocus\(runFocus\)[\s\S]*?target: 'item'[\s\S]*?target: 'search'[\s\S]*?target: 'queue'/u);
 	assert.match(routeSource, /async function recordReviewWebMcpResult[\s\S]*?webMcpScopeReceipt = \{[\s\S]*?WebMCP[\s\S]*?Saved workspace changes[\s\S]*?None/u);
+	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?scopeKey:[\s\S]*?await tick\(\);[\s\S]*?toolName === REVIEW_SCOPE_TOOL_NAME[\s\S]*?await focusReviewScopeDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Review receipt focus did not match the rendered scope destination\.'\)/u);
 	assert.match(routeSource, /let reviewReceiptScopeKey = \$derived\([\s\S]*?currentReviewView\.scope[\s\S]*?currentReviewView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
 	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?scopeKey: JSON\.stringify\(\{ scope: view\.scope, counts: view\.counts \}\)/u);
