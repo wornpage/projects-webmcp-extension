@@ -348,6 +348,7 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /id=\{NEXT_EDITOR_PREVIEW_ID\}[^>]*data-next-preview/u);
 	assert.match(routeSource, /<WornReceipt[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?cells=\{preparationCells\}/u);
 	assert.match(routeSource, /Proposed next action<\/span><strong>\{effectiveChoice \|\| 'Not set'\}/u);
+	assert.match(routeSource, /\.next-authority\s*\{\s*margin-block-start:\s*12px;/u);
 	assert.match(routeSource, /\.next-action-editor\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto;/u);
 	assert.match(routeSource, /\.next-action-editor > \.demo-field\s*\{[\s\S]*?grid-column:\s*1 \/ -1;[\s\S]*?width:\s*100%;/u);
 	assert.match(routeSource, /@media \(max-width: 500px\)[\s\S]*?\.next-action-editor\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\);/u);

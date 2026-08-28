@@ -636,6 +636,9 @@ let showingCustom = $state(false);
 		line-height: 1.5;
 		margin: 0;
 	}
+	.next-authority {
+		margin-block-start: 12px;
+	}
 	.next-save-help {
 		display: block;
 		min-width: 0;
