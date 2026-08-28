@@ -37,11 +37,9 @@
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import {
-		CURRENT_NEXT_EDITOR_TOOL_NAME,
 		NEXT_EDITOR_PREVIEW_ID,
 		NEXT_PREPARATION_RECEIPT_ID,
 		NEXT_PREPARATION_SUMMARY,
-		PREPARE_NEXT_ACTION_TOOL_NAME,
 		createCurrentNextEditorTool,
 		createPrepareNextActionTool,
 		nextEditorPageView
@@ -82,16 +80,10 @@ let showingCustom = $state(false);
 	let preparationReceipt = $state<PreparationReceipt | null>(null);
 	let preparationPreviousEditor = $state<EditorSnapshot | null>(null);
 	let savedNextReceipt = $state<SavedNextReceipt | null>(null);
-	let webMcpReadReceipt = $state<{
-		summary: string;
-		cells: Array<{ label: string; value: string }>;
-		viewKey: string;
-	} | null>(null);
 	let editorPackId = $state('');
 	let editorFocusRequest = 0;
 	let saveFocusFrame: number | null = null;
 	let stopNextWebMcp: (() => void) | null = null;
-	let webMcpInvocationCount = $state(0);
 	// Keep a large review queue useful without placing every candidate in the
 	// DOM at once. The full list still determines the count and can be expanded
 	// explicitly with the same keyboard-accessible buttons.
@@ -152,17 +144,13 @@ let showingCustom = $state(false);
 			busy
 		});
 	});
-	let currentNextEditorKey = $derived(currentNextEditor ? JSON.stringify(currentNextEditor) : '');
 	let preparationCells = $derived(preparationReceipt ? [
-		{ label: 'Tool', value: PREPARE_NEXT_ACTION_TOOL_NAME },
-		{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
-		{ label: 'What it prepared', value: 'An unsaved next-action draft for human review' },
 		{ label: 'Work item', value: preparationReceipt.work.title },
-		{ label: 'Why this choice', value: preparationReceipt.agentNote },
 		{ label: 'Prepared action', value: preparationReceipt.preparedAction },
-		{ label: 'Page-local presentation', value: 'Draft shown in this editor' },
-		{ label: 'Saved workspace changes', value: 'None' },
-		{ label: 'Authority', value: 'Awaiting your Save' }
+		{ label: 'Evidence note', value: preparationReceipt.agentNote },
+		{ label: 'Browser agent changed', value: 'Unsaved draft shown in this editor only' },
+		{ label: 'Workspace data', value: 'Unchanged' },
+		{ label: 'Authority', value: 'Only you can Save' }
 	] : []);
 	let savedNextCells = $derived(savedNextReceipt ? [
 		{ label: 'Work item', value: workTitle(savedNextReceipt.pack) },
@@ -170,41 +158,6 @@ let showingCustom = $state(false);
 		{ label: 'Blocker', value: blockerText(savedNextReceipt.pack) },
 		{ label: 'Proof target', value: savedNextReceipt.pack.doneWhen || 'Not set' }
 	] : []);
-
-	$effect(() => {
-		if (webMcpReadReceipt && webMcpReadReceipt.viewKey !== currentNextEditorKey) {
-			webMcpReadReceipt = null;
-		}
-	});
-
-	async function recordNextWebMcpResult({ toolName, result }: { toolName: string; result: unknown }) {
-		webMcpInvocationCount += 1;
-		if (toolName === PREPARE_NEXT_ACTION_TOOL_NAME) {
-			webMcpReadReceipt = null;
-			await tick();
-			return;
-		}
-		if (toolName !== CURRENT_NEXT_EDITOR_TOOL_NAME) return;
-		const view = result as NonNullable<typeof currentNextEditor>;
-		webMcpReadReceipt = {
-			summary: `WebMCP read the unsaved Next editor for ${view.work.title}.`,
-			cells: [
-				{ label: 'Tool', value: toolName },
-				{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
-				{ label: 'What it read', value: `Current choice “${view.editor.choice || 'Not set'}” and its preview` },
-				{ label: 'Page-local presentation', value: 'Unchanged' },
-				{ label: 'Saved workspace changes', value: 'None' },
-				{ label: 'Authority', value: 'Save remains human-controlled' }
-			],
-			viewKey: JSON.stringify(view)
-		};
-		await tick();
-	}
-
-	async function clearFailedNextWebMcpReceipt() {
-		webMcpReadReceipt = null;
-		await tick();
-	}
 
 	// Describe the save command directly; the preview already owns workflow facts.
 	let saveNextHelp = $derived.by(() => {
@@ -225,13 +178,11 @@ let showingCustom = $state(false);
 				capture: captureNextPreparationSnapshot,
 				restore: restoreNextPreparationSnapshot
 			})
-		], {
-			onInvocationError: clearFailedNextWebMcpReceipt,
-			onResult: recordNextWebMcpResult
-		});
+		]);
 		return () => {
 			stopNextWebMcp?.();
 			stopNextWebMcp = null;
+			clearPreparation();
 		};
 	});
 
@@ -476,15 +427,6 @@ let showingCustom = $state(false);
 		{/if}
 		{#if errorText}
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
-		{/if}
-		{#if webMcpReadReceipt}
-			<div data-webmcp-receipt="next-read" aria-label="Latest Next WebMCP tool receipt">
-				<WornReceipt
-					summary={webMcpReadReceipt.summary}
-					cells={webMcpReadReceipt.cells}
-					ondone={() => (webMcpReadReceipt = null)}
-				/>
-			</div>
 		{/if}
 		{#if preparationReceipt}
 			<div data-webmcp-receipt="next" aria-label="Latest Next WebMCP tool receipt">

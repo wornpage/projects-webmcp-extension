@@ -128,11 +128,12 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
 | Gate | Current result |
 | --- | --- |
 | Public source boundary | 80 tracked public paths, including the route-owned editable Guide brief, scope chooser, and Work action mapping; no replacement CI or compatibility path remains. |
-| Local automated gate | `npm run verify` passes with 0 Svelte errors, 0 warnings, 45 WebMCP contracts, 5 static-artifact contracts, and a completed static build. |
+| Local automated gate | `npm run verify` passes with 0 Svelte errors, 0 warnings, 47 WebMCP contracts, 6 static-artifact contracts, and a completed static build. |
 | Guide default | `All visible work` is selected immediately and exposes `Open all 8 work items` to `/work` in the current sample. |
 | Discovered choices | The current sample renders `Household · 4` and `Research · 4` from observed area data and Work's shared search counter; these names are not fixed chooser behavior. |
 | Custom truth | Custom keeps the shared 120-character/control-character validation; an unmatched term projects 0 matching of 8 workspace and exposes disabled `No work matches`, without a fallback Work link or invented work. |
 | Focused arrival state | `/work?focus=garage-reset-sort-shelves` focuses and centers the matching card, applies a selected-surface wash, accent rail, 4px ring, and `Focused item` label for 4.2 seconds, then removes the arrival treatment while visible keyboard focus remains. |
+| Action accountability | Work and Review getters leave no agent-change receipt. Successful scope presenters show the normalized visible scope and exact live denominators; Next labels the agent-prepared draft unsaved, repeats its evidence note, reports workspace data unchanged, and leaves Save human-owned. Human edits or route teardown clear the affected attribution. |
 
 ## Browser-agent path
 
@@ -147,17 +148,20 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
    - Confirm its result matches the visible three-step workflow, safety copy, current editable brief, every displayed scope choice and count, the selected query, and the workspace denominator.
 2. Open `/work`.
    - Discover `get_current_work_view` and `show_work_search` only.
-   - Read the view; verify workspace, matching, shown, and remaining denominators are explicit.
-   - Set search to `Garage reset`; verify the visible page, returned projection, and page receipt agree while preserving the full workspace denominator.
+   - Read the view; verify workspace, matching, shown, and remaining denominators are explicit and that the getter does not create an agent-change receipt.
+   - Set search to `  Garage reset  `; verify the visible query and receipt use normalized `Garage reset`, report exact shown/matching/workspace denominators, identify only the visible Work search as changed, and state `Workspace data: Unchanged`.
+   - Change the search as a person; verify the now-stale agent attribution clears.
 3. Open `/review`.
    - Discover `get_current_review_queue` and `set_review_scope` only.
-   - Apply query `Garage reset` and the blocked scope; verify total and filtered denominators remain distinct.
+   - Read the queue and verify the getter does not create an agent-change receipt.
+   - Apply query `Garage reset` and the blocked scope; verify shown, filtered, search-match, and total-review denominators remain distinct in both the returned projection and visible receipt, alongside the current blocked/missing-next/missing-owner evidence counts.
    - Verify each returned `attentionReasons` entry is rendered verbatim beside the corresponding item.
+   - Change either human filter; verify the stale agent attribution clears.
 4. Open `/next`.
    - Discover `get_current_next_editor` and `prepare_next_action` only.
-   - Open `?pack=garage-reset-sort-shelves` and confirm the exact stored action `Clear the garage floor` is not collapsed to a generic command.
+   - Open `?pack=garage-reset-sort-shelves`, read the editor without creating a receipt, and confirm the exact stored action `Clear the garage floor` is not collapsed to a generic command.
    - Prepare `Confirm storage bin delivery` with an evidence note explaining that the floor is already done and the bins remain the blocker.
-   - Verify the visible receipt says no workspace data was saved and requires a human Save.
+   - Verify the visible receipt identifies an unsaved browser-agent draft, repeats the exact action and evidence note, says `Workspace data: Unchanged`, and says `Authority: Only you can Save`.
    - Repeat the exact call and verify `changed` is `false`; reload or choose Discard and verify the proposal and note were not persisted.
 5. Navigate between routes.
    - Verify tools from the previous page are aborted and no longer active.

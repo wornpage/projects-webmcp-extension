@@ -4,6 +4,7 @@ export const REVIEW_SCOPE_TOOL_NAME = 'set_review_scope';
 const REVIEW_FILTERS = new Set(['all', 'blocked', 'missing-next', 'owner-gap']);
 const MAX_ATTENTION_REASONS = 4;
 const MAX_REASON_LENGTH = 240;
+const MAX_REVIEW_QUERY_LENGTH = 120;
 
 /** @typedef {'all' | 'blocked' | 'missing-next' | 'owner-gap'} ReviewFilter */
 /** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string, due: string | null, blocker: string | null, attentionReasons: string[] }} ReviewItemView */
@@ -11,6 +12,7 @@ const MAX_REASON_LENGTH = 240;
 /** @typedef {{ scope: { query: string, filter: ReviewFilter }, availableFilters: ReviewFilter[], counts: ReviewCounts, upNext: ReviewItemView | null, items: ReviewItemView[] }} ReviewView */
 /** @typedef {{ target: 'item', itemId: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean } | { target: 'search' | 'queue', itemId: null, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }} ReviewScopeFocus */
 /** @typedef {{ changed: boolean, focus: ReviewScopeFocus, review: ReviewView }} ReviewScopeReceipt */
+/** @typedef {{ summary: string, cells: Array<{ label: string, value: string }>, scopeKey: string }} ReviewPresentationReceipt */
 
 /**
  * Give client-side navigation scroll restoration and the route's rendered
@@ -164,7 +166,7 @@ export function createSetReviewScopeTool(setScope) {
 		inputSchema: {
 			type: 'object',
 			properties: {
-				query: { type: 'string', description: 'Search text. Use an empty string to clear the search.' },
+				query: { type: 'string', maxLength: MAX_REVIEW_QUERY_LENGTH, description: 'Search text. Use an empty string to clear the search.' },
 				filter: {
 					type: 'string',
 					enum: ['all', 'blocked', 'missing-next', 'owner-gap'],
@@ -209,10 +211,55 @@ function reviewScopeInput(input) {
 	if (Object.keys(candidate).some((key) => !allowedKeys.has(key))) {
 		throw new TypeError('Review scope accepts only query and filter.');
 	}
-	if (typeof candidate.query !== 'string') throw new TypeError('Review query must be a string.');
+	const query = normalizeReviewSearch(candidate.query);
+	if (query === null) throw new TypeError(`Review query must be ${MAX_REVIEW_QUERY_LENGTH} characters or fewer and contain no control characters.`);
 	const filter = reviewFilter(candidate.filter);
 	if (!filter) throw new TypeError('Review filter must be all, blocked, missing-next, or owner-gap.');
-	return { query: candidate.query, filter };
+	return { query, filter };
+}
+
+/**
+ * Normalize browser-agent search input before the route's canonical human
+ * scope setter receives it. Empty input remains the explicit all-search state.
+ *
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+export function normalizeReviewSearch(value) {
+	if (typeof value !== 'string' || /\p{Cc}/u.test(value)) return null;
+	const query = value.trim();
+	return query.length <= MAX_REVIEW_QUERY_LENGTH ? query : null;
+}
+
+/**
+ * Build Review's visible presenter receipt from the validated live queue.
+ * Counts and attention evidence stay separate so no denominator is hidden.
+ *
+ * @param {unknown} input
+ * @returns {ReviewPresentationReceipt}
+ */
+export function reviewScopePresentationReceipt(input) {
+	const { changed, review } = reviewScopeReceipt(input);
+	const queryLabel = review.scope.query ? `“${review.scope.query}”` : 'All review items · search cleared';
+	const filterLabel = reviewFilterLabel(review.scope.filter);
+	const summary = `Browser agent ${changed ? 'set' : 'confirmed'} Review scope: ${queryLabel} · ${filterLabel}.`;
+	return {
+		summary,
+		cells: [
+			{ label: 'Visible Review scope', value: `${queryLabel} · ${filterLabel}` },
+			{
+				label: 'Current queue',
+				value: `${review.counts.shown} shown · ${review.counts.filtered} filtered · ${review.counts.searchMatches} search matches · ${review.counts.totalReview} total review`
+			},
+			{
+				label: 'Search-match evidence',
+				value: `${review.counts.blocked} blocked · ${review.counts.missingNext} missing next · ${review.counts.missingOwner} missing owner`
+			},
+			{ label: 'Browser agent changed', value: 'Visible Review search and queue filter only' },
+			{ label: 'Workspace data', value: 'Unchanged' }
+		],
+		scopeKey: JSON.stringify({ scope: review.scope, counts: review.counts })
+	};
 }
 
 /** @param {unknown} input @returns {ReviewScopeReceipt} */
@@ -282,6 +329,17 @@ function reviewCounts(input) {
 /** @param {unknown} value @returns {ReviewFilter | null} */
 function reviewFilter(value) {
 	return typeof value === 'string' && REVIEW_FILTERS.has(value) ? /** @type {ReviewFilter} */ (value) : null;
+}
+
+/** @param {ReviewFilter} filter */
+function reviewFilterLabel(filter) {
+	return filter === 'all'
+		? 'All review items'
+		: filter === 'blocked'
+			? 'Blocked'
+			: filter === 'missing-next'
+				? 'No next action'
+				: 'No owner';
 }
 
 /** @param {unknown} view @returns {ReviewView | null} */

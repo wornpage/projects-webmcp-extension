@@ -12,7 +12,8 @@ import {
 	normalizeWorkSearch,
 	routeWorkSearch,
 	workItemPageView,
-	workPageView
+	workPageView,
+	workSearchPresentationReceipt
 } from '../svelte-frontend/src/routes/work/work-webmcp.mjs';
 import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
 
@@ -226,9 +227,37 @@ test('one exported Work-search normalizer serves tools and safe URL arrival', ()
 	assert.doesNotMatch(arrival, /fetch\(|localStorage|sessionStorage|goto\(|runPackAction|registerPageTools/u);
 });
 
+test('Work presentation receipts freeze the normalized query and live denominators', () => {
+	const work = workView({ search: 'Garage reset', workspace: 8, matching: 4, blocked: 2 });
+	const receipt = workSearchPresentationReceipt({
+		changed: true,
+		query: 'Garage reset',
+		focus: { target: 'item', itemId: work.items[0].id, focused: true, focusVisible: true, inViewport: true, pulsed: true },
+		work
+	});
+	assert.equal(receipt.summary, 'Browser agent set Work search “Garage reset”.');
+	assert.deepEqual(receipt.cells, [
+		{ label: 'Visible query', value: '“Garage reset”' },
+		{ label: 'Current scope', value: '2 shown · 4 matching · 8 workspace' },
+		{ label: 'Browser agent changed', value: 'Visible Work search only' },
+		{ label: 'Workspace data', value: 'Unchanged' }
+	]);
+	assert.equal(receipt.scopeKey, JSON.stringify({ scope: work.scope, counts: work.counts }));
+
+	const clearedWork = workView({ search: '', workspace: 8, matching: 3, blocked: 1 });
+	const cleared = workSearchPresentationReceipt({
+		changed: true,
+		query: '',
+		focus: { target: 'item', itemId: clearedWork.items[0].id, focused: true, focusVisible: true, inViewport: true, pulsed: true },
+		work: clearedWork
+	});
+	assert.equal(cleared.summary, 'Browser agent cleared Work search to show all work.');
+	assert.equal(cleared.cells[0].value, 'All work · search cleared');
+});
+
 test('Work receipt insertion is followed by strict revalidation and failure clears the provisional receipt', async () => {
 	const resultHandler = routeSource.match(/async function recordWorkWebMcpResult[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.match(resultHandler, /webMcpSearchReceipt = \{[\s\S]*?await tick\(\);[\s\S]*?toolName === WORK_SEARCH_TOOL_NAME[\s\S]*?focusWorkSearchDestination\(true\)/u);
+	assert.match(resultHandler, /if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpSearchReceipt = workSearchPresentationReceipt\(outcome\);[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)/u);
 	assert.match(resultHandler, /finalFocus\.target !== outcome\.focus\.target[\s\S]*?finalFocus\.itemId !== outcome\.focus\.itemId[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
 
 	let registered;
@@ -286,15 +315,17 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /\{#each renderedVisible as pack, i \(pack\.id\)\}/u);
 	assert.match(routeSource, /function focusWorkSearchDestination\(requireVisibleFocus: boolean\)[\s\S]*?\[data-work-item\]\[data-pack-id\][\s\S]*?focusAndPulse\(destination, \{[\s\S]*?behavior: 'auto',[\s\S]*?block: 'center',[\s\S]*?requireVisibleFocus[\s\S]*?target: 'item'[\s\S]*?target: 'search'/u);
 	assert.match(routeSource, /async function showWorkSearchFromWebMcp\(nextQuery: string\) \{[\s\S]*?query = nextQuery;\s*debouncedQuery = nextQuery;[\s\S]*?await tick\(\);[\s\S]*?focus: focusWorkSearchDestination\(true\),[\s\S]*?work: currentWorkView/u);
-	assert.match(routeSource, /async function recordWorkWebMcpResult[\s\S]*?webMcpSearchReceipt = \{[\s\S]*?WebMCP[\s\S]*?Saved workspace changes[\s\S]*?None/u);
-	assert.match(routeSource, /webMcpSearchReceipt = \{[\s\S]*?scopeKey:[\s\S]*?await tick\(\);[\s\S]*?toolName === WORK_SEARCH_TOOL_NAME[\s\S]*?focusWorkSearchDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
+	assert.match(routeSource, /async function recordWorkWebMcpResult[\s\S]*?if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpSearchReceipt = workSearchPresentationReceipt\(outcome\)/u);
+	assert.match(helperSource, /function workSearchPresentationReceipt[\s\S]*?Visible query[\s\S]*?Current scope[\s\S]*?Browser agent changed[\s\S]*?Workspace data[\s\S]*?Unchanged/u);
+	assert.match(routeSource, /webMcpSearchReceipt = workSearchPresentationReceipt\(outcome\);[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
 	assert.match(routeSource, /let workReceiptScopeKey = \$derived\([\s\S]*?currentWorkView\.scope[\s\S]*?currentWorkView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpSearchReceipt\.scopeKey !== workReceiptScopeKey[\s\S]*?webMcpSearchReceipt = null/u);
-	assert.match(routeSource, /webMcpSearchReceipt = \{[\s\S]*?scopeKey: JSON\.stringify\(\{ scope: view\.scope, counts: view\.counts \}\)/u);
+	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: work\.scope, counts: work\.counts \}\)/u);
 	assert.match(routeSource, /data-webmcp-receipt="work"[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpSearchReceipt\.cells\}/u);
 	assert.match(routeSource, /\.demo-work-list\s*\{\s*overflow:\s*visible;\s*padding-block-start:\s*8px;\s*\}/u);
 	assert.match(routeSource, /registerPageTools\(document, \[[\s\S]*?createCurrentWorkTool\(\(\) => currentWorkView\),[\s\S]*?createShowWorkSearchTool\(showWorkSearchFromWebMcp\)[\s\S]*?\], \{[\s\S]*?onInvocationError: clearFailedWorkWebMcpReceipt,[\s\S]*?onResult: recordWorkWebMcpResult[\s\S]*?\}\)/u);
 	assert.match(routeSource, /stopWorkWebMcp\?\.\(\);\s*stopWorkWebMcp = null;/u);
+	assert.match(routeSource, /stopWorkWebMcp = null;\s*webMcpSearchReceipt = null;/u);
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);
 	assert.doesNotMatch(`${routeSource}\n${helperSource}\n${registrationSource}`, /\/api\/mcp-proxy|jsonrpc|tools\/call|unregisterTool/u);
 	assert.doesNotMatch(helperSource, /\.\.\.(?:pack|item|work)|purpose:|memory:|sources:|activity:/u);

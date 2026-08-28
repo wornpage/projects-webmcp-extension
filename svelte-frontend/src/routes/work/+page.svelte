@@ -57,13 +57,13 @@
 	import WorkListCard from '$lib/components/WorkListCard.svelte';
 	import WorkFilterControls from './WorkFilterControls.svelte';
 	import {
-		WORK_CURRENT_TOOL_NAME,
 		WORK_SEARCH_TOOL_NAME,
 		createCurrentWorkTool,
 		createShowWorkSearchTool,
 		routeWorkSearch,
 		workItemPageView,
-		workPageView
+		workPageView,
+		workSearchPresentationReceipt
 	} from './work-webmcp.mjs';
 
 	const FILTERS: Array<[string, string]> = [
@@ -233,7 +233,6 @@
 	let receiptVisible = $derived(Boolean(receipt?.summary && receipt.summary !== dismissedReceiptSummary));
 	let receiptFocusTimer: ReturnType<typeof setTimeout> | null = null;
 	let stopWorkWebMcp: (() => void) | null = null;
-	let webMcpInvocationCount = $state(0);
 
 	$effect(() => {
 		if (webMcpSearchReceipt && webMcpSearchReceipt.scopeKey !== workReceiptScopeKey) {
@@ -242,45 +241,15 @@
 	});
 
 	async function recordWorkWebMcpResult({ toolName, result }: { toolName: string; result: unknown }) {
-		const outcome = result as {
-			changed?: boolean;
+		if (toolName !== WORK_SEARCH_TOOL_NAME) return;
+		const outcome = result as Parameters<typeof workSearchPresentationReceipt>[0] & {
 			focus?: ReturnType<typeof focusWorkSearchDestination>;
-			query?: string;
-			work?: typeof currentWorkView;
-			counts?: typeof currentWorkView extends null ? never : NonNullable<typeof currentWorkView>['counts'];
 		};
-		const view = toolName === WORK_CURRENT_TOOL_NAME ? result as NonNullable<typeof currentWorkView> : outcome.work;
-		if (!view) throw new Error(`Work could not present a receipt for ${toolName}.`);
-		const changed = outcome.changed === true;
-		const queryShown = outcome.query?.trim() || 'Any text';
-		webMcpInvocationCount += 1;
-		webMcpSearchReceipt = {
-			summary: toolName === WORK_CURRENT_TOOL_NAME
-				? `WebMCP read ${view.counts.shown} visible Work ${view.counts.shown === 1 ? 'item' : 'items'}.`
-				: `WebMCP ${changed ? 'changed' : 'confirmed'} Work search “${queryShown}”.`,
-			cells: [
-				{ label: 'Tool', value: toolName },
-				{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
-				{
-					label: toolName === WORK_CURRENT_TOOL_NAME ? 'What it read' : 'What it prepared',
-					value: `${view.counts.shown} shown of ${view.counts.matching} matching · ${view.counts.workspace} workspace`
-				},
-				{
-					label: 'Page-local presentation',
-					value: toolName === WORK_SEARCH_TOOL_NAME
-						? (changed ? `Search set to ${queryShown}` : `Search already showed ${queryShown}`)
-						: 'Unchanged'
-				},
-				{ label: 'Saved workspace changes', value: 'None' }
-			],
-			scopeKey: JSON.stringify({ scope: view.scope, counts: view.counts })
-		};
+		webMcpSearchReceipt = workSearchPresentationReceipt(outcome);
 		await tick();
-		if (toolName === WORK_SEARCH_TOOL_NAME) {
-			const finalFocus = focusWorkSearchDestination(true);
-			if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
-				throw new Error('Work receipt focus did not match the rendered search destination.');
-			}
+		const finalFocus = focusWorkSearchDestination(true);
+		if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
+			throw new Error('Work receipt focus did not match the rendered search destination.');
 		}
 	}
 
@@ -355,6 +324,7 @@
 			mounted = false;
 			stopWorkWebMcp?.();
 			stopWorkWebMcp = null;
+			webMcpSearchReceipt = null;
 			if (receiptFocusTimer) clearTimeout(receiptFocusTimer);
 			receiptFocusTimer = null;
 			// Leaving Work drops its route-only batch and focus modes.

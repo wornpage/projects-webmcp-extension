@@ -14,6 +14,7 @@ const MAX_SEARCH_LENGTH = 120;
 /** @typedef {{ scope: WorkScopeView, counts: WorkCountsView, items: WorkItemView[] }} WorkView */
 /** @typedef {{ target: 'item', itemId: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean } | { target: 'search', itemId: null, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }} WorkSearchFocus */
 /** @typedef {{ changed: boolean, query: string, focus: WorkSearchFocus, work: WorkView }} WorkSearchReceipt */
+/** @typedef {{ summary: string, cells: Array<{ label: string, value: string }>, scopeKey: string }} WorkPresentationReceipt */
 
 /**
  * Project the exact bounded Work view already available to the person. The
@@ -228,6 +229,37 @@ export function normalizeWorkSearch(value) {
  */
 export function routeWorkSearch(value) {
 	return normalizeWorkSearch(value) ?? '';
+}
+
+/**
+ * Build the human receipt only from the validated presenter result. This
+ * freezes the exact live rendered denominators returned by the canonical Work
+ * search setter; later human scope changes invalidate the receipt by scopeKey.
+ *
+ * @param {unknown} input
+ * @returns {WorkPresentationReceipt}
+ */
+export function workSearchPresentationReceipt(input) {
+	const { changed, query, work } = workSearchReceipt(input);
+	const queryLabel = query ? `“${query}”` : 'All work · search cleared';
+	const summary = query
+		? `Browser agent ${changed ? 'set' : 'confirmed'} Work search “${query}”.`
+		: changed
+			? 'Browser agent cleared Work search to show all work.'
+			: 'Browser agent confirmed Work search is clear.';
+	return {
+		summary,
+		cells: [
+			{ label: 'Visible query', value: queryLabel },
+			{
+				label: 'Current scope',
+				value: `${work.counts.shown} shown · ${work.counts.matching} matching · ${work.counts.workspace} workspace`
+			},
+			{ label: 'Browser agent changed', value: 'Visible Work search only' },
+			{ label: 'Workspace data', value: 'Unchanged' }
+		],
+		scopeKey: JSON.stringify({ scope: work.scope, counts: work.counts })
+	};
 }
 
 /** @param {unknown} input @returns {WorkSearchReceipt} */

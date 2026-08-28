@@ -259,6 +259,26 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	for (const pattern of deniedRuntimePatterns) assert.doesNotMatch(artifactText, pattern);
 });
 
+test('built artifact keeps page-action receipts truthful and read-only getters silent', () => {
+	const artifactText = collectText(artifactRoot).join('\n');
+	for (const copy of [
+		'Browser agent cleared Work search to show all work.',
+		'Current scope',
+		'Visible Review scope',
+		'Current queue',
+		'Search-match evidence',
+		'Browser agent prepared an unsaved draft. No workspace data was saved.',
+		'Unsaved draft shown in this editor only',
+		'Workspace data',
+		'Unchanged',
+		'Only you can Save'
+	]) {
+		assert.match(artifactText, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
+	}
+	assert.doesNotMatch(artifactText, /WebMCP read \d+ visible (?:Work|Review)/u);
+	assert.doesNotMatch(artifactText, /WebMCP read the unsaved Next editor/u);
+});
+
 test('built Guide publishes exact default and discovered scope denominators', () => {
 	const guideHtml = readFileSync(path.join(artifactRoot, 'webmcp-challenge.html'), 'utf8');
 	assert.match(
