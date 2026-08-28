@@ -15,6 +15,7 @@ const PREPARE_INPUT_KEYS = ['choice', 'expectedMode', 'expectedChoice', 'agentNo
 /** @typedef {{ work: NextEditorWork, presetChoices: string[], editor: NextEditorChoice, preview: NextEditorPreview, preparationReceipt: NextPreparationReceipt | null, canSave: boolean, busy: boolean }} NextEditorView */
 /** @typedef {{ choice: string, expectedMode: NextEditorMode, expectedChoice: string, agentNote: string }} PrepareNextActionInput */
 /** @typedef {{ changed: boolean, focus: { id: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }, next: NextEditorView }} PrepareNextActionReceipt */
+/** @typedef {{ markMutated: () => void }} PrepareNextActionInvocation */
 
 /**
  * Project only the current work item, choices, editor state, and preview already
@@ -82,9 +83,16 @@ export function createCurrentNextEditorTool(getEditor) {
 	};
 }
 
-/** @param {(input: PrepareNextActionInput) => Promise<PrepareNextActionReceipt>} prepareNextAction */
-export function createPrepareNextActionTool(prepareNextAction) {
+/**
+ * @template Snapshot
+ * @param {(input: PrepareNextActionInput, invocation: PrepareNextActionInvocation) => Promise<PrepareNextActionReceipt>} prepareNextAction
+ * @param {{ capture: () => Snapshot, restore: (snapshot: Snapshot) => unknown } | undefined} [transaction]
+ */
+export function createPrepareNextActionTool(prepareNextAction, transaction) {
 	if (typeof prepareNextAction !== 'function') throw new TypeError('Next WebMCP requires a next-action preparer.');
+	if (transaction !== undefined && (typeof transaction.capture !== 'function' || typeof transaction.restore !== 'function')) {
+		throw new TypeError('Next WebMCP preparation transactions require capture and restore functions.');
+	}
 	return {
 		name: PREPARE_NEXT_ACTION_TOOL_NAME,
 		title: 'Prepare next-action preview',
@@ -109,11 +117,22 @@ export function createPrepareNextActionTool(prepareNextAction) {
 		},
 		/** @param {unknown} input @param {{ signal?: AbortSignal }} [options] */
 		async execute(input, options = {}) {
-			options.signal?.throwIfAborted();
-			const fields = prepareNextActionInput(input);
-			const receipt = prepareNextActionReceipt(await prepareNextAction(fields), fields.choice, fields.agentNote);
-			options.signal?.throwIfAborted();
-			return receipt;
+			const snapshot = transaction?.capture();
+			let mutated = false;
+			try {
+				options.signal?.throwIfAborted();
+				const fields = prepareNextActionInput(input);
+				const receipt = prepareNextActionReceipt(
+					await prepareNextAction(fields, { markMutated: () => { mutated = true; } }),
+					fields.choice,
+					fields.agentNote
+				);
+				options.signal?.throwIfAborted();
+				return receipt;
+			} catch (error) {
+				if (mutated && transaction) await transaction.restore(/** @type {Snapshot} */ (snapshot));
+				throw error;
+			}
 		}
 	};
 }

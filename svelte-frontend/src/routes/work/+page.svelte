@@ -57,6 +57,8 @@
 	import WorkListCard from '$lib/components/WorkListCard.svelte';
 	import WorkFilterControls from './WorkFilterControls.svelte';
 	import {
+		WORK_CURRENT_TOOL_NAME,
+		WORK_SEARCH_TOOL_NAME,
 		createCurrentWorkTool,
 		createShowWorkSearchTool,
 		workItemPageView,
@@ -230,12 +232,54 @@
 	let receiptVisible = $derived(Boolean(receipt?.summary && receipt.summary !== dismissedReceiptSummary));
 	let receiptFocusTimer: ReturnType<typeof setTimeout> | null = null;
 	let stopWorkWebMcp: (() => void) | null = null;
+	let webMcpInvocationCount = $state(0);
 
 	$effect(() => {
 		if (webMcpSearchReceipt && webMcpSearchReceipt.scopeKey !== workReceiptScopeKey) {
 			webMcpSearchReceipt = null;
 		}
 	});
+
+	async function recordWorkWebMcpResult({ toolName, result }: { toolName: string; result: unknown }) {
+		const outcome = result as {
+			changed?: boolean;
+			query?: string;
+			work?: typeof currentWorkView;
+			counts?: typeof currentWorkView extends null ? never : NonNullable<typeof currentWorkView>['counts'];
+		};
+		const view = toolName === WORK_CURRENT_TOOL_NAME ? result as NonNullable<typeof currentWorkView> : outcome.work;
+		if (!view) throw new Error(`Work could not present a receipt for ${toolName}.`);
+		const changed = outcome.changed === true;
+		const queryShown = outcome.query?.trim() || 'Any text';
+		webMcpInvocationCount += 1;
+		webMcpSearchReceipt = {
+			summary: toolName === WORK_CURRENT_TOOL_NAME
+				? `WebMCP read ${view.counts.shown} visible Work ${view.counts.shown === 1 ? 'item' : 'items'}.`
+				: `WebMCP ${changed ? 'changed' : 'confirmed'} Work search “${queryShown}”.`,
+			cells: [
+				{ label: 'Tool', value: toolName },
+				{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
+				{
+					label: toolName === WORK_CURRENT_TOOL_NAME ? 'What it read' : 'What it prepared',
+					value: `${view.counts.shown} shown of ${view.counts.matching} matching · ${view.counts.workspace} workspace`
+				},
+				{
+					label: 'Page-local presentation',
+					value: toolName === WORK_SEARCH_TOOL_NAME
+						? (changed ? `Search set to ${queryShown}` : `Search already showed ${queryShown}`)
+						: 'Unchanged'
+				},
+				{ label: 'Saved workspace changes', value: 'None' }
+			],
+			scopeKey: JSON.stringify({ scope: view.scope, counts: view.counts })
+		};
+		await tick();
+	}
+
+	async function clearFailedWorkWebMcpReceipt() {
+		webMcpSearchReceipt = null;
+		await tick();
+	}
 
 	async function refreshWork(
 		{
@@ -265,7 +309,10 @@
 		stopWorkWebMcp = registerPageTools(document, [
 			createCurrentWorkTool(() => currentWorkView),
 			createShowWorkSearchTool(showWorkSearchFromWebMcp)
-		]);
+		], {
+			onInvocationError: clearFailedWorkWebMcpReceipt,
+			onResult: recordWorkWebMcpResult
+		});
 		void refreshWork({
 			reuseRecent: true,
 			afterRefresh: (state) => {
@@ -437,17 +484,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		if (!currentWorkView || currentWorkView.scope.search !== nextQuery) {
 			throw new Error('Work did not render the requested search.');
 		}
-		webMcpSearchReceipt = {
-			summary: nextQuery ? `Agent narrowed Work to “${nextQuery}”.` : 'Agent cleared the Work search.',
-			cells: [
-				{ label: 'Search', value: nextQuery || 'Any text' },
-				{ label: 'Denominator', value: `${currentWorkView.counts.shown} shown of ${currentWorkView.counts.matching} matching · ${currentWorkView.counts.workspace} workspace` },
-				{ label: 'Other filters', value: activeFilterLabel || 'Preserved as shown' },
-				{ label: 'Workspace data', value: 'Unchanged' }
-			],
-			scopeKey: workReceiptScopeKey
-		};
-		await tick();
 		const firstItem = document.querySelector<HTMLElement>('[data-work-item][data-pack-id]');
 		const destination = firstItem ?? filterInput();
 		if (!destination) throw new Error('Work search is unavailable because no work list is rendered.');
@@ -899,7 +935,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		<div data-webmcp-receipt="work">
 			<WornReceipt
 				summary={webMcpSearchReceipt.summary}
-				announce={false}
 				cells={webMcpSearchReceipt.cells}
 				ondone={() => (webMcpSearchReceipt = null)}
 			/>

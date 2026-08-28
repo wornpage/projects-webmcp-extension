@@ -23,7 +23,14 @@
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
-	import { createCurrentReviewTool, createSetReviewScopeTool, reviewItemPageView, reviewPageView } from './review-webmcp.mjs';
+	import {
+		REVIEW_CURRENT_TOOL_NAME,
+		REVIEW_SCOPE_TOOL_NAME,
+		createCurrentReviewTool,
+		createSetReviewScopeTool,
+		reviewItemPageView,
+		reviewPageView
+	} from './review-webmcp.mjs';
 	import {
 		PACK_ACTIONS,
 		primaryCommand,
@@ -115,6 +122,7 @@
 		cells: Array<{ label: string; value: string }>;
 		scopeKey: string;
 	} | null>(null);
+	let webMcpInvocationCount = $state(0);
 	let reviewSummaryText = $derived(buildReviewSummaryText(visible));
 	let blockedCount = $derived(reviewQueue.blockedCount);
 	let missingNextCount = $derived(reviewQueue.missingNextCount);
@@ -175,6 +183,51 @@
 			webMcpScopeReceipt = null;
 		}
 	});
+
+	function reviewFilterLabel(filter: ReviewSubFilter) {
+		return filter === 'all'
+			? 'All review items'
+			: filter === 'blocked'
+				? 'Blocked'
+				: filter === 'missing-next'
+					? 'No next action'
+					: 'No owner';
+	}
+
+	async function recordReviewWebMcpResult({ toolName, result }: { toolName: string; result: unknown }) {
+		const outcome = result as { changed?: boolean; review?: typeof currentReviewView };
+		const view = toolName === REVIEW_CURRENT_TOOL_NAME ? result as NonNullable<typeof currentReviewView> : outcome.review;
+		if (!view) throw new Error(`Review could not present a receipt for ${toolName}.`);
+		const changed = outcome.changed === true;
+		webMcpInvocationCount += 1;
+		webMcpScopeReceipt = {
+			summary: toolName === REVIEW_CURRENT_TOOL_NAME
+				? `WebMCP read ${view.counts.shown} visible Review ${view.counts.shown === 1 ? 'item' : 'items'}.`
+				: `WebMCP ${changed ? 'changed' : 'confirmed'} the Review scope.`,
+			cells: [
+				{ label: 'Tool', value: toolName },
+				{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
+				{
+					label: toolName === REVIEW_CURRENT_TOOL_NAME ? 'What it read' : 'What it prepared',
+					value: `${view.counts.shown} shown of ${view.counts.filtered} scoped · ${view.counts.totalReview} total review`
+				},
+				{
+					label: 'Page-local presentation',
+					value: toolName === REVIEW_SCOPE_TOOL_NAME
+						? (changed ? `Search and queue set to ${reviewFilterLabel(view.scope.filter)}` : `Already showing ${reviewFilterLabel(view.scope.filter)}`)
+						: 'Unchanged'
+				},
+				{ label: 'Saved workspace changes', value: 'None' }
+			],
+			scopeKey: JSON.stringify({ scope: view.scope, counts: view.counts })
+		};
+		await tick();
+	}
+
+	async function clearFailedReviewWebMcpReceipt() {
+		webMcpScopeReceipt = null;
+		await tick();
+	}
 
 	function reviewItemForPageTool(pack: DemoPack | null) {
 		if (!pack) return null;
@@ -285,23 +338,6 @@
 		const { changed, focus } = await applyReviewScope(nextQuery, nextFilter, 'results', true);
 		if (!focus) throw new Error('Review did not verify its visible scope destination.');
 		if (!currentReviewView) throw new Error('Review did not render the requested queue scope.');
-		const filterLabel = nextFilter === 'all'
-			? 'All review items'
-			: nextFilter === 'blocked'
-				? 'Blocked'
-				: nextFilter === 'missing-next'
-					? 'No next action'
-					: 'No owner';
-		webMcpScopeReceipt = {
-			summary: `Agent scoped Review to ${currentReviewView.counts.shown} visible ${currentReviewView.counts.shown === 1 ? 'item' : 'items'}.`,
-			cells: [
-				{ label: 'Search', value: currentReviewView.scope.query.trim() || 'Any text' },
-				{ label: 'Queue filter', value: filterLabel },
-				{ label: 'Denominator', value: `${currentReviewView.counts.shown} shown of ${currentReviewView.counts.filtered} scoped · ${currentReviewView.counts.totalReview} total review` },
-				{ label: 'Workspace data', value: 'Unchanged' }
-			],
-			scopeKey: reviewReceiptScopeKey
-		};
 		return { changed, focus, review: currentReviewView };
 	}
 
@@ -310,7 +346,10 @@
 		stopReviewWebMcp = registerPageTools(document, [
 			createCurrentReviewTool(() => currentReviewView),
 			createSetReviewScopeTool(setReviewScopeFromWebMcp)
-		]);
+		], {
+			onInvocationError: clearFailedReviewWebMcpReceipt,
+			onResult: recordReviewWebMcpResult
+		});
 	});
 	onDestroy(() => {
 		stopReviewWebMcp?.();
@@ -468,7 +507,6 @@ async function handleCardKeys(e: KeyboardEvent) {
 		<div data-webmcp-receipt="review">
 			<WornReceipt
 				summary={webMcpScopeReceipt.summary}
-				announce={false}
 				cells={webMcpScopeReceipt.cells}
 				ondone={() => (webMcpScopeReceipt = null)}
 			/>

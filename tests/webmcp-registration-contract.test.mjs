@@ -59,6 +59,77 @@ test('one page lifecycle signal owns every route tool registration', async () =>
 	assert.deepEqual(errors, []);
 });
 
+test('successful executions retain their narrow descriptor and leave one route-owned result receipt', async () => {
+	let registered;
+	const results = [];
+	const tool = {
+		...descriptor('read-current-view'),
+		title: 'Read current view',
+		annotations: { readOnlyHint: true }
+	};
+	const cleanup = registerPageTools({
+		modelContext: {
+			registerTool(candidate) {
+				registered = candidate;
+			}
+		}
+	}, [tool], {
+		onResult: async (receipt) => {
+			await Promise.resolve();
+			results.push(receipt);
+		}
+	});
+
+	assert.equal(registered.name, tool.name);
+	assert.equal(registered.title, tool.title);
+	assert.equal(registered.inputSchema, tool.inputSchema);
+	assert.equal(registered.annotations, tool.annotations);
+	assert.deepEqual(await registered.execute({}), { name: tool.name });
+	assert.deepEqual(results, [{
+		toolName: tool.name,
+		toolTitle: tool.title,
+		result: { name: tool.name }
+	}]);
+
+	cleanup();
+	assert.deepEqual(await registered.execute({}), { name: tool.name });
+	assert.equal(results.length, 1, 'teardown suppresses late route receipt updates');
+});
+
+test('a thrown invocation clears any provisional route receipt and never claims success', async () => {
+	const failure = new Error('tool failed before it had a result');
+	let registered;
+	let visibleReceipt = { summary: 'Provisional success' };
+	const results = [];
+	const failures = [];
+	registerPageTools({
+		modelContext: { registerTool(candidate) { registered = candidate; } }
+	}, [{
+		...descriptor('failing-tool'),
+		title: 'Fail after presenting',
+		execute: async () => {
+			visibleReceipt = { summary: 'Presented before final validation' };
+			throw failure;
+		}
+	}], {
+		onInvocationError: async (invocation) => {
+			await Promise.resolve();
+			visibleReceipt = null;
+			failures.push(invocation);
+		},
+		onResult: (receipt) => results.push(receipt)
+	});
+
+	await assert.rejects(() => registered.execute({}), failure);
+	assert.equal(visibleReceipt, null);
+	assert.deepEqual(results, []);
+	assert.deepEqual(failures, [{
+		toolName: 'failing-tool',
+		toolTitle: 'Fail after presenting',
+		error: failure
+	}]);
+});
+
 test('teardown suppresses pending registration failures while live failures retain tool identity', async () => {
 	let rejectPending;
 	const pendingErrors = [];
@@ -157,4 +228,6 @@ test('invalid descriptor collections fail loudly instead of registering a partia
 	assert.throws(() => registerPageTools(documentRef, []), /at least one tool descriptor/u);
 	assert.throws(() => registerPageTools(documentRef, [descriptor('duplicate'), descriptor('duplicate')]), /unique tool names/u);
 	assert.throws(() => registerPageTools(documentRef, [{ name: 'missing-execute' }]), /executable tool descriptor/u);
+	assert.throws(() => registerPageTools(documentRef, [descriptor('valid')], { onInvocationError: true }), /invocation error handling requires a function/u);
+	assert.throws(() => registerPageTools(documentRef, [descriptor('valid')], { onResult: true }), /result handling requires a function/u);
 });
