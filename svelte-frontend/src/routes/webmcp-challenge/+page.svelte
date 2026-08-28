@@ -1,8 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { WornButton, WornPage } from '$lib/components';
+	import { onMount, tick } from 'svelte';
+	import { WornButton, WornPage, WornReceipt } from '$lib/components';
 	import { registerPageTools } from '$lib/webmcp.mjs';
-	import { createWebMcpChallengeGuideTool, readRenderedWebMcpChallengeGuide } from './webmcp-challenge-webmcp.mjs';
+	import {
+		WEBMCP_CHALLENGE_GUIDE_TOOL_NAME,
+		createWebMcpChallengeGuideTool,
+		readRenderedWebMcpChallengeGuide
+	} from './webmcp-challenge-webmcp.mjs';
 
 	const recommendedPrompt = 'As you move through Work, Review, and Next, use each page’s WebMCP tools to show only “Garage reset” work, notice that the floor is already done while shelf sorting still waits on storage bins, narrow Review to blocked Garage-reset items, and prepare “Confirm storage bin delivery” with a brief evidence-based note for my review. Do not save or change workspace data.';
 	const steps = [
@@ -31,6 +35,11 @@
 		'Person: approve, save, or discard every workspace change.'
 	] as const;
 	let copyStatus = $state('');
+	let webMcpGuideReceipt = $state<{
+		summary: string;
+		cells: Array<{ label: string; value: string }>;
+	} | null>(null);
+	let webMcpInvocationCount = $state(0);
 
 	async function copyRecommendedPrompt() {
 		try {
@@ -43,7 +52,28 @@
 
 	onMount(() => registerPageTools(document, [
 		createWebMcpChallengeGuideTool(() => readRenderedWebMcpChallengeGuide(document))
-	]));
+	], {
+		onInvocationError: async () => {
+			webMcpGuideReceipt = null;
+			await tick();
+		},
+		onResult: async ({ toolName, result }) => {
+			if (toolName !== WEBMCP_CHALLENGE_GUIDE_TOOL_NAME) return;
+			const guide = result as { steps?: unknown[] };
+			webMcpInvocationCount += 1;
+			webMcpGuideReceipt = {
+				summary: 'WebMCP read the public judge guide.',
+				cells: [
+					{ label: 'Tool', value: toolName },
+					{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
+					{ label: 'What it read', value: `${guide.steps?.length ?? 0} judge steps and the visible authority boundary` },
+					{ label: 'Page-local presentation', value: 'Unchanged' },
+					{ label: 'Saved workspace changes', value: 'None' }
+				]
+			};
+			await tick();
+		}
+	}));
 </script>
 
 <svelte:head>
@@ -81,6 +111,16 @@
 				<p class="challenge-copy-status" data-challenge-copy-status aria-live="polite">{copyStatus}</p>
 			</section>
 		</div>
+
+		{#if webMcpGuideReceipt}
+			<div data-webmcp-receipt="guide" aria-label="Latest Guide WebMCP tool receipt">
+				<WornReceipt
+					summary={webMcpGuideReceipt.summary}
+					cells={webMcpGuideReceipt.cells}
+					ondone={() => (webMcpGuideReceipt = null)}
+				/>
+			</div>
+		{/if}
 
 		<ol class="challenge-steps" aria-label="Three-step WebMCP demonstration">
 			{#each steps as step, index (step.href)}

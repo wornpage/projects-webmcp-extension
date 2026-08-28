@@ -255,6 +255,79 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 		() => mismatched.execute({ choice: 'Start', expectedMode: 'preset', expectedChoice: 'Open', agentNote: 'Reason' }),
 		/did not preserve the prepared choice/u
 	);
+	assert.throws(
+		() => createPrepareNextActionTool(async () => result, { capture: null, restore: () => {} }),
+		/preparation transactions require capture and restore functions/u
+	);
+});
+
+test('a failed repeated preparation preserves the immediately preceding valid draft', async () => {
+	const focus = {
+		id: NEXT_PREPARATION_RECEIPT_ID,
+		focused: true,
+		focusVisible: true,
+		inViewport: true,
+		pulsed: true
+	};
+	let pageState = editor();
+	let failureStage = '';
+	let restores = 0;
+	const preparedView = (choice, agentNote) => editor({
+		editor: { mode: 'custom', choice },
+		preview: { blocker: null, nextAction: choice },
+		preparationReceipt: {
+			summary: NEXT_PREPARATION_SUMMARY,
+			work: { id: 'next-current', title: 'Prepare the garage inventory' },
+			agentNote,
+			preparedAction: choice,
+			workspaceChanged: false,
+			requiresHumanSave: true
+		}
+	});
+	const tool = createPrepareNextActionTool(async (input, invocation) => {
+		if (failureStage === 'before-mutation') throw new Error('failed before mutation');
+		invocation.markMutated();
+		pageState = preparedView(input.choice, input.agentNote);
+		if (failureStage === 'after-mutation') throw new Error('failed after mutation');
+		return {
+			changed: true,
+			focus: failureStage === 'receipt-validation' ? { ...focus, focused: false } : focus,
+			next: pageState
+		};
+	}, {
+		capture: () => structuredClone(pageState),
+		restore: (snapshot) => {
+			restores += 1;
+			pageState = structuredClone(snapshot);
+		}
+	});
+	const prepare = (choice, agentNote) => tool.execute({
+		choice,
+		expectedMode: pageState.editor.mode,
+		expectedChoice: pageState.editor.choice,
+		agentNote
+	});
+
+	await prepare('Draft A', 'First valid human-review draft.');
+	const validDraftA = structuredClone(pageState);
+
+	failureStage = 'before-mutation';
+	await assert.rejects(() => prepare('Draft B', 'This attempt fails before mutation.'), /failed before mutation/u);
+	assert.deepEqual(pageState, validDraftA);
+	assert.equal(restores, 0, 'a failure before mutation must not rewrite the valid draft');
+
+	failureStage = 'after-mutation';
+	await assert.rejects(() => prepare('Draft B', 'This attempt fails after mutation.'), /failed after mutation/u);
+	assert.deepEqual(pageState, validDraftA);
+	assert.equal(restores, 1, 'a provisional mutation must restore its own pre-invocation snapshot');
+
+	failureStage = 'receipt-validation';
+	await assert.rejects(
+		() => prepare('Draft C', 'This attempt returns an invalid visible receipt.'),
+		/did not return a verifiable page receipt/u
+	);
+	assert.deepEqual(pageState, validDraftA);
+	assert.equal(restores, 2, 'post-mutation receipt validation must restore the same snapshot');
 });
 
 test('Next owns one projection and one unsaved setter without server or navigation authority', () => {
@@ -263,10 +336,15 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /let currentNextEditor = \$derived\.by\(\(\) => \{[\s\S]*?return nextEditorPageView\(\{[\s\S]*?work: \{ id: pack\.id,[\s\S]*?presetChoices: NEXT_ACTION_CHOICES,[\s\S]*?editor:[\s\S]*?preview:[\s\S]*?preparationReceipt,[\s\S]*?canSave:[\s\S]*?busy/u);
 	assert.match(routeSource, /function setNextEditorChoice\(nextChoice: string, mode: NextEditorMode,[\s\S]*?choice = nextChoice;[\s\S]*?showingCustom = mode === 'custom';[\s\S]*?customValue = nextChoice/u);
 	assert.match(routeSource, /async function prepareNextActionFromWebMcp[\s\S]*?if \(busy\)[\s\S]*?currentNextEditor[\s\S]*?expectedMode[\s\S]*?expectedChoice[\s\S]*?stale[\s\S]*?agentNote[\s\S]*?workspaceChanged: false[\s\S]*?requiresHumanSave: true[\s\S]*?const focusReceipt = focusAndPulse\([\s\S]*?requireVisibleFocus: true[\s\S]*?focus: \{ id: NEXT_PREPARATION_RECEIPT_ID, \.\.\.focusReceipt \}[\s\S]*?next: currentNextEditor/u);
-	assert.match(routeSource, /stopNextWebMcp = registerPageTools\(document, \[[\s\S]*?createCurrentNextEditorTool\(\(\) => currentNextEditor\),[\s\S]*?createPrepareNextActionTool\(prepareNextActionFromWebMcp\)[\s\S]*?\]\);/u);
+	assert.match(routeSource, /stopNextWebMcp = registerPageTools\(document, \[[\s\S]*?createCurrentNextEditorTool\(\(\) => currentNextEditor\),[\s\S]*?createPrepareNextActionTool\(prepareNextActionFromWebMcp, \{[\s\S]*?capture: captureNextPreparationSnapshot,[\s\S]*?restore: restoreNextPreparationSnapshot[\s\S]*?\}\)[\s\S]*?\], \{[\s\S]*?onInvocationError: clearFailedNextWebMcpReceipt,[\s\S]*?onResult: recordNextWebMcpResult[\s\S]*?\}\);/u);
 	assert.match(routeSource, /return \(\) => \{\s*stopNextWebMcp\?\.\(\);\s*stopNextWebMcp = null;\s*\};/u);
 	const handler = routeSource.match(/async function prepareNextActionFromWebMcp[\s\S]*?\n\t\}/u)?.[0] ?? '';
 	assert.doesNotMatch(handler, /setPackNextAction|setSelectedWork|saveChoice|goto\(|fetch\(|runPackAction|localStorage|sessionStorage/u);
+	assert.match(handler, /stale Next editor state[\s\S]*?invocation\.markMutated\(\);[\s\S]*?setNextEditorChoice/u);
+	const failureHandler = routeSource.match(/async function clearFailedNextWebMcpReceipt[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.doesNotMatch(failureHandler, /clearPreparation|preparationPreviousEditor|setNextEditorChoice/u);
+	assert.match(routeSource, /function captureNextPreparationSnapshot[\s\S]*?choice,[\s\S]*?customValue,[\s\S]*?showingCustom,[\s\S]*?preparationReceipt:[\s\S]*?preparationPreviousEditor:[\s\S]*?savedNextReceipt/u);
+	assert.match(routeSource, /function restoreNextPreparationSnapshot[\s\S]*?choice = snapshot\.choice;[\s\S]*?customValue = snapshot\.customValue;[\s\S]*?showingCustom = snapshot\.showingCustom;[\s\S]*?preparationReceipt = [\s\S]*?preparationPreviousEditor = [\s\S]*?savedNextReceipt = snapshot\.savedNextReceipt/u);
 	assert.match(routeSource, /id=\{NEXT_EDITOR_PREVIEW_ID\}[^>]*data-next-preview/u);
 	assert.match(routeSource, /<WornReceipt[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?cells=\{preparationCells\}/u);
 	assert.match(routeSource, /Proposed next action<\/span><strong>\{effectiveChoice \|\| 'Not set'\}/u);

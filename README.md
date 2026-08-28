@@ -37,7 +37,7 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 | Next | `get_current_next_editor` | Read the visible next-action editor |
 | Next | `prepare_next_action` | Prepare an unsaved choice and concise evidence note for the person to review |
 
-The page owns registration and teardown through `document.modelContext.registerTool`. WebMCP actions are deliberately reversible presentation changes or unsaved preparation; each leaves a visible page receipt, while consequential saves remain visible, human-owned controls.
+The page owns registration and teardown through `document.modelContext.registerTool`. Every successful tool invocation leaves a polite, screen-reader-announced receipt naming the tool and what it read or prepared. Read receipts mark page presentation unchanged; reversible actions describe their page-local effect; all receipts report that saved workspace changes are `None`. Consequential saves remain visible, human-owned controls.
 
 ## WebMCP implementation
 

@@ -273,7 +273,7 @@ test('every visible Review to Next activation uses one canonical focused handoff
 
 test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /import \{ registerPageTools \} from '\$lib\/webmcp\.mjs';/u);
-	assert.match(routeSource, /import \{ createCurrentReviewTool, createSetReviewScopeTool, reviewItemPageView, reviewPageView \} from '\.\/review-webmcp\.mjs';/u);
+	assert.match(routeSource, /import \{[\s\S]*?createCurrentReviewTool,[\s\S]*?createSetReviewScopeTool,[\s\S]*?reviewItemPageView,[\s\S]*?reviewPageView[\s\S]*?\} from '\.\/review-webmcp\.mjs';/u);
 	assert.match(routeSource, /let currentReviewView = \$derived\.by\(\(\) => reviewPageView\(\{[\s\S]*?totalReview: reviewTotal,[\s\S]*?searchMatches: visible\.length,[\s\S]*?filtered: filteredVisible\.length,[\s\S]*?shown: renderedReviewCount,[\s\S]*?remaining: hiddenReviewCount/u);
 	assert.match(routeSource, /upNext: reviewItemForPageTool\(firstReview\),\s*items: renderedList\.map\(reviewItemForPageTool\)/u);
 	assert.match(routeSource, /function attentionReasons\(pack: DemoPack\): string\[\][\s\S]*?Blocked:[\s\S]*?No next action is set[\s\S]*?Decision needed from/u);
@@ -283,13 +283,13 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /async function applyReviewScope\([\s\S]*?query = nextQuery;\s*reviewSubFilter = nextFilter;\s*await tick\(\);[\s\S]*?focusAndPulse\(focusTarget/u);
 	assert.match(routeSource, /const requestedQueue = summarizeReviewQueue\(packs, nextQuery, 'all'\);[\s\S]*?nextFilter === reviewSubFilter[\s\S]*?const \{ changed, focus \} = await applyReviewScope\(nextQuery, nextFilter, 'results', true\);[\s\S]*?if \(!focus\)[\s\S]*?return \{ changed, focus, review: currentReviewView \};/u);
 	assert.match(routeSource, /const focusReceipt = focusAndPulse\(focusTarget, \{[\s\S]*?requireVisibleFocus[\s\S]*?\}\);[\s\S]*?target: 'item'[\s\S]*?target: 'search'[\s\S]*?target: 'queue'/u);
-	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?Agent scoped Review[\s\S]*?Workspace data[\s\S]*?Unchanged/u);
+	assert.match(routeSource, /async function recordReviewWebMcpResult[\s\S]*?webMcpScopeReceipt = \{[\s\S]*?WebMCP[\s\S]*?Saved workspace changes[\s\S]*?None/u);
 	assert.match(routeSource, /let reviewReceiptScopeKey = \$derived\([\s\S]*?currentReviewView\.scope[\s\S]*?currentReviewView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
-	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?scopeKey: reviewReceiptScopeKey/u);
+	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?scopeKey: JSON\.stringify\(\{ scope: view\.scope, counts: view\.counts \}\)/u);
 	assert.match(routeSource, /data-webmcp-receipt="review"[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}/u);
 	assert.doesNotMatch(demoCss, /\.demo-card-facts\s*\{[^}]*grid-template-columns:\s*repeat\(3,/u);
-	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\]\)/u);
+	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\], \{\s*onInvocationError: clearFailedReviewWebMcpReceipt,\s*onResult: recordReviewWebMcpResult\s*\}\)/u);
 	assert.match(routeSource, /stopReviewWebMcp\?\.\(\);\s*stopReviewWebMcp = null;/u);
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);
 	assert.doesNotMatch(`${routeSource}\n${helperSource}\n${registrationSource}`, /\/api\/mcp-proxy|jsonrpc|tools\/call|unregisterTool/u);
