@@ -1,6 +1,6 @@
 // @ts-nocheck -- plain ESM shared with the browser bundle.
-// Pure workflow rules shared by the browser-local challenge state owner and
-// the Svelte views. The surface is limited to this static challenge flow.
+// Pure workflow rules shared by the browser-local Projects state owner and
+// the Svelte views. The surface models the durable workflow used by the demo.
 
 const DAY_MS = 86_400_000;
 const SEED_DUE_ANCHOR = '2026-08-10';

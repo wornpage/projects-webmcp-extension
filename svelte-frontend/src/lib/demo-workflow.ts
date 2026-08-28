@@ -1,4 +1,4 @@
-// Challenge-only work-item derivations. Browser-local mutations live in
+// Projects work-item derivations for the browser-local workflow. Browser-local mutations live in
 // demo-client.ts; this module owns the small display and navigation contract
 // shared by Work, Review, and Next.
 

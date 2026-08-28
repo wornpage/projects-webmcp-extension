@@ -1,4 +1,4 @@
-// Browser-local state owner for the static WebMCP challenge application.
+// Browser-local state owner for the Projects workflow and its sample workspace.
 
 import { browser } from '$app/environment';
 import { get, writable } from 'svelte/store';
@@ -67,15 +67,15 @@ function errorMessage(error: unknown, fallback: string): string {
 
 function assertDemoState(value: unknown): asserts value is DemoState {
 	if (!value || typeof value !== 'object' || !Array.isArray((value as DemoState).packs)) {
-		throw new ChallengeStateError('Saved challenge data is not a valid work-item state.');
+		throw new ChallengeStateError('Saved workspace data is not a valid work-item state.');
 	}
 	const ids = new Set<string>();
 	for (const pack of (value as DemoState).packs) {
 		if (!pack || typeof pack !== 'object' || typeof pack.id !== 'string' || !pack.id.trim()) {
-			throw new ChallengeStateError('Saved challenge data contains a work item without an id.');
+			throw new ChallengeStateError('Saved workspace data contains a work item without an id.');
 		}
 		if (ids.has(pack.id)) {
-			throw new ChallengeStateError(`Saved challenge data contains duplicate id "${pack.id}".`);
+			throw new ChallengeStateError(`Saved workspace data contains duplicate id "${pack.id}".`);
 		}
 		ids.add(pack.id);
 	}
@@ -88,7 +88,7 @@ function cloneState(state: DemoState): DemoState {
 		return clone;
 	} catch (error) {
 		if (error instanceof ChallengeStateError) throw error;
-		throw new ChallengeStateError('Challenge data could not be copied for a local save.');
+		throw new ChallengeStateError('Workspace data could not be copied for a local save.');
 	}
 }
 
@@ -106,7 +106,7 @@ function readStoredState(): DemoState | null {
 		return parsed;
 	} catch (error) {
 		if (error instanceof ChallengeStateError) throw error;
-		throw new ChallengeStateError('Saved challenge data is invalid JSON. Clear this site\'s local data to restart.');
+		throw new ChallengeStateError('Saved workspace data is invalid JSON. Clear this site\'s local data to restart.');
 	}
 }
 
@@ -116,7 +116,7 @@ function persistState(state: DemoState): void {
 	try {
 		serialized = JSON.stringify(state);
 	} catch {
-		throw new ChallengeStateError('Challenge data could not be serialized for a local save.');
+		throw new ChallengeStateError('Workspace data could not be serialized for a local save.');
 	}
 	try {
 		localStorage.setItem(STORAGE_KEY, serialized);
@@ -130,19 +130,19 @@ async function loadSeedState(): Promise<DemoState> {
 	try {
 		response = await fetch(SEED_URL, { cache: 'no-store' });
 	} catch {
-		throw new ChallengeStateError('Could not load the bundled challenge data.');
+		throw new ChallengeStateError('Could not load the bundled workspace data.');
 	}
 	if (!response.ok) {
-		throw new ChallengeStateError(`Could not load the bundled challenge data (${response.status}).`);
+		throw new ChallengeStateError(`Could not load the bundled workspace data (${response.status}).`);
 	}
 	let source: unknown;
 	try {
 		source = await response.json();
 	} catch {
-		throw new ChallengeStateError('The bundled challenge data is invalid JSON.');
+		throw new ChallengeStateError('The bundled workspace data is invalid JSON.');
 	}
 	if (!Array.isArray(source)) {
-		throw new ChallengeStateError('The bundled challenge data is not a work-item list.');
+		throw new ChallengeStateError('The bundled workspace data is not a work-item list.');
 	}
 	const state: DemoState = { packs: rebaseSeedPacks(source as DemoPack[]) };
 	assertDemoState(state);
@@ -160,7 +160,7 @@ async function runDemoStateRefresh(): Promise<DemoState | null> {
 		return state;
 	} catch (error) {
 		if (startingRevision !== stateRevision) return get(demoState);
-		demoStateError.set(errorMessage(error, 'Could not load challenge data.'));
+		demoStateError.set(errorMessage(error, 'Could not load workspace data.'));
 		return null;
 	} finally {
 		if (startingRevision === stateRevision) demoStateLoading.set(false);
@@ -246,7 +246,7 @@ export async function runPackAction(packId: string, rawAction: string): Promise<
 	if (!current) current = await refreshDemoState();
 	if (!current) return null;
 	if (!current.packs.some((pack) => pack.id === packId)) {
-		displayToast('That work item is no longer in this challenge state.', 'error');
+		displayToast('That work item is no longer in the current workspace state.', 'error');
 		return null;
 	}
 
@@ -325,7 +325,7 @@ export async function createPack(payload: Record<string, unknown>): Promise<{
 		draft.selectedId = id;
 		draft.status = `Created ${formatWorkTitle(title)}.`;
 	});
-	if (!state) throw new ChallengeStateError('Challenge data is not available.');
+	if (!state) throw new ChallengeStateError('Workspace data is not available.');
 	const created = state.packs.find((item) => item.id === id)!;
 	displayToast(`Created: ${formatWorkTitle(created.title)}`, 'success');
 	return { pack: created, state };

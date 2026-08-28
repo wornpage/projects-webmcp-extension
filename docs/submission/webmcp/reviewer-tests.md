@@ -101,7 +101,7 @@ The root and frontend locked installs completed from empty dependency directorie
 
 | Route | Direct loads | Catalog tools | Exact observed catalog |
 | --- | ---: | ---: | --- |
-| Guide | 1/1 | 1/1 | `get_webmcp_challenge_guide` |
+| Guide | 1/1 | 1/1 | `get_projects_handoff_guide` |
 | Work | 1/1 | 2/2 | `get_current_work_view`, `show_work_search` |
 | Review | 1/1 | 2/2 | `get_current_review_queue`, `set_review_scope` |
 | Next | 1/1 | 2/2 | `get_current_next_editor`, `prepare_next_action` |
@@ -136,7 +136,7 @@ This record follows the merged reviewer-readiness work at `0284712edfd08d3f5cf02
 1. Open `/webmcp-challenge`.
    - Read **Guide reader in this browser** before using a tool. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The one Guide reader can read the visible guide only and cannot navigate, save, or change workspace data.
    - If it says `Reader API unavailable`, use the ordinary judge path instead: copy the prompt and follow the three visible buttons. The browser-local sample remains usable without WebMCP.
-   - In a compatible browser, discover `get_webmcp_challenge_guide`.
+   - In a compatible browser, discover `get_projects_handoff_guide`.
    - Confirm its result matches the visible three-step prompt and safety copy.
 2. Open `/work`.
    - Discover `get_current_work_view` and `show_work_search` only.

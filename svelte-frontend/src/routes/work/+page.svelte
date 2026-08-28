@@ -109,8 +109,8 @@
 
 	let workMetadata = $derived.by(() => summarizeWorkMetadata(packs, { isMissingOwnerValue, dueUrgency }));
 	let dueUrgencyFilter = $state('all');
-	// The contest path always begins with the complete workspace visible so the
-	// completed Garage-reset evidence cannot be hidden by a prior browser visit.
+	// The Work page begins with the complete sample workspace visible so people and page tools
+	// share the same initial context on every browser visit.
 	let hideDone = $state(false);
 
 	// Debounce search query to avoid re-filtering on every keystroke
