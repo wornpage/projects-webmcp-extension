@@ -9,6 +9,8 @@ import {
 	WORK_SEARCH_TOOL_NAME,
 	createCurrentWorkTool,
 	createShowWorkSearchTool,
+	normalizeWorkSearch,
+	routeWorkSearch,
 	workItemPageView,
 	workPageView
 } from '../svelte-frontend/src/routes/work/work-webmcp.mjs';
@@ -206,6 +208,22 @@ test('the Work-search descriptor declares and verifies one reversible page-local
 	assert.deepEqual(noMatch.focus, { target: 'search', itemId: null, ...focusProof });
 	assert.deepEqual(noMatch.work.counts, { workspace: 4, matching: 0, shown: 0, remaining: 0, blocked: 0 });
 	assert.deepEqual(noMatch.work.items, []);
+});
+
+test('one exported Work-search normalizer serves tools and safe URL arrival', () => {
+	assert.equal(normalizeWorkSearch('  Research  '), 'Research');
+	assert.equal(routeWorkSearch('  Research  '), 'Research');
+	assert.equal(normalizeWorkSearch('x'.repeat(121)), null);
+	assert.equal(normalizeWorkSearch('line\nbreak'), null);
+	assert.equal(routeWorkSearch('x'.repeat(121)), '');
+	assert.equal(routeWorkSearch('line\nbreak'), '');
+	assert.equal(routeWorkSearch(null), '');
+	assert.match(helperSource, /const query = normalizeWorkSearch\(candidate\.query\);/u);
+	assert.match(routeSource, /function applyRouteWorkSearch\(searchParam: unknown\)[\s\S]*?const routeSearch = routeWorkSearch\(searchParam\);[\s\S]*?query = routeSearch;[\s\S]*?debouncedQuery = routeSearch;/u);
+	assert.match(routeSource, /const routeSearch = applyRouteWorkSearch\(\$page\.url\.searchParams\.get\('search'\)\);/u);
+	assert.match(routeSource, /void focusRouteWorkSearchArrival\(routeSearch\);/u);
+	const arrival = routeSource.match(/function applyRouteWorkSearch[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.doesNotMatch(arrival, /fetch\(|localStorage|sessionStorage|goto\(|runPackAction|registerPageTools/u);
 });
 
 test('Work receipt insertion is followed by strict revalidation and failure clears the provisional receipt', async () => {

@@ -127,20 +127,20 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
 
 | Gate | Current result |
 | --- | --- |
-| Public source boundary | 79 tracked public paths, including the route-owned editable Guide brief and scope chooser; no replacement CI or compatibility path remains. |
-| Local automated gate | `npm run verify` passes with 0 Svelte errors, 0 warnings, 42 WebMCP contracts, 5 static-artifact contracts, and a completed static build. |
-| Guide default | `All visible work` is selected immediately and shows 8 matching of 8 workspace in the current sample. |
+| Public source boundary | 80 tracked public paths, including the route-owned editable Guide brief, scope chooser, and Work action mapping; no replacement CI or compatibility path remains. |
+| Local automated gate | `npm run verify` passes with 0 Svelte errors, 0 warnings, 45 WebMCP contracts, 5 static-artifact contracts, and a completed static build. |
+| Guide default | `All visible work` is selected immediately and exposes `Open all 8 work items` to `/work` in the current sample. |
 | Discovered choices | The current sample renders `Household · 4` and `Research · 4` from observed area data and Work's shared search counter; these names are not fixed chooser behavior. |
-| Custom truth | Custom keeps the 120-character/control-character validation and projects an unmatched term as 0 matching of 8 workspace without fallback or invented work. |
+| Custom truth | Custom keeps the shared 120-character/control-character validation; an unmatched term projects 0 matching of 8 workspace and exposes disabled `No work matches`, without a fallback Work link or invented work. |
 | Focused arrival state | `/work?focus=garage-reset-sort-shelves` focuses and centers the matching card, applies a selected-surface wash, accent rail, 4px ring, and `Focused item` label for 4.2 seconds, then removes the arrival treatment while visible keyboard focus remains. |
 
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.
-   - Keep **All visible work** selected. It is the default and displays its matching count beside the explicit workspace denominator; no taxonomy knowledge or editing is needed.
+   - Keep **All visible work** selected. It is the default and exposes **Open all 8 work items** to `/work`; no taxonomy knowledge or editing is needed.
    - Ask the browser agent: `Follow the brief on this page.` Verify the returned projection contains the exact default `agentBrief`, empty `workQuery`, selected All scope, 8 matching, and 8 workspace for the current sample.
    - Choose one displayed alternative. In the current sample, the observed data-backed choices are `Household · 4` and `Research · 4`; verify the selected label, deterministic query, 4 matching, and 8 workspace agree in the visible Guide and tool result.
-   - Optional Custom variation: choose **Custom**, enter `Definitely absent work term`, then ask `Follow the brief on this page.` Verify the Guide returns the exact normalized query with 0 matching of 8 workspace and Work reports 0 matching and 0 shown, preserves the full denominator, and invents no result.
+   - Choose **Research** and verify **Open 4 Research items** leads to `/work?search=Research`, where Work immediately shows 4 matching of 8. Choose **Custom**, enter `Definitely absent work term`, and verify disabled **No work matches** replaces the link; then ask `Follow the brief on this page.` Verify the Guide returns the exact normalized query with 0 matching of 8 workspace and Work reports 0 matching and 0 shown, preserves the full denominator, and invents no result.
    - Expand **Authority and browser status** only when needed. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The Guide reader cannot navigate, save, or change workspace data.
    - If it says `Reader API unavailable`, use Copy brief and follow the three visible buttons. A nonempty derived or Custom scope must remain in the copied instructions.
    - In a compatible browser, discover `get_projects_handoff_guide`.

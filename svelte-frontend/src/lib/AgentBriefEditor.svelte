@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { WornButton, WornChip } from '$lib/components';
+	import { guideWorkAction } from '$lib/guide-work-action.mjs';
 
 	type DerivedScopeChoice = {
 		id: string;
@@ -39,6 +40,12 @@
 	let selectedDerivedScope = $derived(scopeCatalog.choices.find(({ id }) => id === selectedScopeId) ?? null);
 	let selectedScopeKind = $derived(selectedScopeId === 'custom' ? 'custom' : selectedDerivedScope ? 'derived' : 'all');
 	let selectedScopeLabel = $derived(selectedScopeId === 'custom' ? 'Custom' : selectedDerivedScope?.label ?? 'All visible work');
+	let selectedScopeAction = $derived(guideWorkAction({
+		kind: selectedScopeKind,
+		label: selectedScopeLabel,
+		query: workQuery,
+		matchingCount: selectedMatchingCount
+	}));
 
 	$effect(() => {
 		if (selectedScopeId === 'all' || selectedScopeId === 'custom' || selectedDerivedScope) return;
@@ -158,7 +165,13 @@
 		{#if scopeCatalog.omittedChoiceCount > 0}
 			<p class="agent-brief-help">Showing {scopeCatalog.shownChoiceCount} of {scopeCatalog.discoveredChoiceCount} discovered scopes. Use Custom for another visible term.</p>
 		{/if}
-		<p class="agent-scope-result" aria-live="polite" data-agent-scope-result>{selectedMatchingCount} matching of {scopeCatalog.workspaceCount} workspace · {selectedScopeLabel}</p>
+		<div class="agent-scope-action" aria-live="polite" data-agent-scope-action>
+			{#if selectedScopeAction.href}
+				<WornButton data-agent-scope-action-link href={selectedScopeAction.href} size="sm" variant="primary">{selectedScopeAction.label}</WornButton>
+			{:else}
+				<WornButton data-agent-scope-action-disabled type="button" size="sm" variant="primary" disabled>{selectedScopeAction.label}</WornButton>
+			{/if}
+		</div>
 		{#if selectedScopeId === 'custom'}
 			<div class="agent-work-query-field">
 				<div class="agent-work-query-label">
@@ -231,8 +244,7 @@
 	}
 	.agent-brief-help,
 	.agent-brief-status,
-	.agent-scope-heading p,
-	.agent-scope-result {
+	.agent-scope-heading p {
 		color: var(--worn-text-secondary);
 		font-size: 14px;
 		line-height: 1.5;
@@ -268,9 +280,9 @@
 		display: inline-flex;
 		min-width: 0;
 	}
-	.agent-scope-result {
-		font-family: var(--font-typewriter);
-		font-size: 12px;
+	.agent-scope-action {
+		display: flex;
+		justify-content: flex-start;
 	}
 	.agent-work-query-label {
 		align-items: baseline;

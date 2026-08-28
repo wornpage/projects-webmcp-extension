@@ -39,6 +39,7 @@ svelte-frontend/src/lib/components/WornToast.svelte
 svelte-frontend/src/lib/demo-client.ts
 svelte-frontend/src/lib/demo-workflow.ts
 svelte-frontend/src/lib/focus-pulse.mjs
+svelte-frontend/src/lib/guide-work-action.mjs
 svelte-frontend/src/lib/local-date.mjs
 svelte-frontend/src/lib/progressive-reveal.mjs
 svelte-frontend/src/lib/recent-work.mjs

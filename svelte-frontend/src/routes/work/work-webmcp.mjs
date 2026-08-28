@@ -201,9 +201,33 @@ function workSearchInput(input) {
 	}
 	if (typeof candidate.query !== 'string') throw new TypeError('Work search query must be a string.');
 	if (/\p{Cc}/u.test(candidate.query)) throw new TypeError('Work search query cannot contain control characters.');
-	const query = candidate.query.trim();
-	if (query.length > MAX_SEARCH_LENGTH) throw new TypeError(`Work search query must be ${MAX_SEARCH_LENGTH} characters or fewer.`);
+	const query = normalizeWorkSearch(candidate.query);
+	if (query === null) throw new TypeError(`Work search query must be ${MAX_SEARCH_LENGTH} characters or fewer.`);
 	return query;
+}
+
+/**
+ * The single public Work-search normalizer. Route-arrival input must fail
+ * closed while the page tool reports invalid caller input, so callers decide
+ * whether a null result becomes the all-work view or a validation error.
+ *
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+export function normalizeWorkSearch(value) {
+	if (typeof value !== 'string' || /\p{Cc}/u.test(value)) return null;
+	const query = value.trim();
+	return query.length <= MAX_SEARCH_LENGTH ? query : null;
+}
+
+/**
+ * Normalize route input without giving a URL any authority beyond Work's
+ * local visible search. Invalid input deliberately falls back to all work.
+ *
+ * @param {unknown} value
+ */
+export function routeWorkSearch(value) {
+	return normalizeWorkSearch(value) ?? '';
 }
 
 /** @param {unknown} input @returns {WorkSearchReceipt} */
