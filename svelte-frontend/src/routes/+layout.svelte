@@ -38,7 +38,7 @@
 			<small>WebMCP edition</small>
 		</a>
 
-		<nav aria-label="Challenge pages">
+		<nav aria-label="Projects workflow navigation">
 			{#each ROUTES as item (item.href)}
 				<a href={item.href} aria-current={pathname === item.href ? 'page' : undefined}>
 					{item.label}

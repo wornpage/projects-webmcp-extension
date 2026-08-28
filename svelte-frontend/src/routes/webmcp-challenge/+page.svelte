@@ -103,7 +103,7 @@
 			<div class="challenge-intro">
 				<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
 				<p class="challenge-purpose">Shared work loses time when people reconstruct blockers and next actions from scattered handoffs. Wornpage Projects lets a browser agent narrow the same visible workspace and prepare—not decide—the next handoff.</p>
-				<dl class="challenge-facts" aria-label="What the demo allows">
+				<dl class="challenge-facts" aria-label="Projects workflow capabilities">
 					<div><dt>Page tools</dt><dd>7</dd></div>
 					<div><dt>Actions you can undo</dt><dd>3</dd></div>
 					<div><dt>Automatic saves</dt><dd>0</dd></div>

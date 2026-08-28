@@ -20,6 +20,14 @@ const webManifest = fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'
 const rootReadme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
 const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmcp/reviewer-tests.md'), 'utf8');
 
+test('Projects workflow surfaces use durable accessible product labels', () => {
+	const layoutSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.svelte'), 'utf8');
+	assert.match(layoutSource, /<nav aria-label="Projects workflow navigation">/u);
+	assert.doesNotMatch(layoutSource, /aria-label="Challenge pages"/u);
+	assert.match(pageSource, /<dl class="challenge-facts" aria-label="Projects workflow capabilities">/u);
+	assert.doesNotMatch(pageSource, /aria-label="What the demo allows"/u);
+});
+
 function guideFixture() {
 	return {
 		title: 'WebMCP Challenge guide',
@@ -123,7 +131,7 @@ test('challenge route is prerendered and owns one public reader without navigati
 	assert.match(pageSource, /WornButton type="button" size="sm" onclick=\{copyRecommendedPrompt\}>Copy prompt<\/WornButton>/u);
 	assert.match(pageSource, /data-challenge-copy-status aria-live="polite"/u);
 	assert.match(pageSource, /<section class="challenge-prompt" aria-labelledby="challenge-prompt-title">[\s\S]*?<h2 id="challenge-prompt-title">Run the judged path<\/h2>[\s\S]*?<\/section>/u);
-	assert.match(pageSource, /<dl class="challenge-facts" aria-label="What the demo allows">[\s\S]*?<dt>Page tools<\/dt><dd>7<\/dd>[\s\S]*?<dt>Actions you can undo<\/dt><dd>3<\/dd>[\s\S]*?<dt>Automatic saves<\/dt><dd>0<\/dd>[\s\S]*?<\/dl>/u);
+	assert.match(pageSource, /<dl class="challenge-facts" aria-label="Projects workflow capabilities">[\s\S]*?<dt>Page tools<\/dt><dd>7<\/dd>[\s\S]*?<dt>Actions you can undo<\/dt><dd>3<\/dd>[\s\S]*?<dt>Automatic saves<\/dt><dd>0<\/dd>[\s\S]*?<\/dl>/u);
 	assert.match(pageSource, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/u);
 	assert.match(pageSource, /\.challenge-kicker \{\s*color: var\(--worn-text-secondary\);/u);
 	assert.doesNotMatch(pageSource, /\.challenge-kicker \{[^}]*color: var\(--worn-accent\);/u);
