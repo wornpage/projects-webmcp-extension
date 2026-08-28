@@ -191,9 +191,14 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	}
 	const guideHtml = readFileSync(path.join(artifactRoot, 'webmcp-challenge.html'), 'utf8');
 	assert.match(guideHtml, /data-agent-brief-input/u);
+	assert.match(guideHtml, /data-agent-work-query-input/u);
 	assert.match(guideHtml, /maxlength="1000"/u);
+	assert.match(guideHtml, /maxlength="120"/u);
+	assert.match(guideHtml, /Work to focus on \(optional\)/u);
+	assert.match(guideHtml, /Leave work scope empty for all visible work/u);
+	assert.match(guideHtml, /Follow the brief on this page\./u);
 	assert.match(guideHtml, /Local draft · not saved · workspace unchanged/u);
-	assert.match(guideHtml, /The Guide tool reads the current text in this field\. Copy brief is the fallback/u);
+	assert.match(guideHtml, /The Guide tool reads both fields; Copy brief is the fallback/u);
 	assert.doesNotMatch(guideHtml, /A useful handoff, in order/u);
 
 	const css = collectCss(artifactRoot);

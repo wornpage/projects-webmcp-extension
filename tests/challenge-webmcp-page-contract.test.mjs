@@ -19,6 +19,7 @@ const appDocument = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/app
 const webManifest = fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8');
 const rootReadme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
 const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmcp/reviewer-tests.md'), 'utf8');
+const editorSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/AgentBriefEditor.svelte'), 'utf8');
 
 test('Projects workflow surfaces use durable accessible product labels', () => {
 	const layoutSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.svelte'), 'utf8');
@@ -38,7 +39,8 @@ function guideFixture() {
 			{ position: 3, title: 'Prepare next', description: 'Prepare a draft.', href: '/next' }
 		],
 		safety: ['Sample data stays local.', 'Page state is bounded.', 'Humans retain decisions.'],
-		agentBrief: 'Read the visible project state.\nDo not save workspace data.'
+		agentBrief: 'Read the visible project state.\nDo not save workspace data.',
+		workQuery: 'Garden study'
 	};
 }
 
@@ -58,6 +60,11 @@ test('Projects handoff guide projects one exact public three-step workflow', () 
 	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: '' })?.agentBrief, '');
 	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: 'x'.repeat(1001) }), null);
 	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: 'Unsafe\u0007control' }), null);
+	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: '' })?.workQuery, '');
+	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: '  Garden study  ' })?.workQuery, 'Garden study');
+	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: 'x'.repeat(121) }), null);
+	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: 'Garden\nstudy' }), null);
+	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), workQuery: undefined }), null);
 });
 
 test('Projects handoff guide descriptor is closed, read-only, live, and abort-aware', async () => {
@@ -75,6 +82,10 @@ test('Projects handoff guide descriptor is closed, read-only, live, and abort-aw
 	assert.equal((await tool.execute({})).purpose, 'Updated visible purpose.');
 	guide = { ...guide, agentBrief: 'Edited current brief.' };
 	assert.equal((await tool.execute({})).agentBrief, 'Edited current brief.');
+	guide = { ...guide, workQuery: 'Changed live Work scope' };
+	const liveResult = await tool.execute({});
+	assert.equal(liveResult.workQuery, 'Changed live Work scope');
+	assert.deepEqual(structuredClone(liveResult), liveResult);
 	await assert.rejects(tool.execute({ extra: true }), /empty object/u);
 	const controller = new AbortController();
 	controller.abort();
@@ -97,6 +108,8 @@ test('guide reader projects the rendered guide exactly and ordinary links remain
 				? { dataset: { webmcpChallengeTitle: fixture.title, webmcpChallengePurpose: fixture.purpose } }
 				: selector === '[data-agent-brief-input]'
 					? { value: fixture.agentBrief }
+					: selector === '[data-agent-work-query-input]'
+						? { value: fixture.workQuery }
 					: null;
 		},
 		querySelectorAll(selector) {
@@ -108,7 +121,7 @@ test('guide reader projects the rendered guide exactly and ordinary links remain
 	assert.deepEqual(guide, fixture);
 	assert.deepEqual(await createWebMcpChallengeGuideTool(() => guide).execute({}), fixture);
 	assert.match(pageSource, /<WornButton href=\{step\.href\} size="sm">\{step\.action\}<\/WornButton>/u);
-	assert.match(pageSource, /Reader API unavailable[\s\S]*?Copy the brief[\s\S]*?three visible buttons[\s\S]*?browser-local sample remains usable without WebMCP/u);
+	assert.match(pageSource, /Reader API unavailable[\s\S]*?Copy brief[\s\S]*?three visible buttons[\s\S]*?browser-local sample remains usable without WebMCP/u);
 });
 
 test('handoff route is prerendered and owns one public reader without navigation or write authority', () => {
@@ -125,8 +138,8 @@ test('handoff route is prerendered and owns one public reader without navigation
 	assert.match(pageSource, /browser agent narrow the same visible workspace and prepare—not decide—the next handoff/u);
 	assert.match(pageSource, /Guide reader in this browser/u);
 	assert.match(pageSource, /typeof webMcpDocument\.modelContext\?\.registerTool === 'function'/u);
-	assert.match(pageSource, /Reader API detected[\s\S]*?one tool reads this visible guide and current editable brief only; it cannot navigate, save, or change workspace data[\s\S]*?does not confirm registration success/u);
-	assert.match(pageSource, /Reader API unavailable[\s\S]*?Copy the brief[\s\S]*?three visible buttons[\s\S]*?browser-local sample remains usable without WebMCP/u);
+	assert.match(pageSource, /Reader API detected[\s\S]*?Leave scope empty for all visible work[\s\S]*?enter an existing work term[\s\S]*?Follow the brief on this page\.[\s\S]*?one Guide tool reads the visible guide, current brief, and optional Work scope only; it cannot navigate, save, or change workspace data[\s\S]*?does not confirm registration success/u);
+	assert.match(pageSource, /Reader API unavailable[\s\S]*?Copy brief[\s\S]*?three visible buttons[\s\S]*?browser-local sample remains usable without WebMCP/u);
 	assert.doesNotMatch(pageSource, /Chrome/u);
 	assert.match(appDocument, /Projects handoff workflow/u);
 	assert.match(appDocument, /human-controlled saves/u);
@@ -150,12 +163,24 @@ test('handoff route is prerendered and owns one public reader without navigation
 	for (const source of [pageSource, appDocument, webManifest]) {
 		assert.doesNotMatch(source, /judge|contest|recording|garage reset|copy prompt|run the judged path/iu);
 	}
-	const editorSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/AgentBriefEditor.svelte'), 'utf8');
 	assert.match(editorSource, /data-agent-brief-input/u);
+	assert.match(editorSource, /data-agent-work-query-input/u);
+	assert.match(editorSource, /Work to focus on \(optional\)/u);
+	assert.match(editorSource, /maxlength="120"/u);
 	assert.match(editorSource, /maxlength="1000"/u);
 	assert.match(editorSource, /aria-live="polite"/u);
 	assert.match(editorSource, /navigator\.clipboard\?\.writeText/u);
 	assert.match(editorSource, /briefInput\?\.focus\(\);[\s\S]*?briefInput\?\.select\(\);/u);
 	assert.match(editorSource, /@media \(max-width: 520px\)/u);
 	assert.doesNotMatch(editorSource, /fetch\(|localStorage|sessionStorage|modelContext/u);
+});
+
+test('editable Guide fallback copies optional Work scope without changing authority', () => {
+	assert.match(editorSource, /const scopedQuery = workQuery\.trim\(\);/u);
+	assert.match(editorSource, /scopedQuery\s*\? `Brief for the browser agent:\\n\$\{brief\}\\n\\nWork to focus on:\\n\$\{scopedQuery\}`\s*:\s*brief/u);
+	assert.match(editorSource, /navigator\.clipboard\.writeText\(copyText\)/u);
+	assert.match(editorSource, /workQuery = '';/u);
+	assert.match(editorSource, /brief = DEFAULT_AGENT_BRIEF;/u);
+	assert.match(editorSource, /briefInput\?\.focus\(\);[\s\S]*?briefInput\?\.select\(\);/u);
+	assert.doesNotMatch(editorSource, /fetch\(|localStorage|sessionStorage|modelContext|goto\(/u);
 });

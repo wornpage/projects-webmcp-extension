@@ -55,15 +55,16 @@
 		},
 		onResult: async ({ toolName, result }) => {
 			if (toolName !== PROJECTS_HANDOFF_GUIDE_TOOL_NAME) return;
-			const guide = result as { steps?: unknown[]; agentBrief?: unknown };
+			const guide = result as { steps?: unknown[]; agentBrief?: unknown; workQuery?: unknown };
 			webMcpInvocationCount += 1;
 			webMcpGuideReceipt = {
-				summary: 'WebMCP read the current Guide and editable brief.',
+				summary: 'WebMCP read the current Guide, brief, and optional Work scope.',
 				cells: [
 					{ label: 'Tool', value: toolName },
 					{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
 					{ label: 'What it read', value: `${guide.steps?.length ?? 0} workflow steps and the visible authority boundary` },
 					{ label: 'Editable brief', value: typeof guide.agentBrief === 'string' ? guide.agentBrief : 'Unavailable' },
+					{ label: 'Work scope', value: typeof guide.workQuery === 'string' && guide.workQuery ? guide.workQuery : 'All visible work' },
 					{ label: 'Page-local presentation', value: 'Unchanged' },
 					{ label: 'Saved workspace changes', value: 'None' }
 				]
@@ -138,9 +139,9 @@
 			<section class="challenge-browser-note" data-webmcp-guide-reader-status aria-live="polite" aria-labelledby="challenge-browser-note-title">
 				<h2 id="challenge-browser-note-title">Guide reader in this browser</h2>
 				{#if webMcpGuideReaderAvailable}
-					<p><strong>Reader API detected.</strong> This browser exposes the Guide reader API. Its one tool reads this visible guide and current editable brief only; it cannot navigate, save, or change workspace data. This status does not confirm registration success.</p>
+					<p><strong>Reader API detected.</strong> Leave scope empty for all visible work, or enter an existing work term, then ask the browser agent: <q>Follow the brief on this page.</q> Its one Guide tool reads the visible guide, current brief, and optional Work scope only; it cannot navigate, save, or change workspace data. This status does not confirm registration success.</p>
 				{:else}
-					<p><strong>Reader API unavailable.</strong> Copy the brief, then follow the three visible buttons instead. The browser-local sample remains usable without WebMCP.</p>
+					<p><strong>Reader API unavailable.</strong> Leave scope empty for all visible work or enter an existing work term, then use Copy brief and follow the three visible buttons. The copied instructions keep the optional Work scope. The browser-local sample remains usable without WebMCP.</p>
 				{/if}
 			</section>
 		</div>

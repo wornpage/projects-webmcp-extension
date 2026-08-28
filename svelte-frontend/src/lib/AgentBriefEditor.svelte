@@ -5,6 +5,7 @@
 	export const DEFAULT_AGENT_BRIEF = 'Use the WebMCP tools on Work, Review, and Next to inspect the visible project state, narrow the items that need attention, and prepare an evidence-based next action for my review. Do not save or change workspace data.';
 
 	let brief = $state(DEFAULT_AGENT_BRIEF);
+	let workQuery = $state('');
 	let status = $state('Local draft · not saved · workspace unchanged');
 	let briefInput = $state<HTMLTextAreaElement | null>(null);
 
@@ -14,14 +15,21 @@
 
 	function resetBrief() {
 		brief = DEFAULT_AGENT_BRIEF;
+		workQuery = '';
 		noteLocalDraft();
 	}
 
 	async function copyBrief() {
 		try {
 			if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('Clipboard API unavailable.');
-			await navigator.clipboard.writeText(brief);
-			status = 'Brief copied · local draft not saved · workspace unchanged';
+			const scopedQuery = workQuery.trim();
+			const copyText = scopedQuery
+				? `Brief for the browser agent:\n${brief}\n\nWork to focus on:\n${scopedQuery}`
+				: brief;
+			await navigator.clipboard.writeText(copyText);
+			status = scopedQuery
+				? 'Brief and work scope copied · local draft not saved · workspace unchanged'
+				: 'Brief copied · local draft not saved · workspace unchanged';
 		} catch {
 			status = 'Copy unavailable · brief selected for manual copy · workspace unchanged';
 			await tick();
@@ -39,7 +47,23 @@
 		</div>
 		<p class="agent-brief-limit" aria-label={`${brief.length} of 1000 characters`}>{brief.length}/1000</p>
 	</div>
-	<p class="agent-brief-help" id="agent-brief-help">The Guide tool reads the current text in this field. Copy brief is the fallback when its reader API is unavailable.</p>
+	<p class="agent-brief-help" id="agent-brief-help">Leave work scope empty for all visible work, or enter an existing visible work term. Then ask the browser agent: <q>Follow the brief on this page.</q> The Guide tool reads both fields; Copy brief is the fallback when its reader API is unavailable.</p>
+	<div class="agent-work-query-field">
+		<div class="agent-work-query-label">
+			<label for="agent-work-query-input">Work to focus on (optional)</label>
+			<span aria-label={`${workQuery.length} of 120 characters`}>{workQuery.length}/120</span>
+		</div>
+		<input
+			bind:value={workQuery}
+			data-agent-work-query-input
+			id="agent-work-query-input"
+			maxlength="120"
+			type="text"
+			aria-describedby="agent-work-query-help agent-brief-status"
+			oninput={noteLocalDraft}
+		/>
+		<p id="agent-work-query-help" class="agent-brief-help">Matches visible title, type, area, owner, blocker, source, purpose, memory, next action, due date, or other visible work terms.</p>
+	</div>
 	<label for="agent-brief-input">Brief for the browser agent</label>
 	<textarea
 		bind:this={briefInput}
@@ -101,6 +125,23 @@
 		font-size: 14px;
 		font-weight: 700;
 	}
+	.agent-work-query-field {
+		display: grid;
+		gap: 6px;
+	}
+	.agent-work-query-label {
+		align-items: baseline;
+		display: flex;
+		gap: 12px;
+		justify-content: space-between;
+	}
+	.agent-work-query-label span {
+		color: var(--worn-text-secondary);
+		font-family: var(--font-typewriter);
+		font-size: 12px;
+		white-space: nowrap;
+	}
+	.agent-brief-editor input,
 	.agent-brief-editor textarea {
 		background: var(--worn-surface);
 		border: 1px solid var(--worn-border);
@@ -114,6 +155,7 @@
 		resize: vertical;
 		width: 100%;
 	}
+	.agent-brief-editor input:focus-visible,
 	.agent-brief-editor textarea:focus-visible {
 		outline: 2px dashed var(--worn-focus);
 		outline-offset: 2px;

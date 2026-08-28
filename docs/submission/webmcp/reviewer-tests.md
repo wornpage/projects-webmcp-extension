@@ -134,11 +134,13 @@ This record follows the merged reviewer-readiness work at `0284712edfd08d3f5cf02
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.
-   - Read **Guide reader in this browser** before using a tool. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The one Guide reader can read the visible guide and its current editable brief only; it cannot navigate, save, or change workspace data.
-   - Edit the brief, then ask the browser agent: `Follow the brief on this page.` Verify that the returned projection contains the exact current `agentBrief`.
-   - If it says `Reader API unavailable`, use Copy brief and follow the three visible buttons. The browser-local sample remains usable without WebMCP.
+   - Read **Guide reader in this browser** before using a tool. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The one Guide reader can read the visible guide, current editable brief, and optional Work scope only; it cannot navigate, save, or change workspace data.
+   - Leave **Work to focus on (optional)** empty for the default all-visible-work path. Without editing either field, ask the browser agent: `Follow the brief on this page.` Verify that the returned projection contains the exact default `agentBrief` and an empty `workQuery`.
+   - Optional variation: enter `Garden study`, then ask `Follow the brief on this page.` Verify the Guide returns `workQuery: "Garden study"` and Work search selects only the four existing items in that second work family.
+   - Optional variation: enter `Definitely absent work term`, then ask `Follow the brief on this page.` Verify Work reports 0 matching and 0 shown, returns no items, preserves the full workspace denominator, and invents no result.
+   - If it says `Reader API unavailable`, use Copy brief and follow the three visible buttons. A nonempty Work scope must remain in the copied instructions. The browser-local sample remains usable without WebMCP.
    - In a compatible browser, discover `get_projects_handoff_guide`.
-   - Confirm its result matches the visible three-step workflow, safety copy, and current editable brief.
+   - Confirm its result matches the visible three-step workflow, safety copy, current editable brief, and optional Work scope.
 2. Open `/work`.
    - Discover `get_current_work_view` and `show_work_search` only.
    - Read the view; verify workspace, matching, shown, and remaining denominators are explicit.

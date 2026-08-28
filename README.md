@@ -67,7 +67,7 @@ document.modelContext.registerTool({
 });
 ```
 
-The shipped implementation adds exact-input rejection, validated current-page projections, truthful annotations, and complete descriptors in each route. The Guide projection normalizes line endings, accepts empty text, permits only normal text plus tabs and newlines, and limits the brief to 1,000 characters. It passes descriptors to [`registerPageTools`](svelte-frontend/src/lib/webmcp.mjs), which performs registration with one abort signal for the page-owned catalog. That lifecycle boundary removes the tools together when navigation leaves the page and aborts the catalog if any registration fails.
+The shipped implementation adds exact-input rejection, validated current-page projections, truthful annotations, and complete descriptors in each route. The Guide projection normalizes line endings, accepts an empty brief, permits only normal text plus tabs and newlines, and limits the brief to 1,000 characters. Beside it, `workQuery` is an explicit single-line Work-search scope: it trims boundary whitespace, accepts empty for all visible work, rejects control characters, and is limited to 120 characters. It passes descriptors to [`registerPageTools`](svelte-frontend/src/lib/webmcp.mjs), which performs registration with one abort signal for the page-owned catalog. That lifecycle boundary removes the tools together when navigation leaves the page and aborts the catalog if any registration fails.
 
 ## Run locally
 
@@ -96,10 +96,10 @@ The Pages build script performs the nested locked frontend install before buildi
 
 ## Reviewer path
 
-1. Open `/webmcp-challenge` and edit the browser-agent brief.
+1. Open `/webmcp-challenge`. Leave **Work to focus on (optional)** empty to include all visible work, or enter an existing visible work term. Editing is not required for the default all-work path.
 2. In a compatible browser, ask the browser agent: `Follow the brief on this page.`
-3. Verify the Guide result includes the exact current `agentBrief` and that no workspace data changed.
-4. If the reader API is unavailable, use Copy brief and continue through the three visible route buttons instead.
+3. Verify the Guide result includes the exact current `agentBrief` and normalized `workQuery`, and that no workspace data changed.
+4. If the reader API is unavailable, use Copy brief; a nonempty Work scope is included with the brief. Continue through the three visible route buttons instead.
 
 ## Repository boundary
 
@@ -123,7 +123,7 @@ There is no `server/`, `worker/`, Pages Functions, or hidden compatibility route
 npm run verify
 ```
 
-The gate runs Svelte diagnostics, focused WebMCP contracts, static-artifact contracts, and a production prerender. Current expected denominators are 79/79 public source paths, 38/38 WebMCP contracts, and 4/4 static-artifact contracts. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
+The gate runs Svelte diagnostics, focused WebMCP contracts, static-artifact contracts, and a production prerender. Current expected denominators are 79/79 public source paths, 40/40 WebMCP contracts, and 4/4 static-artifact contracts. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
 
 ## License and trademarks
 

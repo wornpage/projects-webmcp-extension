@@ -2,6 +2,7 @@ export const PROJECTS_HANDOFF_GUIDE_TOOL_NAME = 'get_projects_handoff_guide';
 
 const ALLOWED_ROUTES = new Set(['/work', '/review', '/next']);
 const TEXT_LIMIT = 1_000;
+const WORK_QUERY_LIMIT = 120;
 
 /**
  * Read the guide from the public page instead of duplicating its values for
@@ -13,6 +14,7 @@ const TEXT_LIMIT = 1_000;
 export function readRenderedWebMcpChallengeGuide(documentRef) {
 	const root = documentRef.querySelector('[data-webmcp-challenge-guide]');
 	const agentBriefInput = documentRef.querySelector('[data-agent-brief-input]');
+	const agentWorkQueryInput = documentRef.querySelector('[data-agent-work-query-input]');
 	const renderedSteps = Array.from(documentRef.querySelectorAll('[data-webmcp-challenge-step]')).map((step, index) => ({
 		position: index + 1,
 		title: step.querySelector('h2')?.textContent?.trim() ?? '',
@@ -25,7 +27,8 @@ export function readRenderedWebMcpChallengeGuide(documentRef) {
 		purpose: root?.dataset.webmcpChallengePurpose ?? '',
 		steps: renderedSteps,
 		safety: renderedSafety,
-		agentBrief: agentBriefInput?.value
+		agentBrief: agentBriefInput?.value,
+		workQuery: agentWorkQueryInput?.value
 	};
 }
 
@@ -40,7 +43,8 @@ export function webMcpChallengeGuideView(input) {
 	const title = normalizedText(input.title);
 	const purpose = normalizedText(input.purpose);
 	const agentBrief = normalizedAgentBrief(input.agentBrief);
-	if (!title || !purpose || agentBrief === null || input.steps.length !== 3 || input.safety.length !== 3) return null;
+	const workQuery = normalizedWorkQuery(input.workQuery);
+	if (!title || !purpose || agentBrief === null || workQuery === null || input.steps.length !== 3 || input.safety.length !== 3) return null;
 
 	const steps = input.steps.map((entry, index) => challengeStep(entry, index + 1));
 	const safety = input.safety.map(normalizedText);
@@ -53,7 +57,8 @@ export function webMcpChallengeGuideView(input) {
 		purpose,
 		steps: validSteps,
 		safety: /** @type {string[]} */ (safety),
-		agentBrief
+		agentBrief,
+		workQuery
 	};
 }
 
@@ -63,7 +68,7 @@ export function createWebMcpChallengeGuideTool(getGuide) {
 	return {
 		name: PROJECTS_HANDOFF_GUIDE_TOOL_NAME,
 		title: 'Get Projects handoff guide',
-		description: 'Read the current Projects handoff guide, including its editable browser-agent brief, three workflow routes, and visible authority boundaries. This does not navigate, fetch, or write.',
+		description: 'Read the current Projects handoff guide, including its editable browser-agent brief, optional Work-search query, three workflow routes, and visible authority boundaries. This does not navigate, fetch, or write.',
 		inputSchema: { type: 'object', properties: {}, additionalProperties: false },
 		annotations: {
 			readOnlyHint: true,
@@ -106,6 +111,13 @@ function normalizedAgentBrief(value) {
 	const text = value.replace(/\r\n?/gu, '\n').trim();
 	if (text.length > TEXT_LIMIT || /[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/u.test(text)) return null;
 	return text;
+}
+
+/** @param {unknown} value */
+function normalizedWorkQuery(value) {
+	if (typeof value !== 'string' || /\p{Cc}/u.test(value)) return null;
+	const text = value.trim();
+	return text.length <= WORK_QUERY_LIMIT ? text : null;
 }
 
 /** @param {unknown} value @returns {value is Record<string, any>} */
