@@ -88,7 +88,7 @@ test('guide reader projects the rendered guide exactly and ordinary links remain
 	assert.deepEqual(guide, fixture);
 	assert.deepEqual(await createWebMcpChallengeGuideTool(() => guide).execute({}), fixture);
 	assert.match(pageSource, /<WornButton href=\{step\.href\} size="sm">\{step\.action\}<\/WornButton>/u);
-	assert.match(pageSource, /If WebMCP is unavailable, the ordinary page and browser-local sample remain usable/u);
+	assert.match(pageSource, /Reader API unavailable[\s\S]*?ordinary judge path[\s\S]*?browser-local sample remains usable without WebMCP/u);
 });
 
 test('challenge route is prerendered and owns one public reader without navigation or write authority', () => {
@@ -101,8 +101,12 @@ test('challenge route is prerendered and owns one public reader without navigati
 	assert.match(pageSource, /WebMCP project workspace · live sample · no login/u);
 	assert.match(pageSource, /Person: approve, save, or discard every workspace change/u);
 	assert.match(pageSource, /prepare “Confirm storage bin delivery” with a brief evidence-based note/u);
-	assert.match(pageSource, /ChatGPT or Codex in-app browser for the demonstrated WebMCP path/u);
-	assert.match(pageSource, /ordinary page and browser-local sample remain usable/u);
+	assert.match(pageSource, /Shared work loses time when people reconstruct blockers and next actions from scattered handoffs/u);
+	assert.match(pageSource, /browser agent narrow the same visible workspace and prepare—not decide—the next handoff/u);
+	assert.match(pageSource, /Guide reader in this browser/u);
+	assert.match(pageSource, /typeof webMcpDocument\.modelContext\?\.registerTool === 'function'/u);
+	assert.match(pageSource, /Reader API detected[\s\S]*?one tool reads this visible guide only; it cannot navigate, save, or change workspace data[\s\S]*?does not confirm registration success/u);
+	assert.match(pageSource, /Reader API unavailable[\s\S]*?ordinary judge path[\s\S]*?browser-local sample remains usable without WebMCP/u);
 	assert.doesNotMatch(pageSource, /Chrome/u);
 	assert.match(appDocument, /tools read, narrow, and prepare while you control Save/u);
 	assert.match(appDocument, /prepare an unsaved next action[\s\S]*?the person controls Save/u);
