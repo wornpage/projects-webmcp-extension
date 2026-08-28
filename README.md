@@ -29,7 +29,7 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 
 | Page | Tool | Authority |
 | --- | --- | --- |
-| Guide | `get_webmcp_challenge_guide` | Read the visible judge path |
+| Guide | `get_projects_handoff_guide` | Read the visible handoff guide |
 | Work | `get_current_work_view` | Read the bounded, filtered list and its denominators |
 | Work | `show_work_search` | Change only the visible search scope |
 | Review | `get_current_review_queue` | Read the bounded queue, denominators, and visible reasons each item surfaced |
@@ -49,8 +49,8 @@ The challenge documentation's `search_products` descriptor illustrates the imper
 const registrationController = new AbortController();
 
 document.modelContext.registerTool({
-	name: 'get_webmcp_challenge_guide',
-	description: 'Read the exact public judge guide rendered on this page.',
+	name: 'get_projects_handoff_guide',
+	description: 'Read the current Projects handoff guide rendered on this page.',
 	inputSchema: {
 		type: 'object',
 		properties: {},

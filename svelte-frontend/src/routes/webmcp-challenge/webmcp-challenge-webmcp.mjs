@@ -1,4 +1,4 @@
-export const WEBMCP_CHALLENGE_GUIDE_TOOL_NAME = 'get_webmcp_challenge_guide';
+export const PROJECTS_HANDOFF_GUIDE_TOOL_NAME = 'get_projects_handoff_guide';
 
 const ALLOWED_ROUTES = new Set(['/work', '/review', '/next']);
 const TEXT_LIMIT = 1_000;
@@ -22,14 +22,13 @@ export function readRenderedWebMcpChallengeGuide(documentRef) {
 	return {
 		title: root?.dataset.webmcpChallengeTitle ?? '',
 		purpose: root?.dataset.webmcpChallengePurpose ?? '',
-		prompt: root?.dataset.webmcpChallengePrompt ?? '',
 		steps: renderedSteps,
 		safety: renderedSafety
 	};
 }
 
 /**
- * Validate the exact public guide rendered by the challenge page. The guide
+ * Validate the exact public guide rendered by the handoff page. The guide
  * contains no workspace data and offers no navigation or write authority.
  *
  * @param {unknown} input
@@ -38,8 +37,7 @@ export function webMcpChallengeGuideView(input) {
 	if (!isRecord(input) || !Array.isArray(input.steps) || !Array.isArray(input.safety)) return null;
 	const title = normalizedText(input.title);
 	const purpose = normalizedText(input.purpose);
-	const prompt = normalizedText(input.prompt);
-	if (!title || !purpose || !prompt || input.steps.length !== 3 || input.safety.length !== 3) return null;
+	if (!title || !purpose || input.steps.length !== 3 || input.safety.length !== 3) return null;
 
 	const steps = input.steps.map((entry, index) => challengeStep(entry, index + 1));
 	const safety = input.safety.map(normalizedText);
@@ -50,7 +48,6 @@ export function webMcpChallengeGuideView(input) {
 	return {
 		title,
 		purpose,
-		prompt,
 		steps: validSteps,
 		safety: /** @type {string[]} */ (safety)
 	};
@@ -60,9 +57,9 @@ export function webMcpChallengeGuideView(input) {
 export function createWebMcpChallengeGuideTool(getGuide) {
 	if (typeof getGuide !== 'function') throw new TypeError('WebMCP challenge guide requires a current-page getter.');
 	return {
-		name: WEBMCP_CHALLENGE_GUIDE_TOOL_NAME,
-		title: 'Get WebMCP challenge guide',
-		description: 'Read the exact public judge guide currently rendered by the WebMCP Challenge page, including its recommended prompt, three safe demo routes, and authority boundaries. This does not navigate, fetch, or write.',
+		name: PROJECTS_HANDOFF_GUIDE_TOOL_NAME,
+		title: 'Get Projects handoff guide',
+		description: 'Read the current Projects handoff guide, including its three workflow routes and visible authority boundaries. This does not navigate, fetch, or write.',
 		inputSchema: { type: 'object', properties: {}, additionalProperties: false },
 		annotations: {
 			readOnlyHint: true,
@@ -73,10 +70,10 @@ export function createWebMcpChallengeGuideTool(getGuide) {
 		async execute(input, options = {}) {
 			options.signal?.throwIfAborted();
 			if (!isRecord(input) || Object.keys(input).length !== 0) {
-				throw new TypeError('WebMCP challenge guide accepts only an empty object.');
+				throw new TypeError('Projects handoff guide accepts only an empty object.');
 			}
 			const guide = webMcpChallengeGuideView(getGuide());
-			if (!guide) throw new TypeError('WebMCP challenge guide is not verifiable.');
+			if (!guide) throw new TypeError('Projects handoff guide is not verifiable.');
 			options.signal?.throwIfAborted();
 			return guide;
 		}

@@ -19,5 +19,5 @@
   <!-- Divider -->
   <line x1="480" y1="450" x2="720" y2="450" stroke="#0d9488" stroke-width="2" opacity="0.3"/>
   <!-- Footer label -->
-  <text x="600" y="530" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#8a9a91" text-anchor="middle">WebMCP Challenge</text>
+  <text x="600" y="530" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#8a9a91" text-anchor="middle">WebMCP handoff workflow</text>
 </svg>
