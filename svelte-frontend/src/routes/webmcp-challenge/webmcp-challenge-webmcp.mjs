@@ -1,3 +1,5 @@
+import { normalizeWorkSearch } from '../work/work-webmcp.mjs';
+
 export const PROJECTS_HANDOFF_GUIDE_TOOL_NAME = 'get_projects_handoff_guide';
 
 const ALLOWED_ROUTES = new Set(['/work', '/review', '/next']);
@@ -28,7 +30,7 @@ export function deriveGuideWorkScopeCatalog(workspaceCount, visiblePacks, countM
 	const areas = /** @type {Map<string, string>} */ (new Map());
 	for (const pack of visiblePacks) {
 		if (!isRecord(pack)) continue;
-		const area = normalizedWorkQuery(pack.area);
+		const area = normalizedScopeLabel(pack.area);
 		if (!area) continue;
 		const key = area.toLocaleLowerCase('en-US');
 		if (!areas.has(key)) areas.set(key, area);
@@ -124,7 +126,7 @@ export function webMcpChallengeGuideView(input) {
 	const title = normalizedText(input.title);
 	const purpose = normalizedText(input.purpose);
 	const agentBrief = normalizedAgentBrief(input.agentBrief);
-	const workQuery = normalizedWorkQuery(input.workQuery);
+	const workQuery = normalizeWorkSearch(input.workQuery);
 	if (!title || !purpose || agentBrief === null || workQuery === null || input.steps.length !== 3 || input.safety.length !== 3) return null;
 	const workScope = guideWorkScopeView(input.workScope, workQuery);
 	if (!workScope) return null;
@@ -210,7 +212,7 @@ function guideWorkScopeView(input, workQuery) {
 	const selectedId = normalizedScopeId(input.selected.id);
 	const selectedKind = scopeKind(input.selected.kind);
 	const selectedLabel = normalizedScopeLabel(input.selected.label);
-	const selectedQuery = normalizedWorkQuery(input.selected.query);
+	const selectedQuery = normalizeWorkSearch(input.selected.query);
 	const selectedMatchingCount = boundedCount(input.selected.matchingCount);
 	if (!selectedId || !selectedKind || !selectedLabel || selectedQuery === null || selectedMatchingCount === null || selectedMatchingCount > visibleCount || selectedQuery !== workQuery) return null;
 	const selectedChoice = validChoices.find(({ id }) => id === selectedId);
@@ -250,7 +252,7 @@ function scopeChoice(input) {
 			? { id, kind, label, query: null, matchingCount: null }
 			: null;
 	}
-	const query = normalizedWorkQuery(input.query);
+	const query = normalizeWorkSearch(input.query);
 	const matchingCount = boundedCount(input.matchingCount);
 	return query === null || matchingCount === null ? null : { id, kind, label, query, matchingCount };
 }
@@ -306,13 +308,6 @@ function normalizedAgentBrief(value) {
 	const text = value.replace(/\r\n?/gu, '\n').trim();
 	if (text.length > TEXT_LIMIT || /[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/u.test(text)) return null;
 	return text;
-}
-
-/** @param {unknown} value */
-function normalizedWorkQuery(value) {
-	if (typeof value !== 'string' || /\p{Cc}/u.test(value)) return null;
-	const text = value.trim();
-	return text.length <= WORK_QUERY_LIMIT ? text : null;
 }
 
 /** @param {unknown} value @returns {value is Record<string, any>} */

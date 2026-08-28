@@ -192,6 +192,16 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	const guideHtml = readFileSync(path.join(artifactRoot, 'webmcp-challenge.html'), 'utf8');
 	assert.match(guideHtml, /data-agent-brief-input/u);
 	assert.match(guideHtml, /data-agent-scope-chooser/u);
+	assert.match(guideHtml, /challenge-guide-rail/u);
+	assert.match(guideHtml, /<a href="\/work"[^>]*data-agent-scope-action-link[^>]*>.*?Open all 8 work items/u);
+	assert.doesNotMatch(guideHtml, /8 matching of 8 workspace · All visible work/u);
+	const railIndex = guideHtml.indexOf('challenge-guide-rail');
+	const stepsIndex = guideHtml.indexOf('challenge-steps', railIndex);
+	const editorIndex = guideHtml.indexOf('agent-brief-editor', railIndex);
+	assert.ok(railIndex >= 0 && railIndex < stepsIndex && stepsIndex < editorIndex, 'built Guide keeps steps in the left rail before the editor');
+	for (const href of ['/work', '/review', '/next']) {
+		assert.match(guideHtml, new RegExp(`<a href="${href}"[^>]*>.*?(?:Start in Work|Continue to Review|Open the draft editor)`, 'u'));
+	}
 	assert.match(guideHtml, /maxlength="1000"/u);
 	assert.doesNotMatch(guideHtml, /data-agent-work-query-input/u);
 	assert.match(guideHtml, /All visible work is ready by default/u);
@@ -260,6 +270,7 @@ test('built Guide publishes exact default and discovered scope denominators', ()
 	assert.match(guideHtml, /data-scope-kind="derived"[^>]*data-scope-label="Household"[^>]*data-scope-query="Household"[^>]*data-scope-match-count="4"[\s\S]*?Household · 4/u);
 	assert.match(guideHtml, /data-scope-kind="derived"[^>]*data-scope-label="Research"[^>]*data-scope-query="Research"[^>]*data-scope-match-count="4"[\s\S]*?Research · 4/u);
 	assert.match(guideHtml, /data-scope-id="custom"[^>]*data-scope-kind="custom"[^>]*data-scope-label="Custom"[\s\S]*?Custom…/u);
-	assert.match(guideHtml, /8 matching of 8 workspace · All visible work/u);
+	assert.match(guideHtml, /<a href="\/work"[^>]*data-agent-scope-action-link[^>]*>.*?Open all 8 work items/u);
+	assert.doesNotMatch(guideHtml, /8 matching of 8 workspace · All visible work/u);
 	assert.match(guideHtml, /aria-pressed="true"[\s\S]*?All visible work · 8/u);
 });

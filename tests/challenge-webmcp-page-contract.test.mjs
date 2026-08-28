@@ -11,6 +11,8 @@ import {
 	readRenderedWebMcpChallengeGuide,
 	webMcpChallengeGuideView
 } from '../svelte-frontend/src/routes/webmcp-challenge/webmcp-challenge-webmcp.mjs';
+import { guideWorkAction } from '../svelte-frontend/src/lib/guide-work-action.mjs';
+import { routeWorkSearch } from '../svelte-frontend/src/routes/work/work-webmcp.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pageSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/webmcp-challenge/+page.svelte'), 'utf8');
@@ -22,6 +24,9 @@ const webManifest = fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'
 const rootReadme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
 const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmcp/reviewer-tests.md'), 'utf8');
 const editorSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/AgentBriefEditor.svelte'), 'utf8');
+const guideActionSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/guide-work-action.mjs'), 'utf8');
+const workRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
+const samplePacks = JSON.parse(fs.readFileSync(path.join(repoRoot, 'data/demo-packs.json'), 'utf8'));
 
 function scopeFixture() {
 	return {
@@ -183,6 +188,42 @@ test('Projects handoff guide accepts default, derived, and honest zero-match Cus
 	assert.deepEqual(webMcpChallengeGuideView(emptyCustom), emptyCustom);
 });
 
+test('Guide actions, Guide projection, route arrival, and Work search share exact query and count outcomes', async () => {
+	const workspaceCount = samplePacks.filter((pack) => !pack.archived).length;
+	const researchQuery = routeWorkSearch(' Research ');
+	const researchCount = samplePacks.filter((pack) => !pack.archived && pack.area === researchQuery).length;
+	assert.equal(workspaceCount, 8);
+	assert.equal(researchCount, 4);
+
+	assert.deepEqual(guideWorkAction({ kind: 'all', label: 'All visible work', query: '', matchingCount: workspaceCount }), {
+		disabled: false, href: '/work', label: 'Open all 8 work items'
+	});
+	assert.deepEqual(guideWorkAction({ kind: 'derived', label: 'Research', query: researchQuery, matchingCount: researchCount }), {
+		disabled: false, href: '/work?search=Research', label: 'Open 4 Research items'
+	});
+	assert.deepEqual(guideWorkAction({ kind: 'custom', label: 'Custom', query: 'absent', matchingCount: 0 }), {
+		disabled: true, href: null, label: 'No work matches'
+	});
+	assert.equal(guideWorkAction({ kind: 'custom', label: 'Custom', query: 'research & review', matchingCount: 1 }).href, '/work?search=research+%26+review');
+
+	const guide = webMcpChallengeGuideView(selectedGuide({
+		id: 'area-2', kind: 'derived', label: 'Research', query: researchQuery, matchingCount: researchCount
+	}));
+	assert.equal(guide?.workQuery, researchQuery);
+	assert.deepEqual(guide?.workScope.selected, {
+		id: 'area-2', kind: 'derived', label: 'Research', query: researchQuery, matchingCount: researchCount
+	});
+	assert.equal(samplePacks.filter((pack) => !pack.archived && pack.area === routeWorkSearch('absent')).length, 0);
+	assert.match(guideActionSource, /new URLSearchParams\(\{ search: query \}\)/u);
+	assert.match(pageSource, /guideVisiblePacks = \$derived\(filterPacks\(guidePacks, 'all', ''\)\)/u);
+	assert.match(pageSource, /selectedMatchingCount = \$derived\(filterPacks\(guidePacks, 'all', workQuery\)\.length\)/u);
+	assert.match(workRouteSource, /filterPacks\(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone\)/u);
+	assert.match(editorSource, /guideWorkAction\(\{[\s\S]*?kind: selectedScopeKind,[\s\S]*?query: workQuery,[\s\S]*?matchingCount: selectedMatchingCount/u);
+	assert.match(editorSource, /data-agent-scope-action-link[\s\S]*?href=\{selectedScopeAction\.href\}/u);
+	assert.match(editorSource, /data-agent-scope-action-disabled[\s\S]*?disabled/u);
+	assert.doesNotMatch(editorSource, /matching of \{scopeCatalog\.workspaceCount\} workspace/u);
+});
+
 test('Projects handoff guide rejects malformed, duplicate, negative, and mismatched scope projections', () => {
 	const fixture = guideFixture();
 	assert.equal(webMcpChallengeGuideView({ ...fixture, workScope: undefined }), null);
@@ -303,9 +344,27 @@ test('handoff route owns one data-backed reader without navigation, write, or mo
 	assert.match(editorSource, /WornChip label="Custom…"[\s\S]*?pressed=\{selectedScopeId === 'custom'\}/u);
 	assert.match(editorSource, /\{#if selectedScopeId === 'custom'\}[\s\S]*?data-agent-work-query-input[\s\S]*?maxlength="120"/u);
 	assert.match(editorSource, /an unmatched term stays at zero/u);
-	assert.match(editorSource, /aria-live="polite" data-agent-scope-result/u);
+	assert.match(editorSource, /aria-live="polite" data-agent-scope-action/u);
 	assert.match(editorSource, /Local draft · not saved · workspace unchanged/u);
 	assert.match(editorSource, /@media \(max-width: 520px\)/u);
+});
+
+test('wide Guide layout keeps the existing steps in the left rail beside the editor without a dead quadrant', () => {
+	const railStart = pageSource.indexOf('<div class="challenge-guide-rail">');
+	const introStart = pageSource.indexOf('<div class="challenge-intro">');
+	const stepsStart = pageSource.indexOf('<ol class="challenge-steps"');
+	const editorStart = pageSource.indexOf('<AgentBriefEditor');
+	assert.ok(railStart >= 0 && railStart < introStart && introStart < stepsStart && stepsStart < editorStart);
+	assert.match(pageSource, /\.challenge-hero \{[\s\S]*?align-items: start;[\s\S]*?grid-template-columns: minmax\(0, 0\.82fr\) minmax\(360px, 1\.18fr\);/u);
+	assert.match(pageSource, /\.challenge-guide-rail \{[\s\S]*?display: grid;[\s\S]*?gap: 24px;[\s\S]*?min-width: 0;/u);
+	assert.match(pageSource, /\.challenge-steps \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/u);
+	const layoutCss = pageSource.match(/\.challenge-hero \{[\s\S]*?@media \(max-width: 860px\)/u)?.[0] ?? '';
+	assert.doesNotMatch(layoutCss, /min-height|overflow:\s*(?:hidden|clip)/u);
+	assert.match(pageSource, /@media \(max-width: 860px\) \{[\s\S]*?\.challenge-hero,[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/u);
+	assert.match(pageSource, /<WornButton href=\{step\.href\} size="sm">\{step\.action\}<\/WornButton>/u);
+	for (const route of ['/work', '/review', '/next']) {
+		assert.match(pageSource, new RegExp(`href: '${route}'`, 'u'), `${route} remains one of the usable Guide steps`);
+	}
 });
 
 test('editable Guide fallback preserves composite copy, all semantics, and manual-copy focus', () => {

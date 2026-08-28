@@ -115,9 +115,23 @@
 		data-webmcp-challenge-purpose="People and browser agents share the same live project page while consequential decisions remain human-owned."
 	>
 		<div class="challenge-hero">
-			<div class="challenge-intro">
-				<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
-				<p class="challenge-purpose">Choose visible work and edit the brief; the browser agent can inspect and prepare while you control Save.</p>
+			<div class="challenge-guide-rail">
+				<div class="challenge-intro">
+					<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
+					<p class="challenge-purpose">Choose visible work and edit the brief; the browser agent can inspect and prepare while you control Save.</p>
+				</div>
+				<ol class="challenge-steps" aria-label="Three-step Projects handoff workflow">
+					{#each steps as step, index (step.href)}
+						<li data-webmcp-challenge-step>
+							<span class="challenge-number" aria-hidden="true">{index + 1}</span>
+							<div>
+								<h2>{step.title}</h2>
+								<p>{step.description}</p>
+							</div>
+							<WornButton href={step.href} size="sm">{step.action}</WornButton>
+						</li>
+					{/each}
+				</ol>
 			</div>
 			<AgentBriefEditor scopeCatalog={guideScopeCatalog} bind:selectedScopeId bind:workQuery {selectedMatchingCount} />
 		</div>
@@ -131,19 +145,6 @@
 				/>
 			</div>
 		{/if}
-
-		<ol class="challenge-steps" aria-label="Three-step Projects handoff workflow">
-			{#each steps as step, index (step.href)}
-				<li data-webmcp-challenge-step>
-					<span class="challenge-number" aria-hidden="true">{index + 1}</span>
-					<div>
-						<h2>{step.title}</h2>
-						<p>{step.description}</p>
-					</div>
-					<WornButton href={step.href} size="sm">{step.action}</WornButton>
-				</li>
-			{/each}
-		</ol>
 
 		<WornAccordion label="Authority and browser status">
 			<div class="challenge-boundary-grid">
@@ -176,9 +177,15 @@
 		min-width: 0;
 	}
 	.challenge-hero {
+		align-items: start;
 		display: grid;
 		gap: 20px;
 		grid-template-columns: minmax(0, 0.82fr) minmax(360px, 1.18fr);
+	}
+	.challenge-guide-rail {
+		display: grid;
+		gap: 24px;
+		min-width: 0;
 	}
 	.challenge-intro {
 		align-content: start;
@@ -207,7 +214,7 @@
 	.challenge-steps {
 		display: grid;
 		gap: 10px;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: minmax(0, 1fr);
 		list-style: none;
 		margin: 0;
 		padding: 0;

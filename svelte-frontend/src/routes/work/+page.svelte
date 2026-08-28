@@ -61,6 +61,7 @@
 		WORK_SEARCH_TOOL_NAME,
 		createCurrentWorkTool,
 		createShowWorkSearchTool,
+		routeWorkSearch,
 		workItemPageView,
 		workPageView
 	} from './work-webmcp.mjs';
@@ -311,8 +312,26 @@
 		}
 	}
 
+	// URL search is intentionally a one-time, page-local arrival state. It
+	// shares the public tool's normalizer but does not write, navigate, or
+	// initiate any work beyond rendering the existing Work route.
+	function applyRouteWorkSearch(searchParam: unknown): string {
+		const routeSearch = routeWorkSearch(searchParam);
+		query = routeSearch;
+		debouncedQuery = routeSearch;
+		return routeSearch;
+	}
+
+	async function focusRouteWorkSearchArrival(routeSearch: string) {
+		if (!routeSearch) return;
+		await tick();
+		if (!filterInput() && !document.querySelector<HTMLElement>('[data-work-item][data-pack-id]')) return;
+		focusWorkSearchDestination(true);
+	}
+
 	onMount(() => {
 		let mounted = true;
+		const routeSearch = applyRouteWorkSearch($page.url.searchParams.get('search'));
 		stopWorkWebMcp = registerPageTools(document, [
 			createCurrentWorkTool(() => currentWorkView),
 			createShowWorkSearchTool(showWorkSearchFromWebMcp)
@@ -323,7 +342,9 @@
 		void refreshWork({
 			reuseRecent: true,
 			afterRefresh: (state) => {
-				if (mounted) hydrateRecentWork((state?.packs ?? packs) as DemoPack[]);
+				if (!mounted) return;
+				hydrateRecentWork((state?.packs ?? packs) as DemoPack[]);
+				void focusRouteWorkSearchArrival(routeSearch);
 			}
 		});
 		try {
