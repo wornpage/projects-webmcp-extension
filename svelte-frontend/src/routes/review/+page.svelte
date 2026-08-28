@@ -726,14 +726,13 @@ async function handleCardKeys(e: KeyboardEvent) {
 			justify-content: flex-start;
 		}
 	}
-	/* The spotlight head is a flex row on wider screens. Its anonymous title
-	   wrapper otherwise keeps the min-content width of an unbroken user title,
-	   so the shell's overflow clipping can hide part of the heading and badges. */
+	/* The spotlight head is a flex row on wider screens. Keep hostile titles
+	   shrinkable without clipping the container or its visible focus boundary. */
 	.review-priority-shell,
 	.review-priority {
 		display: grid;
 		gap: 12px;
-		overflow: hidden;
+		overflow: visible;
 		max-width: 100%;
 		min-width: 0;
 		width: 100%;
