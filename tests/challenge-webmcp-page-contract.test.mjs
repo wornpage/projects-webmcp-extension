@@ -54,6 +54,7 @@ test('Projects handoff guide projects one exact public three-step workflow', () 
 		webMcpChallengeGuideView({ ...guideFixture(), agentBrief: 'Line one\r\nLine two\rLine three\tready' }),
 		{ ...guideFixture(), agentBrief: 'Line one\nLine two\nLine three\tready' }
 	);
+	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: '  kept  ' })?.agentBrief, 'kept');
 	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: '' })?.agentBrief, '');
 	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: 'x'.repeat(1001) }), null);
 	assert.equal(webMcpChallengeGuideView({ ...guideFixture(), agentBrief: 'Unsafe\u0007control' }), null);

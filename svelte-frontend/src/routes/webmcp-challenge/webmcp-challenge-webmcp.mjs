@@ -103,7 +103,7 @@ function normalizedText(value) {
 /** @param {unknown} value */
 function normalizedAgentBrief(value) {
 	if (typeof value !== 'string') return null;
-	const text = value.replace(/\r\n?/gu, '\n');
+	const text = value.replace(/\r\n?/gu, '\n').trim();
 	if (text.length > TEXT_LIMIT || /[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/u.test(text)) return null;
 	return text;
 }
