@@ -12,6 +12,7 @@ import {
 	workItemPageView,
 	workPageView
 } from '../svelte-frontend/src/routes/work/work-webmcp.mjs';
+import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
@@ -203,6 +204,57 @@ test('the Work-search descriptor declares and verifies one reversible page-local
 	assert.deepEqual((await empty.execute({ query: 'missing' })).focus, { target: 'search', itemId: null, ...focusProof });
 });
 
+test('Work receipt insertion is followed by strict revalidation and failure clears the provisional receipt', async () => {
+	const resultHandler = routeSource.match(/async function recordWorkWebMcpResult[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(resultHandler, /webMcpSearchReceipt = \{[\s\S]*?await tick\(\);[\s\S]*?toolName === WORK_SEARCH_TOOL_NAME[\s\S]*?focusWorkSearchDestination\(true\)/u);
+	assert.match(resultHandler, /finalFocus\.target !== outcome\.focus\.target[\s\S]*?finalFocus\.itemId !== outcome\.focus\.itemId[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
+
+	let registered;
+	let visibleReceipt = null;
+	const events = [];
+	const strictFailure = new Error('Visible focus verification failed: {"inViewport":false}');
+	const view = workView({ search: 'Garage reset' });
+	const validPageState = structuredClone(view);
+	const focus = {
+		target: 'item',
+		itemId: view.items[0].id,
+		focused: true,
+		focusVisible: true,
+		inViewport: true,
+		pulsed: true
+	};
+	registerPageTools({
+		modelContext: { registerTool(candidate) { registered = candidate; } }
+	}, [createShowWorkSearchTool(async () => ({
+		changed: true,
+		query: 'Garage reset',
+		focus,
+		work: view
+	}))], {
+		onResult: async () => {
+			visibleReceipt = { summary: 'Provisional Work search success' };
+			events.push('receipt');
+			await Promise.resolve();
+			events.push('strict revalidation');
+			throw strictFailure;
+		},
+		onInvocationError: async ({ error }) => {
+			assert.equal(error, strictFailure);
+			visibleReceipt = null;
+			events.push('clear');
+			await Promise.resolve();
+		}
+	});
+
+	await assert.rejects(() => registered.execute({ query: 'Garage reset' }), strictFailure);
+	assert.deepEqual(events, ['receipt', 'strict revalidation', 'clear']);
+	assert.equal(visibleReceipt, null);
+	assert.deepEqual(view, validPageState);
+	const failureHandler = routeSource.match(/async function clearFailedWorkWebMcpReceipt[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(failureHandler, /webMcpSearchReceipt = null;[\s\S]*?await tick\(\);/u);
+	assert.doesNotMatch(failureHandler, /query\s*=|debouncedQuery\s*=/u);
+});
+
 test('Work renders and returns one canonical bounded view through its existing search owner', () => {
 	assert.match(routeSource, /import \{ registerPageTools \} from '\$lib\/webmcp\.mjs';/u);
 	assert.match(routeSource, /import \{[\s\S]*?createCurrentWorkTool,[\s\S]*?createShowWorkSearchTool,[\s\S]*?workItemPageView,[\s\S]*?workPageView[\s\S]*?\} from '\.\/work-webmcp\.mjs';/u);
@@ -210,8 +262,10 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /let hideDone = \$state\(false\);/u);
 	assert.doesNotMatch(routeSource, /demo-hide-done/u);
 	assert.match(routeSource, /\{#each renderedVisible as pack, i \(pack\.id\)\}/u);
-	assert.match(routeSource, /async function showWorkSearchFromWebMcp\(nextQuery: string\) \{[\s\S]*?query = nextQuery;\s*debouncedQuery = nextQuery;[\s\S]*?await tick\(\);[\s\S]*?const focusReceipt = focusAndPulse\(destination, \{[\s\S]*?behavior: 'auto',[\s\S]*?block: 'center',[\s\S]*?requireVisibleFocus: true[\s\S]*?\}\);[\s\S]*?focus: firstItem[\s\S]*?target: 'item'[\s\S]*?\.\.\.focusReceipt[\s\S]*?target: 'search'[\s\S]*?\.\.\.focusReceipt[\s\S]*?work: currentWorkView/u);
+	assert.match(routeSource, /function focusWorkSearchDestination\(requireVisibleFocus: boolean\)[\s\S]*?\[data-work-item\]\[data-pack-id\][\s\S]*?focusAndPulse\(destination, \{[\s\S]*?behavior: 'auto',[\s\S]*?block: 'center',[\s\S]*?requireVisibleFocus[\s\S]*?target: 'item'[\s\S]*?target: 'search'/u);
+	assert.match(routeSource, /async function showWorkSearchFromWebMcp\(nextQuery: string\) \{[\s\S]*?query = nextQuery;\s*debouncedQuery = nextQuery;[\s\S]*?await tick\(\);[\s\S]*?focus: focusWorkSearchDestination\(true\),[\s\S]*?work: currentWorkView/u);
 	assert.match(routeSource, /async function recordWorkWebMcpResult[\s\S]*?webMcpSearchReceipt = \{[\s\S]*?WebMCP[\s\S]*?Saved workspace changes[\s\S]*?None/u);
+	assert.match(routeSource, /webMcpSearchReceipt = \{[\s\S]*?scopeKey:[\s\S]*?await tick\(\);[\s\S]*?toolName === WORK_SEARCH_TOOL_NAME[\s\S]*?focusWorkSearchDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
 	assert.match(routeSource, /let workReceiptScopeKey = \$derived\([\s\S]*?currentWorkView\.scope[\s\S]*?currentWorkView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpSearchReceipt\.scopeKey !== workReceiptScopeKey[\s\S]*?webMcpSearchReceipt = null/u);
 	assert.match(routeSource, /webMcpSearchReceipt = \{[\s\S]*?scopeKey: JSON\.stringify\(\{ scope: view\.scope, counts: view\.counts \}\)/u);
