@@ -1126,6 +1126,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		:global(.demo-panel-head:has(.work-head-actions) .demo-panel-title){margin-block:0}
 	}
 	.demo-work-list {
+		overflow: visible;
 		padding-block-start: 8px;
 	}
 
