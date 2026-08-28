@@ -239,6 +239,7 @@
 	.demo-card-extra dd { margin: 0; color: var(--worn-text); }
 	.demo-card-reactions { display: flex; gap: 4px; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--worn-border); }
 	.work-command-row, .work-card-actions { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; max-width: 100%; }
+	.demo-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; margin-block-start: 8px; }
 	.work-command-row :global(.worn-btn), .work-card-actions :global(.worn-btn) { box-sizing: border-box; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 	.work-card-actions :global(.worn-select) { box-sizing: border-box; min-width: 0; max-width: 100%; }
 	:global(.demo-work-card.batch-active) .demo-card-head { min-block-size: 44px; padding-inline-start: 52px; }
@@ -249,5 +250,8 @@
 	:global(.due-overdue) { border-color: var(--worn-danger-border) !important; background: var(--worn-danger-bg) !important; color: var(--worn-danger-text) !important; }
 	:global(.due-today) { border-color: var(--worn-warning-border) !important; background: var(--worn-warning-bg) !important; color: var(--worn-warning-text) !important; }
 	:global(.due-soon) { border-color: var(--worn-accent) !important; background: var(--worn-accent-50) !important; }
-	@media (max-width: 640px) { :global(.work-snooze-select) { width: 100%; } }
+	@media (max-width: 640px) {
+		.demo-card-meta { gap: 6px; margin-block-start: 6px; }
+		:global(.work-snooze-select) { width: 100%; }
+	}
 </style>
