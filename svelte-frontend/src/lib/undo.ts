@@ -1,4 +1,4 @@
-// Receipt-scoped undo for visible, browser-local challenge actions.
+// Receipt-scoped undo for visible, browser-local Projects workflow actions.
 
 import { get, writable } from 'svelte/store';
 import { demoState, savePackPath, toasts } from '$lib/demo-client';

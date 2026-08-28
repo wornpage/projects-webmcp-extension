@@ -1,4 +1,4 @@
-// Browser-local state owner for the static WebMCP challenge application.
+// Browser-local state owner for the Projects workflow and its sample workspace.
 
 import { browser } from '$app/environment';
 import { get, writable } from 'svelte/store';

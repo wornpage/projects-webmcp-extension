@@ -16,7 +16,7 @@ function isPastDate(value: string | undefined): boolean {
 	return !Number.isNaN(due.getTime()) && due < today;
 }
 
-/** Visible consistency checks for the synthetic challenge data. */
+/** Visible consistency checks for the sample workspace data. */
 export function workItemIssues(pack: DemoPack): WorkItemIssue[] {
 	const issues: WorkItemIssue[] = [];
 	const blocker = String(pack.blocker || '').trim();
