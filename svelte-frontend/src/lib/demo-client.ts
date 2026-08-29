@@ -10,6 +10,9 @@ import {
 	PACK_ACTIONS,
 	STATE_FILTERS,
 	VALID_PACK_STATUSES,
+	workflowLabel,
+	hasBlocker,
+	blockerText,
 	workTitle
 } from '$lib/demo-workflow';
 import {
@@ -22,6 +25,7 @@ import {
 	unblockPacksBlockedBy,
 	unblockedReceiptSentence
 } from './workflow-rules.mjs';
+import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, hydrateSerializedState, pendingDraftFingerprint as fingerprintPendingDraft, resetPersistedState, restorePendingDraft, upsertPendingDraft } from './pending-next-action.mjs';
 
 const STORAGE_KEY = 'projects-webmcp-challenge-state-v1';
 const SEED_URL = '/data/demo-packs.json';
@@ -49,6 +53,16 @@ export interface DemoToast {
 }
 
 export const toasts = writable<DemoToast[]>([]);
+
+export type PendingNextActionDraft = {
+	workId: string;
+	choice: string;
+	mode: 'preset' | 'custom';
+	evidenceNote: string;
+	evidence: Array<{ workId: string; field: 'workflow' | 'blocker'; expectedValue: string }>;
+	originFingerprint: string;
+	source: 'human' | 'webmcp';
+};
 
 export class ChallengeStateError extends Error {
 	constructor(message: string) {
@@ -79,6 +93,76 @@ function assertDemoState(value: unknown): asserts value is DemoState {
 		}
 		ids.add(pack.id);
 	}
+	const pending = (value as DemoState).pendingNextActionDrafts;
+	if (pending !== undefined && (!Array.isArray(pending) || pending.some((draft) => !isPendingNextActionDraft(draft)))) {
+		throw new ChallengeStateError('Saved pending approvals are invalid. Clear this site\'s local data to restart.');
+	}
+}
+
+function isPendingNextActionDraft(value: unknown): value is PendingNextActionDraft {
+	if (!value || typeof value !== 'object') return false;
+	const draft = value as PendingNextActionDraft;
+	return typeof draft.workId === 'string' && Boolean(draft.workId.trim()) &&
+		typeof draft.choice === 'string' && Boolean(draft.choice.trim()) &&
+		(draft.mode === 'preset' || draft.mode === 'custom') &&
+		typeof draft.evidenceNote === 'string' && Array.isArray(draft.evidence) &&
+		typeof draft.originFingerprint === 'string' && Boolean(draft.originFingerprint) &&
+		(draft.source === 'human' || draft.source === 'webmcp') &&
+		draft.evidence.every((fact) => fact && typeof fact.workId === 'string' && (fact.field === 'workflow' || fact.field === 'blocker') && typeof fact.expectedValue === 'string');
+}
+
+export function pendingNextActionDrafts(state: DemoState | null): PendingNextActionDraft[] {
+	return state?.pendingNextActionDrafts && Array.isArray(state.pendingNextActionDrafts)
+		? state.pendingNextActionDrafts.filter(isPendingNextActionDraft)
+		: [];
+}
+
+export function pendingNextActionDraftFor(state: DemoState | null, workId: string): PendingNextActionDraft | null {
+	return pendingNextActionDrafts(state).find((draft) => draft.workId === workId) ?? null;
+}
+
+export async function savePendingNextActionDraft(draft: PendingNextActionDraft): Promise<DemoState | null> {
+	if (!isPendingNextActionDraft(draft)) throw new ChallengeStateError('Pending approval draft is invalid.');
+	return saveBrowserState((state) => {
+		upsertPendingDraft(state, draft);
+	});
+}
+
+export async function restorePendingNextActionDraft(workId: string, priorDraft: PendingNextActionDraft | null): Promise<DemoState | null> {
+	return saveBrowserState((state) => restorePendingDraft(state, workId, priorDraft));
+}
+
+export async function discardPendingNextActionDraft(workId: string): Promise<DemoState | null> {
+	return saveBrowserState((state) => {
+		discardPendingDraft(state, workId);
+	});
+}
+
+export function pendingDraftFingerprint(state: DemoState, draft: PendingNextActionDraft): string {
+	return fingerprintPendingDraft(state, draft, (pack: DemoPack) => ({ title: workTitle(pack), workflow: workflowLabel(pack), blocker: hasBlocker(pack) ? blockerText(pack) : 'None', next: pack.next || '' }));
+}
+
+export async function setPackNextAction(workId: string): Promise<{ saved: true; pack: DemoPack; receipt: DemoReceipt; state: DemoState }> {
+	const written = await saveBrowserState((state) => {
+		let approved;
+		try {
+			approved = approvePendingDraft(state, workId, {
+				projectPack: (pack: DemoPack) => ({ title: workTitle(pack), workflow: workflowLabel(pack), blocker: hasBlocker(pack) ? blockerText(pack) : 'None', next: pack.next || '' }),
+				nextPath: nextChoiceForwardPath
+			});
+		} catch (error) {
+			throw new ChallengeStateError(error instanceof Error ? error.message : 'Pending approval could not be saved.');
+		}
+		const pack = approved.pack;
+		const summary = `Next action set to "${pack.next || 'open'}".`;
+		const receipt: DemoReceipt = { summary, pack };
+		state.selectedId = pack.id;
+		state.status = summary;
+		state.actionReceipt = receipt;
+	});
+	if (!written?.actionReceipt?.pack) throw new ChallengeStateError('Pending next action was not saved.');
+	displayToast('Next action saved.', 'success');
+	return { saved: true, pack: written.actionReceipt.pack, receipt: written.actionReceipt, state: written };
 }
 
 function cloneState(state: DemoState): DemoState {
@@ -99,11 +183,8 @@ function readStoredState(): DemoState | null {
 	} catch {
 		throw new ChallengeStateError('Browser storage is unavailable. Local changes cannot be loaded.');
 	}
-	if (serialized === null) return null;
 	try {
-		const parsed = JSON.parse(serialized) as unknown;
-		assertDemoState(parsed);
-		return parsed;
+		return hydrateSerializedState(serialized, assertDemoState) as DemoState | null;
 	} catch (error) {
 		if (error instanceof ChallengeStateError) throw error;
 		throw new ChallengeStateError('Saved workspace data is invalid JSON. Clear this site\'s local data to restart.');
@@ -208,12 +289,15 @@ export async function resetDemoSampleState(): Promise<DemoState | null> {
 	if (!browser) return null;
 	stateRevision += 1;
 	try {
-		localStorage.removeItem(STORAGE_KEY);
-	} catch {
+		return await resetPersistedState({
+			remove: () => localStorage.removeItem(STORAGE_KEY),
+			loadSeed: loadSeedState,
+			install: replaceDemoState
+		});
+	} catch (error) {
+		if (error instanceof ChallengeStateError) throw error;
 		throw new ChallengeStateError('Browser storage is unavailable. The live sample could not be reset.');
 	}
-	const seed = await loadSeedState();
-	return replaceDemoState(seed);
 }
 
 export async function saveBrowserState(
@@ -222,10 +306,7 @@ export async function saveBrowserState(
 	if (!browser) return null;
 	const current = get(demoState) ?? (await refreshDemoState());
 	if (!current) return null;
-	const draft = cloneState(current);
-	mutate(draft);
-	persistState(draft);
-	return replaceDemoState(draft);
+	return cloneMutatePersist({ current, clone: cloneState, mutate, persist: persistState, install: replaceDemoState });
 }
 
 function appendActivity(pack: DemoPack, detail: string): boolean {
@@ -399,31 +480,6 @@ export async function savePackPath(
 	});
 	if (!written?.actionReceipt?.pack) throw new ChallengeStateError('Work path was not saved.');
 	displayToast('Saved.', 'success');
-	return {
-		saved: true,
-		pack: written.actionReceipt.pack,
-		receipt: written.actionReceipt,
-		state: written
-	};
-}
-
-export async function setPackNextAction(
-	packId: string,
-	next: string
-): Promise<{ saved: true; pack: DemoPack; receipt: DemoReceipt; state: DemoState }> {
-	const written = await saveBrowserState((draft) => {
-		const pack = draft.packs.find((item) => item.id === packId);
-		if (!pack) throw new ChallengeStateError('Work item was not found.');
-		const forwardPath = nextChoiceForwardPath(pack, next);
-		Object.assign(pack, forwardPath);
-		const summary = `Next action set to "${forwardPath.next || 'open'}".`;
-		const receipt: DemoReceipt = { summary, pack };
-		draft.selectedId = pack.id;
-		draft.status = summary;
-		draft.actionReceipt = receipt;
-	});
-	if (!written?.actionReceipt?.pack) throw new ChallengeStateError('Next action was not saved.');
-	displayToast('Next action saved.', 'success');
 	return {
 		saved: true,
 		pack: written.actionReceipt.pack,

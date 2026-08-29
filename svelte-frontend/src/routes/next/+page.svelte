@@ -8,9 +8,15 @@
 		demoStateError,
 		refreshDemoState,
 		setPackNextAction,
+		savePendingNextActionDraft,
+		discardPendingNextActionDraft,
+		restorePendingNextActionDraft,
+		pendingNextActionDraftFor,
+		pendingDraftFingerprint,
 		setSelectedWork,
 		toasts,
-		ChallengeStateError
+		ChallengeStateError,
+		type PendingNextActionDraft
 	} from '$lib/demo-client';
 	import {
 		NEXT_ACTION_CHOICES,
@@ -47,7 +53,8 @@
 		createPrepareNextActionTool,
 		nextEditorPageView,
 		verifiedNextEvidenceNote,
-		verifyNextPreparationEvidence
+		verifyNextPreparationEvidence,
+		shouldHydratePendingDraft
 	} from './next-webmcp.mjs';
 
 	type NextEditorMode = 'preset' | 'custom';
@@ -85,8 +92,12 @@
 		customValue: string;
 		showingCustom: boolean;
 		preparationReceipt: PreparationReceipt | null;
-		preparationPreviousEditor: EditorSnapshot | null;
-		savedNextReceipt: SavedNextReceipt | null;
+	preparationPreviousEditor: EditorSnapshot | null;
+	savedNextReceipt: SavedNextReceipt | null;
+	pendingDraft: PendingNextActionDraft | null;
+	invocationWorkId: string;
+	preparationToolName: string;
+	preparationInFlight: boolean;
 	};
 
 	let chosenPackId = $state('');
@@ -97,6 +108,7 @@ let showingCustom = $state(false);
 	let errorText = $state('');
 	let preparationReceipt = $state<PreparationReceipt | null>(null);
 	let preparationToolName = $state('');
+	let preparationInFlight = $state(false);
 	let preparationPreviousEditor = $state<EditorSnapshot | null>(null);
 	let savedNextReceipt = $state<SavedNextReceipt | null>(null);
 	let editorPackId = $state('');
@@ -127,6 +139,9 @@ let showingCustom = $state(false);
 			(!selectedId ? packs.find(isReview) || packs[0] : null) ||
 			null
 	);
+	let visiblePackId = $derived(pack?.id || '');
+	let pendingDraft = $derived(pendingNextActionDraftFor($demoState, visiblePackId));
+	let pendingDraftStale = $derived(pendingDraft ? pendingDraft.originFingerprint !== pendingDraftFingerprint($demoState!, pendingDraft) : false);
 	// Only declare not-found once the demo state has landed — until then the
 	// requested pack may simply not have arrived yet.
 	let notFound = $derived(Boolean(selectedId) && demoLoaded && !pack);
@@ -158,8 +173,9 @@ let showingCustom = $state(false);
 				blocker: hasBlocker(preview) ? blockerText(preview) : null,
 				nextAction: effectiveChoice || 'Not set'
 			},
-			preparationReceipt,
-			canSave: Boolean(effectiveChoice) && !busy,
+			preparationReceipt: preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME ? preparationReceipt : null,
+			canSave: Boolean(effectiveChoice) && !busy && Boolean(pendingDraft) && !pendingDraftStale,
+			staleReason: pendingDraftStale ? 'Draft is stale. Refresh the evidence and prepare it again before approval.' : pendingDraft ? null : 'No pending draft. Choose an action to create one before approval.',
 			busy
 		});
 	});
@@ -240,10 +256,28 @@ let showingCustom = $state(false);
 		return 'Open';
 	}
 
+	function savedEditorBaseline(target: DemoPack | null): EditorSnapshot {
+		const choice = defaultChoiceFor(target);
+		return { choice, mode: (NEXT_ACTION_CHOICES as readonly string[]).includes(choice) ? 'preset' : 'custom' };
+	}
+
 	function clearPreparation() {
 		preparationReceipt = null;
 		preparationToolName = '';
 		preparationPreviousEditor = null;
+	}
+
+	function preparationFromPending(draft: PendingNextActionDraft): PreparationReceipt {
+		const evidence = draft.evidence.map((reference) => {
+			const candidate = packs.find((item) => item.id === reference.workId);
+			return {
+				work: { id: reference.workId, title: candidate ? workTitle(candidate) : reference.workId },
+				field: reference.field,
+				label: reference.field === 'workflow' ? 'Workflow' : 'Blocker',
+				value: reference.expectedValue
+			};
+		}) as NextVerifiedEvidence[];
+		return { summary: NEXT_PREPARATION_SUMMARY, work: { id: draft.workId, title: pack ? workTitle(pack) : draft.workId }, evidenceNote: draft.evidenceNote, evidence, preparedAction: draft.choice, workspaceChanged: false, requiresHumanSave: true };
 	}
 
 	function clonePreparationReceipt(receipt: PreparationReceipt | null): PreparationReceipt | null {
@@ -256,18 +290,25 @@ let showingCustom = $state(false);
 			customValue,
 			showingCustom,
 			preparationReceipt: clonePreparationReceipt(preparationReceipt),
-			preparationPreviousEditor: preparationPreviousEditor ? { ...preparationPreviousEditor } : null,
-			savedNextReceipt
+		preparationPreviousEditor: preparationPreviousEditor ? { ...preparationPreviousEditor } : null,
+			savedNextReceipt,
+			pendingDraft: pendingDraft ? structuredClone(pendingDraft) : null,
+			invocationWorkId: pack?.id || '',
+			preparationToolName,
+			preparationInFlight
 		};
 	}
 
-	function restoreNextPreparationSnapshot(snapshot: NextPreparationSnapshot) {
+	async function restoreNextPreparationSnapshot(snapshot: NextPreparationSnapshot) {
 		choice = snapshot.choice;
 		customValue = snapshot.customValue;
 		showingCustom = snapshot.showingCustom;
 		preparationReceipt = clonePreparationReceipt(snapshot.preparationReceipt);
 		preparationPreviousEditor = snapshot.preparationPreviousEditor ? { ...snapshot.preparationPreviousEditor } : null;
 		savedNextReceipt = snapshot.savedNextReceipt;
+		preparationToolName = snapshot.preparationToolName;
+		preparationInFlight = snapshot.preparationInFlight;
+		if (snapshot.invocationWorkId) await restorePendingNextActionDraft(snapshot.invocationWorkId, snapshot.pendingDraft);
 	}
 
 	function setNextEditorChoice(nextChoice: string, mode: NextEditorMode, clearAgentPreparation = true) {
@@ -276,6 +317,21 @@ let showingCustom = $state(false);
 		choice = nextChoice;
 		showingCustom = mode === 'custom';
 		if (mode === 'custom') customValue = nextChoice;
+	}
+
+	function setHumanNextEditorChoice(nextChoice: string, mode: NextEditorMode) {
+		setNextEditorChoice(nextChoice, mode);
+		preparationPreviousEditor = savedEditorBaseline(pack);
+		if (!pack?.id || !nextChoice.trim()) return;
+		void savePendingNextActionDraft({
+			workId: pack.id,
+			choice: nextChoice.trim(),
+			mode,
+			evidenceNote: 'Human-created draft; approval remains human-owned.',
+			evidence: [],
+			originFingerprint: pendingDraftFingerprint($demoState!, { workId: pack.id, choice: nextChoice.trim(), mode, evidenceNote: '', evidence: [], originFingerprint: 'pending', source: 'human' }),
+			source: 'human'
+		});
 	}
 
 	$effect(() => {
@@ -288,6 +344,15 @@ let showingCustom = $state(false);
 			(NEXT_ACTION_CHOICES as readonly string[]).includes(initialChoice) ? 'preset' : 'custom'
 		);
 		errorText = '';
+	});
+
+	$effect(() => {
+		const draft = pendingDraft;
+		if (!draft || !shouldHydratePendingDraft({ preparationInFlight, pendingDraft: draft, visibleWorkId: pack?.id || '', preparationReceipt })) return;
+		preparationPreviousEditor = savedEditorBaseline(pack);
+		preparationReceipt = preparationFromPending(draft);
+		preparationToolName = draft.source === 'webmcp' ? PREPARE_NEXT_ACTION_TOOL_NAME : '';
+		setNextEditorChoice(draft.choice, draft.mode, false);
 	});
 
 	async function prepareNextActionFromWebMcp(
@@ -320,10 +385,18 @@ let showingCustom = $state(false);
 		if (!alreadyDesired && !matchesExpected) {
 			throw new Error('Prepare next action rejected stale Next editor state.');
 		}
+		const pending: PendingNextActionDraft = {
+			workId: current.work.id,
+			choice: input.choice,
+			mode: desiredMode,
+			evidenceNote,
+			evidence: input.evidence,
+			originFingerprint: pendingDraftFingerprint($demoState!, { workId: current.work.id, choice: input.choice, mode: desiredMode, evidenceNote, evidence: input.evidence, originFingerprint: 'pending', source: 'webmcp' }),
+			source: 'webmcp'
+		};
 		invocation.markMutated();
-		if (!preparationReceipt) {
-			preparationPreviousEditor = { mode: current.editor.mode, choice: current.editor.choice };
-		}
+		preparationInFlight = true;
+		if (!preparationReceipt) preparationPreviousEditor = savedEditorBaseline(pack);
 		setNextEditorChoice(input.choice, desiredMode, false);
 		preparationReceipt = {
 			summary: NEXT_PREPARATION_SUMMARY,
@@ -334,6 +407,7 @@ let showingCustom = $state(false);
 			workspaceChanged: false,
 			requiresHumanSave: true
 		};
+		preparationToolName = PREPARE_NEXT_ACTION_TOOL_NAME;
 		await tick();
 		const target = document.getElementById(NEXT_PREPARATION_RECEIPT_ID);
 		if (!(target instanceof HTMLElement)) throw new Error('Prepare next action could not find its visible preview.');
@@ -343,6 +417,8 @@ let showingCustom = $state(false);
 			requireVisibleFocus: true
 		});
 		if (!currentNextEditor) throw new Error('Prepare next action could not verify the visible editor.');
+		await savePendingNextActionDraft(pending);
+		preparationInFlight = false;
 		return {
 			changed: !alreadyDesired || !receiptAlreadyDesired,
 			focus: { id: NEXT_PREPARATION_RECEIPT_ID, ...focusReceipt },
@@ -361,8 +437,9 @@ let showingCustom = $state(false);
 		));
 	}
 
-	function discardPreparation() {
+	async function discardPreparation() {
 		const previous = preparationPreviousEditor;
+		if (pack?.id) await discardPendingNextActionDraft(pack.id);
 		clearPreparation();
 		if (previous) setNextEditorChoice(previous.choice, previous.mode, false);
 		void scheduleEditorFocus('choices');
@@ -386,12 +463,19 @@ let showingCustom = $state(false);
 
 	async function saveChoice() {
 		if (!pack?.id || busy || !effectiveChoice) return;
+		if (pendingDraft && pendingDraftStale) {
+			errorText = 'Draft is stale. Refresh the evidence and prepare it again before approval.';
+			return;
+		}
 		busy = true;
 		errorText = '';
 		if (saveFocusFrame !== null) cancelAnimationFrame(saveFocusFrame);
 		saveFocusFrame = null;
 		try {
-			const result = await setPackNextAction(pack.id, effectiveChoice);
+			const result = pendingDraft
+				? await setPackNextAction(pack.id)
+				: null;
+			if (!result) throw new ChallengeStateError('Create a pending draft before approval.');
 			const summary = result?.receipt?.summary || `Next action saved: ${effectiveChoice}.`;
 			savedNextReceipt = { summary, pack: result.pack };
 			clearPreparation();
@@ -479,7 +563,7 @@ let showingCustom = $state(false);
 		{#if errorText}
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
 		{/if}
-		{#if preparationReceipt}
+		{#if preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME}
 			<WebMcpActivityStrip
 				id={NEXT_PREPARATION_RECEIPT_ID}
 				route="next"
@@ -487,6 +571,8 @@ let showingCustom = $state(false);
 				toolName={preparationToolName}
 				cells={preparationCells}
 			/>
+		{:else if pendingDraft?.source === 'human'}
+			<WornAlert tone="info">Draft prepared by you. Workspace unchanged until you approve Save.</WornAlert>
 		{/if}
 		<div class="next-presenter-result">
 			<div class="demo-command-lines compact demo-focus-surface" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">
@@ -504,28 +590,31 @@ let showingCustom = $state(false);
 				/>
 			{/if}
 		</div>
-		<p class="next-authority">Review the draft. Nothing changes until you choose Save.</p>
+		<p class="next-authority"><strong>Draft:</strong> {savedNextReceipt ? 'none · completed' : pendingDraft ? pendingDraftStale ? 'stale' : 'pending approval' : 'none'} · <strong>Workspace:</strong> {savedNextReceipt ? 'updated' : 'unchanged'} · <strong>Authority:</strong> {savedNextReceipt ? 'saved and approved by the person' : pendingDraft ? 'only you can approve Save' : 'create a draft before approval'}.</p>
+		{#if pendingDraftStale}
+			<WornAlert tone="warning">Draft is stale. Refresh the visible work and re-prepare before approval; this draft cannot be saved.</WornAlert>
+		{/if}
 
 		<div class="demo-inline-form next-action-editor">
 			<div class="demo-field">
 				<div class="demo-chip-row" role="group" aria-label="Next action choices" data-next-choices>
 					{#each NEXT_ACTION_CHOICES as act}
 						<WornChip label={act} size="sm" pressed={!showingCustom && effectiveChoice === act}
-							onclick={() => setNextEditorChoice(act, 'preset')} />
+							onclick={() => setHumanNextEditorChoice(act, 'preset')} />
 					{/each}
 					<WornChip label="Custom…" size="sm" pressed={effectiveMode === 'custom'}
-						onclick={() => { setNextEditorChoice(customValue, 'custom'); scheduleEditorFocus('custom'); }} />
+						onclick={() => { setHumanNextEditorChoice(customValue, 'custom'); scheduleEditorFocus('custom'); }} />
 				</div>
 				{#if effectiveMode === 'custom'}
-					<WornInput id="custom-next-input" aria-label="Custom next action" placeholder="Type a custom next action…" bind:value={choice} oninput={() => { customValue = choice; clearPreparation(); savedNextReceipt = null; }} />
+					<WornInput id="custom-next-input" aria-label="Custom next action" placeholder="Type a custom next action…" bind:value={choice} oninput={() => { customValue = choice; setHumanNextEditorChoice(choice, 'custom'); savedNextReceipt = null; }} />
 				{/if}
 			</div>
 			<span id="apply-next-action-help" class="next-save-help">{saveNextHelp}</span>
 			<div class="next-save-actions">
 				{#if preparationReceipt}
-					<WornButton type="button" onclick={discardPreparation}>Discard draft</WornButton>
+					<WornButton type="button" onclick={() => void discardPreparation()}>Discard draft</WornButton>
 				{/if}
-				<WornButton variant="primary" disabled={busy || !effectiveChoice} aria-describedby="apply-next-action-help" onclick={saveChoice}>
+				<WornButton variant="primary" disabled={busy || !effectiveChoice || !pendingDraft || pendingDraftStale} aria-describedby="apply-next-action-help" onclick={saveChoice}>
 					{busy ? 'Saving…' : preparationReceipt ? 'Approve and save' : 'Save next action'}
 				</WornButton>
 			</div>

@@ -20,7 +20,7 @@ import {
 } from './workflow-rules.mjs';
 
 export interface DemoPack {
-	id?: string;
+	id: string;
 	title?: string;
 	type?: string;
 	status?: string;
@@ -55,6 +55,7 @@ export interface DemoReceipt {
 
 export interface DemoState {
 	packs: DemoPack[];
+	pendingNextActionDrafts?: Array<{ workId: string; choice: string; mode: 'preset' | 'custom'; evidenceNote: string; evidence: Array<{ workId: string; field: 'workflow' | 'blocker'; expectedValue: string }>; originFingerprint: string; source: 'human' | 'webmcp'; }>;
 	filter?: string;
 	selectedId?: string;
 	status?: string;

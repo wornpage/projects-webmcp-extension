@@ -4,6 +4,12 @@ export const NEXT_EDITOR_PREVIEW_ID = 'next-action-preview';
 export const NEXT_PREPARATION_RECEIPT_ID = 'next-preparation-receipt';
 export const NEXT_PREPARATION_SUMMARY = 'Browser agent prepared an unsaved draft. No workspace data was saved.';
 
+/** @param {{ preparationInFlight: boolean, pendingDraft: { workId: string, choice: string } | null, visibleWorkId: string, preparationReceipt: { preparedAction: string } | null }} input @returns {boolean} */
+export function shouldHydratePendingDraft({ preparationInFlight, pendingDraft, visibleWorkId, preparationReceipt }) {
+	if (preparationInFlight || !pendingDraft || pendingDraft.workId !== visibleWorkId) return false;
+	return preparationReceipt?.preparedAction !== pendingDraft.choice;
+}
+
 const SINGLE_LINE_CONTROL = /\p{Cc}/u;
 const PREPARE_INPUT_KEYS = ['choice', 'expectedMode', 'expectedChoice', 'evidence'];
 const EVIDENCE_INPUT_KEYS = ['workId', 'field', 'expectedValue'];
@@ -20,7 +26,7 @@ const MAX_EVIDENCE_REFERENCES = 3;
 /** @typedef {{ id: string, title: string, workflow: string, blocker: string }} NextEvidenceWork */
 /** @typedef {{ work: NextEditorWork, field: NextEvidenceField, label: string, value: string }} NextVerifiedEvidence */
 /** @typedef {{ summary: string, work: NextEditorWork, evidenceNote: string, evidence: NextVerifiedEvidence[], preparedAction: string, workspaceChanged: false, requiresHumanSave: true }} NextPreparationReceipt */
-/** @typedef {{ work: NextEditorWork, presetChoices: string[], editor: NextEditorChoice, preview: NextEditorPreview, preparationReceipt: NextPreparationReceipt | null, canSave: boolean, busy: boolean }} NextEditorView */
+/** @typedef {{ work: NextEditorWork, presetChoices: string[], editor: NextEditorChoice, preview: NextEditorPreview, preparationReceipt: NextPreparationReceipt | null, canSave: boolean, busy: boolean, staleReason: string | null }} NextEditorView */
 /** @typedef {{ choice: string, expectedMode: NextEditorMode, expectedChoice: string, evidence: NextEvidenceReference[] }} PrepareNextActionInput */
 /** @typedef {{ changed: boolean, focus: { id: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }, next: NextEditorView }} PrepareNextActionReceipt */
 /** @typedef {{ markMutated: () => void }} PrepareNextActionInvocation */
@@ -36,7 +42,7 @@ const MAX_EVIDENCE_REFERENCES = 3;
 export function nextEditorPageView(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
-	if (typeof candidate.canSave !== 'boolean' || typeof candidate.busy !== 'boolean') return null;
+	if (typeof candidate.canSave !== 'boolean' || typeof candidate.busy !== 'boolean' || (candidate.staleReason !== null && typeof candidate.staleReason !== 'string')) return null;
 	const work = nextEditorWork(candidate.work);
 	const presetChoices = nextEditorPresetChoices(candidate.presetChoices);
 	const editor = nextEditorChoice(candidate.editor);
@@ -47,7 +53,7 @@ export function nextEditorPageView(input) {
 		: nextPreparationReceipt(candidate.preparationReceipt);
 	if (!work || !presetChoices || !editor || !preview || (candidate.preparationReceipt !== null && !preparationReceipt)) return null;
 	if (editor.mode === 'preset' && (!editor.choice || !presetChoices.includes(editor.choice))) return null;
-	if (candidate.canSave !== (Boolean(editor.choice) && !candidate.busy)) return null;
+	if (candidate.canSave !== (Boolean(editor.choice) && !candidate.busy && candidate.staleReason === null)) return null;
 	if (
 		preparationReceipt &&
 		(preparationReceipt.work.id !== work.id ||
@@ -61,7 +67,8 @@ export function nextEditorPageView(input) {
 		preview,
 		preparationReceipt,
 		canSave: candidate.canSave,
-		busy: candidate.busy
+		busy: candidate.busy,
+		staleReason: candidate.staleReason
 	};
 }
 
@@ -104,7 +111,7 @@ export function createPrepareNextActionTool(prepareNextAction, transaction) {
 	return {
 		name: PREPARE_NEXT_ACTION_TOOL_NAME,
 		title: 'Prepare next-action preview',
-		description: 'Prepare an unsaved next-action preview from one to three exact Work or Review facts. The page rejects stale or mismatched facts and generates the visible evidence note from the verified values. This changes only reversible page state for a person to review and never saves or writes workspace data.',
+		description: 'Prepare a durable browser-local pending next-action draft from one to three exact Work or Review facts. The page rejects stale or mismatched facts, generates the visible evidence note from the verified values, and never saves or writes workspace data fields. A person must later approve the draft; failed or aborted preparation restores its prior pending draft state.',
 		inputSchema: {
 			type: 'object',
 			properties: {
