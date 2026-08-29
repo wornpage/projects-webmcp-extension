@@ -147,7 +147,8 @@ test('static mode identifies its bounded routes without production fallbacks', (
 	assert.match(landing, /Let an agent find the next move\. Keep the final say\./u);
 	assert.match(landing, /No automatic saves/u);
 	assert.match(landing, /Open the handoff workflow/u);
-	assert.match(landing, /Public static sample, no login, no backend, and four focused workflow pages/u);
+	assert.match(landing, /Public static sample, no login, no backend, and five focused workflow pages/u);
+	assert.match(landing, /Only explicit human controls, including Add and Save, write browser-local workspace state/u);
 	assert.doesNotMatch(landing, /judge|contest|garage reset|recording/iu);
 	assert.doesNotMatch(`${landing}\n${app}`, /projectsdemo\.org|\/agents|\/billing/u);
 	assert.match(headers, /X-Content-Type-Options: nosniff/u);
@@ -160,6 +161,7 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 		'index.html',
 		'landing.html',
 		'next.html',
+		'priority.html',
 		'review.html',
 		'webmcp-challenge.html',
 		'work.html'
@@ -177,7 +179,7 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 		/<meta name="robots" content="noindex,nofollow,noarchive"/u
 	);
 	const artifactText = collectText(artifactRoot).join('\n');
-	for (const route of ['webmcp-challenge.html', 'work.html', 'review.html', 'next.html']) {
+	for (const route of ['webmcp-challenge.html', 'priority.html', 'work.html', 'review.html', 'next.html']) {
 		const html = readFileSync(path.join(artifactRoot, route), 'utf8');
 		const brand = html.match(/<a\b[^>]*\bclass="[^"]*\bchallenge-brand\b[^"]*"[^>]*>[\s\S]*?<\/a>/u)?.[0];
 		assert.ok(brand, `${route} contains the interactive challenge-brand anchor`);
@@ -189,6 +191,10 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 		);
 		assert.match(brand, /<span[^>]*>Wornpage Projects<\/span>/u, `${route} preserves the visible brand name`);
 	}
+	const priorityHtml = readFileSync(path.join(artifactRoot, 'priority.html'), 'utf8');
+	assert.match(priorityHtml, /Priority/u);
+	assert.match(priorityHtml, /No actionable recommendation/u);
+	assert.match(priorityHtml, /No loaded, non-archived work item is active, unblocked, dependency-ready, and free of a pending decision\./u);
 	const guideHtml = readFileSync(path.join(artifactRoot, 'webmcp-challenge.html'), 'utf8');
 	assert.match(guideHtml, /data-agent-brief-input/u);
 	assert.match(guideHtml, /data-agent-scope-chooser/u);

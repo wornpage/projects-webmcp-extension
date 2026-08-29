@@ -358,3 +358,23 @@ test('compact Work grid cards remain readable and contained for fine and coarse 
 	assert.match(workGridCardSource, /<WornButton data-work-primary-navigation href=\{commandHref\} size="sm" variant="primary"[\s\S]*?onclick=\{\(event\) => \{ event\.stopPropagation\(\); \}\}/u);
 	assert.match(workGridCardSource, /<WornButton data-work-primary-mutation type="button" size="sm" variant="primary"[\s\S]*?onclick=\{\(event\) => \{ event\.stopPropagation\(\); onPrimaryMutation\(pack, cmd\.action\); \}\}/u);
 });
+
+test('Quick Add stays available through the one createPack path in both Work densities', () => {
+	const formPattern = /<form class="quick-create-row"/gu;
+	assert.equal([...routeSource.matchAll(formPattern)].length, 1, 'Work renders one Quick Add form');
+	const quickAddIndex = routeSource.indexOf('<form class="quick-create-row"');
+	const densityPanelsIndex = routeSource.indexOf('{#each densityPanelTabs');
+	assert.ok(quickAddIndex >= 0 && quickAddIndex < densityPanelsIndex, 'Quick Add is owned once outside the density panels');
+	assert.doesNotMatch(routeSource, /@media\(max-width:420px\)\{[\s\S]*?\.quick-create-row\{display:none\}/u);
+	const quickCreateSource = routeSource.match(/async function quickCreate\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(routeSource, /let quickProofTarget = \$state\(''\);/u);
+	assert.match(quickCreateSource, /const proofTarget = quickProofTarget\.trim\(\);[\s\S]*?await createPack\(\{[\s\S]*?title,[\s\S]*?status: 'active',[\s\S]*?next: 'Open',[\s\S]*?doneWhen: proofTarget \|\| undefined,[\s\S]*?quickTitle = '';\s*quickProofTarget = '';/u);
+	assert.match(routeSource, /<summary>Proof target <span>Optional<\/span><\/summary>[\s\S]*?<WornInput[^>]*id="work-quick-proof-target"[^>]*maxlength=\{1000\}[^>]*aria-label="Quick-add proof target"/u);
+	assert.doesNotMatch(quickCreateSource, /localStorage|saveBrowserState|fetch\(/u);
+});
+
+test('expanded Recent activity follows the Work page heading hierarchy', () => {
+	const recentTimeline = routeSource.match(/<WornAccordion label="Recent activity">[\s\S]*?<WornTimeline[\s\S]*?\/>/u)?.[0] ?? '';
+	assert.match(recentTimeline, /headingLevel=\{2\}/u);
+	assert.doesNotMatch(recentTimeline, /headingLevel=\{3\}/u);
+});

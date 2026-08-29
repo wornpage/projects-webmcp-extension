@@ -57,6 +57,8 @@ svelte-frontend/src/routes/+layout.svelte
 svelte-frontend/src/routes/+layout.ts
 svelte-frontend/src/routes/next/+page.svelte
 svelte-frontend/src/routes/next/next-webmcp.mjs
+svelte-frontend/src/routes/priority/+page.svelte
+svelte-frontend/src/routes/priority/priority-webmcp.mjs
 svelte-frontend/src/routes/review/+page.svelte
 svelte-frontend/src/routes/review/review-webmcp.mjs
 svelte-frontend/src/routes/webmcp-challenge/+page.svelte
@@ -75,6 +77,7 @@ tests/challenge-brand-affordance-webmcp-contract.test.mjs
 tests/challenge-webmcp-page-contract.test.mjs
 tests/focus-pulse-webmcp-contract.test.mjs
 tests/next-webmcp-page-contract.test.mjs
+tests/priority-webmcp-page-contract.test.mjs
 tests/public-manifest-webmcp-contract.test.mjs
 tests/review-webmcp-page-contract.test.mjs
 tests/webmcp-registration-contract.test.mjs

@@ -42,7 +42,7 @@ p { margin: 0 0 20px; color: #5b6b63; }
 a { color: #0d716a; font-weight: 700; }
 </style>
 </head>
-<body><main><h1>This route is not in the challenge build</h1><p>The public edition contains only the judge guide, Work, Review, and Next screens.</p><p><a href="/webmcp-challenge">Open the guide</a></p></main></body>
+<body><main><h1>This route is not in the challenge build</h1><p>The public edition contains only the judge Guide, Priority, Work, Review, and Next screens.</p><p><a href="/webmcp-challenge">Open the guide</a></p></main></body>
 </html>
 `;
 

@@ -2,7 +2,7 @@
 
 ## Included
 
-- The landing page and four judge routes: Guide, Work, Review, and Next.
+- The landing page and five judge routes: Guide, Priority, Work, Review, and Next.
 - Route-owned WebMCP descriptors and one lifecycle-safe registration helper.
 - Deterministic synthetic sample data and browser-local state.
 - Only the shared workflow and Wornpage UI pieces required by those routes.
