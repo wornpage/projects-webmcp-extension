@@ -56,10 +56,9 @@ test('presentation-changing tools produce truthful accessible receipts without m
 	assert.match(workRouteSource, /if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?workSearchPresentationReceipt/u);
 	assert.match(reviewRouteSource, /if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?reviewScopePresentationReceipt/u);
 	assert.doesNotMatch(nextRouteSource, /webMcpReadReceipt|data-webmcp-receipt="next-read"/u);
-	assert.match(nextRouteSource, /label: 'Evidence note'[\s\S]*?label: 'Workspace data', value: 'Unchanged'[\s\S]*?label: 'Authority', value: 'Only you can Save'/u);
+	assert.match(nextRouteSource, /label: 'Evidence note'[\s\S]*?label: 'Status', value: 'Draft — waiting for your approval'[\s\S]*?label: 'Save', value: 'Not saved'/u);
 	assert.doesNotMatch(nextRouteSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '', /Work item|Prepared action|Browser agent changed/u);
-	assert.match(nextRouteSource, /label: 'Workspace data', value: 'Unchanged'/u);
-	assert.match(nextRouteSource, /label: 'Authority', value: 'Only you can Save'/u);
+	assert.doesNotMatch(nextRouteSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '', /Workspace data|Authority|Only you can Save/u);
 	for (const [route, source] of [['work', workRouteSource], ['review', reviewRouteSource], ['next', nextRouteSource]]) {
 		assert.match(source, /data-webmcp-receipt=/u, `${route} must render the presenter receipt in the page`);
 	}
@@ -82,7 +81,8 @@ test('action presenters publish only after success and preserve valid pre-invoca
 	assert.doesNotMatch(reviewPresenter, /webMcpScopeReceipt\s*=/u);
 	assert.match(reviewRouteSource, /async function clearFailedReviewWebMcpReceipt\(\) \{\s*webMcpScopeReceipt = null;\s*await tick\(\);\s*\}/u);
 
-	assert.doesNotMatch(nextRouteSource, /onResult:|onInvocationError:|webMcpReadReceipt/u);
+	assert.doesNotMatch(nextRouteSource, /onInvocationError:|webMcpReadReceipt/u);
+	assert.match(nextRouteSource, /onResult: \(\{ toolName \}\)[\s\S]*?toolName === PREPARE_NEXT_ACTION_TOOL_NAME/u);
 	assert.match(nextRouteSource, /createPrepareNextActionTool\(prepareNextActionFromWebMcp, \{[\s\S]*?capture: captureNextPreparationSnapshot,[\s\S]*?restore: restoreNextPreparationSnapshot/u);
 	assert.match(guideRouteSource, /onInvocationError: async \(\) => \{\s*webMcpGuideReceipt = null;\s*await tick\(\);\s*\}/u);
 });

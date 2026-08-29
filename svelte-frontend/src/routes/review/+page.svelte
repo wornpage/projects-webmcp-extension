@@ -122,6 +122,7 @@
 		summary: string;
 		cells: Array<{ label: string; value: string }>;
 		scopeKey: string;
+		toolName: string;
 	} | null>(null);
 	let reviewSummaryText = $derived(buildReviewSummaryText(visible));
 	let blockedCount = $derived(reviewQueue.blockedCount);
@@ -189,7 +190,7 @@
 		const outcome = result as Parameters<typeof reviewScopePresentationReceipt>[0] & {
 			focus?: Awaited<ReturnType<typeof focusReviewScopeDestination>>;
 		};
-		webMcpScopeReceipt = reviewScopePresentationReceipt(outcome);
+		webMcpScopeReceipt = { ...reviewScopePresentationReceipt(outcome), toolName };
 		await tick();
 		const finalFocus = await focusReviewScopeDestination(true);
 		if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
@@ -526,6 +527,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 			</div>
 			{#if webMcpScopeReceipt}
 				<div class="review-presenter-result" data-webmcp-receipt="review" aria-label="Latest Review WebMCP activity">
+					<p class="webmcp-tool-label">WebMCP · {webMcpScopeReceipt.toolName}</p>
 					<WornReceipt
 						summary={webMcpScopeReceipt.summary}
 						cells={webMcpScopeReceipt.cells}
@@ -784,6 +786,14 @@ async function handleCardKeys(e: KeyboardEvent) {
 	}
 	.review-presenter-result {
 		margin-block-start: 4px;
+		min-width: 0;
+	}
+	.webmcp-tool-label {
+		color: var(--worn-text-secondary);
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 12px;
+		margin: 0 0 4px;
+		overflow-wrap: anywhere;
 	}
 	.review-list-reveal {
 		align-items: center;

@@ -242,7 +242,7 @@ export function reviewScopePresentationReceipt(input) {
 	const { changed, review } = reviewScopeReceipt(input);
 	const queryLabel = review.scope.query ? `“${review.scope.query}”` : 'All review items · search cleared';
 	const filterLabel = reviewFilterLabel(review.scope.filter);
-	const summary = `Browser agent ${changed ? 'set' : 'confirmed'} Review scope: ${queryLabel} · ${filterLabel}.`;
+	const summary = `Review scope ${changed ? 'updated' : 'confirmed'}: ${queryLabel} · ${filterLabel}.`;
 	return {
 		summary,
 		cells: [
@@ -255,8 +255,7 @@ export function reviewScopePresentationReceipt(input) {
 				label: 'Search-match evidence',
 				value: `${review.counts.blocked} blocked · ${review.counts.missingNext} missing next · ${review.counts.missingOwner} missing owner`
 			},
-			{ label: 'Browser agent changed', value: 'Visible Review search and queue filter only' },
-			{ label: 'Workspace data', value: 'Unchanged' }
+			{ label: 'Status', value: 'Visible queue updated · Not saved' }
 		],
 		scopeKey: JSON.stringify({ scope: review.scope, counts: review.counts })
 	};

@@ -268,13 +268,12 @@ test('Review presentation receipts freeze normalized filters, counts, and visibl
 		focus: { target: 'item', itemId: review.upNext.id, focused: true, focusVisible: true, inViewport: true, pulsed: true },
 		review
 	});
-	assert.equal(receipt.summary, 'Browser agent set Review scope: “garage” · Blocked.');
+	assert.equal(receipt.summary, 'Review scope updated: “garage” · Blocked.');
 	assert.deepEqual(receipt.cells, [
 		{ label: 'Visible Review scope', value: '“garage” · Blocked' },
 		{ label: 'Current queue', value: '2 shown · 3 filtered · 5 search matches · 12 total review' },
 		{ label: 'Search-match evidence', value: '3 blocked · 1 missing next · 0 missing owner' },
-		{ label: 'Browser agent changed', value: 'Visible Review search and queue filter only' },
-		{ label: 'Workspace data', value: 'Unchanged' }
+		{ label: 'Status', value: 'Visible queue updated · Not saved' }
 	]);
 	assert.equal(receipt.scopeKey, JSON.stringify({ scope: review.scope, counts: review.counts }));
 });
@@ -350,13 +349,14 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /async function applyReviewScope\([\s\S]*?query = nextQuery;\s*reviewSubFilter = nextFilter;\s*await tick\(\);[\s\S]*?await focusReviewScopeDestination\(requireVisibleFocus\)/u);
 	assert.match(routeSource, /const requestedQueue = summarizeReviewQueue\(packs, nextQuery, 'all'\);[\s\S]*?nextFilter === reviewSubFilter[\s\S]*?const \{ changed, focus \} = await applyReviewScope\(nextQuery, nextFilter, 'results', true\);[\s\S]*?if \(!focus\)[\s\S]*?return \{ changed, focus, review: currentReviewView \};/u);
 	assert.match(routeSource, /async function focusReviewScopeDestination\(requireVisibleFocus: boolean\)[\s\S]*?\.review-priority\[data-pack-id\] \.demo-card-title[\s\S]*?focusAndPulse\(focusTarget, \{[\s\S]*?requireVisibleFocus: verify[\s\S]*?await settleReviewScopeFocus\(runFocus\)[\s\S]*?target: 'item'[\s\S]*?target: 'search'[\s\S]*?target: 'queue'/u);
-	assert.match(routeSource, /async function recordReviewWebMcpResult[\s\S]*?if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?webMcpScopeReceipt = reviewScopePresentationReceipt\(outcome\)/u);
-	assert.match(helperSource, /function reviewScopePresentationReceipt[\s\S]*?Visible Review scope[\s\S]*?Current queue[\s\S]*?Search-match evidence[\s\S]*?Browser agent changed[\s\S]*?Workspace data[\s\S]*?Unchanged/u);
-	assert.match(routeSource, /webMcpScopeReceipt = reviewScopePresentationReceipt\(outcome\);[\s\S]*?await tick\(\);[\s\S]*?await focusReviewScopeDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Review receipt focus did not match the rendered scope destination\.'\)/u);
+	assert.match(routeSource, /async function recordReviewWebMcpResult[\s\S]*?if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?webMcpScopeReceipt = \{ \.\.\.reviewScopePresentationReceipt\(outcome\), toolName \}/u);
+	assert.match(helperSource, /function reviewScopePresentationReceipt[\s\S]*?Visible Review scope[\s\S]*?Current queue[\s\S]*?Search-match evidence[\s\S]*?Status[\s\S]*?Not saved/u);
+	assert.match(routeSource, /webMcpScopeReceipt = \{ \.\.\.reviewScopePresentationReceipt\(outcome\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?await focusReviewScopeDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Review receipt focus did not match the rendered scope destination\.'\)/u);
 	assert.match(routeSource, /let reviewReceiptScopeKey = \$derived\([\s\S]*?currentReviewView\.scope[\s\S]*?currentReviewView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
 	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: review\.scope, counts: review\.counts \}\)/u);
-	assert.match(routeSource, /data-webmcp-receipt="review"[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}/u);
+	assert.match(routeSource, /data-webmcp-receipt="review"[\s\S]*?WebMCP · \{webMcpScopeReceipt\.toolName\}[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}/u);
+	assert.match(routeSource, /\.webmcp-tool-label\s*\{[\s\S]*?font-family:[\s\S]*?overflow-wrap:\s*anywhere;/u);
 	assert.match(routeSource, /<article class="review-priority demo-focus-surface"[\s\S]*?<div class="review-presenter-result" data-webmcp-receipt="review"[\s\S]*?<\/article>/u);
 	assert.match(routeSource, /\.review-priority-shell,\s*\.review-priority\s*\{[\s\S]*?overflow:\s*visible;[\s\S]*?width:\s*100%;\s*\}/u);
 	assert.doesNotMatch(demoCss, /\.demo-card-facts\s*\{[^}]*grid-template-columns:\s*repeat\(3,/u);
