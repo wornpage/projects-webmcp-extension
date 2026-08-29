@@ -231,6 +231,19 @@ This checkpoint starts from Projects source `bdefb75eaaaf808b7b93812bdf9407ffe59
 | Wide and pointer checks | At 1280 × 900 in dark mode, the 32 × 32px fine-pointer Dismiss control passed the same 4.3-second focus hold and resumed removal without horizontal overflow. A real pointer dismissal removed the toast and left focus on `BODY`, so pointer use does not force keyboard recovery. Manual keyboard recovery is covered by the component's focus-visible and `MouseEvent.detail === 0` behavioral contracts; the in-app browser key helper focused the button but did not synthesize its activation, so this checkpoint makes no rendered Enter-key claim. |
 | WebMCP and data boundary | Guide discovery remained exactly one page-owned, read-only `get_projects_handoff_guide` tool with the same descriptor. No WebMCP tool was invoked. This slice changed no registration, request, workspace storage, pending draft, save, or Quick Add transaction path; rendered toast checks used only the visible browser-local sample reset. |
 
+## Compact Quick Add focus boundary checkpoint — August 29, 2026
+
+This checkpoint addresses the user-observed clipped Quick Add focus outline below 500px without changing its canonical `createPack` transaction or optional proof-target mapping.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | At 390 × 844, the Quick Add input and compact `.demo-list-panel` both began at x = 8.0px. WornInput's 1.74px dashed outline plus 1.74px offset extended 3.49px beyond the input, while the panel used `overflow: hidden`, producing −3.49px start clearance and clipping the outline. |
+| Ownership decision | The shared WornInput focus treatment is correct, and the folded surface only establishes its decorative boundary. Work now insets its route-owned Quick Add grid by 4px inline only while the compact panel clips; no shared Wornpage API or generic panel behavior changed. |
+| Focused contract | The existing Quick Add contract now requires the exact compact inset while continuing to prove one form, one `createPack` call, one optional proof target mapped to `doneWhen`, and no direct storage or network shortcut. The focused Work suite passed 11/11. |
+| Rendered compact matrix | At 499px the focused title input had +0.51px clearance beyond its full outline and 0px horizontal overflow. At both 390px and 320px, the focused title input, enabled Add button, and expanded proof-target input each had +0.51px inline clipping clearance, remained `:focus-visible`, and produced 0px horizontal overflow. The Add control remained 44px high at 390px and 320px. |
+| Boundary control | At the 500px compact boundary, the panel remains `overflow: hidden` and the 4px route inset remains active, so the outline keeps its reserved clearance. At 501px, panel overflow becomes visible and the compact inset is absent, allowing the full outline to paint outside the panel without adding wide-layout indentation. |
+| WebMCP and data boundary | Work discovery remained exactly `get_current_work_view` and `show_work_search`. No tool was invoked. Browser validation filled only unsaved page-local Quick Add fields, performed no submit, and changed no workspace, draft, storage, or network state. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.

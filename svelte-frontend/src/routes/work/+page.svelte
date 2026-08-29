@@ -1151,6 +1151,9 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		.quick-create-row :global(.quick-create-submit){min-block-size:44px}
 		.quick-create-options summary{min-block-size:44px}
 	}
+	@media(max-width:500px){
+		.quick-create-row{margin-inline:4px}
+	}
 	@media(max-width:700px){
 		:global(.demo-panel-head:has(.work-head-actions)){gap:8px;padding-block:7px}
 		:global(.demo-panel-head:has(.work-head-actions) .demo-panel-title){margin-block:0}

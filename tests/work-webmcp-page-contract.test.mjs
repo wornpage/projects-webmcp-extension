@@ -370,6 +370,7 @@ test('Quick Add stays available through the one createPack path in both Work den
 	assert.match(routeSource, /let quickProofTarget = \$state\(''\);/u);
 	assert.match(quickCreateSource, /const proofTarget = quickProofTarget\.trim\(\);[\s\S]*?await createPack\(\{[\s\S]*?title,[\s\S]*?status: 'active',[\s\S]*?next: 'Open',[\s\S]*?doneWhen: proofTarget \|\| undefined,[\s\S]*?quickTitle = '';\s*quickProofTarget = '';/u);
 	assert.match(routeSource, /<summary>Proof target <span>Optional<\/span><\/summary>[\s\S]*?<WornInput[^>]*id="work-quick-proof-target"[^>]*maxlength=\{1000\}[^>]*aria-label="Quick-add proof target"/u);
+	assert.match(routeSource, /@media\(max-width:500px\)\{\s*\.quick-create-row\{margin-inline:4px\}\s*\}/u);
 	assert.doesNotMatch(quickCreateSource, /localStorage|saveBrowserState|fetch\(/u);
 });
 
