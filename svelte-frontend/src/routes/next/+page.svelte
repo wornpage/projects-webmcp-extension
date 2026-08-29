@@ -96,6 +96,7 @@
 	pendingDraft: PendingNextActionDraft | null;
 	invocationWorkId: string;
 	preparationToolName: string;
+	preparationInFlight: boolean;
 	};
 
 	let chosenPackId = $state('');
@@ -106,6 +107,7 @@ let showingCustom = $state(false);
 	let errorText = $state('');
 	let preparationReceipt = $state<PreparationReceipt | null>(null);
 	let preparationToolName = $state('');
+	let preparationInFlight = $state(false);
 	let preparationPreviousEditor = $state<EditorSnapshot | null>(null);
 	let savedNextReceipt = $state<SavedNextReceipt | null>(null);
 	let editorPackId = $state('');
@@ -291,7 +293,8 @@ let showingCustom = $state(false);
 			savedNextReceipt,
 			pendingDraft: pendingDraft ? structuredClone(pendingDraft) : null,
 			invocationWorkId: pack?.id || '',
-			preparationToolName
+			preparationToolName,
+			preparationInFlight
 		};
 	}
 
@@ -303,6 +306,7 @@ let showingCustom = $state(false);
 		preparationPreviousEditor = snapshot.preparationPreviousEditor ? { ...snapshot.preparationPreviousEditor } : null;
 		savedNextReceipt = snapshot.savedNextReceipt;
 		preparationToolName = snapshot.preparationToolName;
+		preparationInFlight = snapshot.preparationInFlight;
 		if (snapshot.invocationWorkId) await restorePendingNextActionDraft(snapshot.invocationWorkId, snapshot.pendingDraft);
 	}
 
@@ -342,7 +346,7 @@ let showingCustom = $state(false);
 	});
 
 	$effect(() => {
-		if (!pendingDraft || pendingDraft.workId !== pack?.id || preparationReceipt?.preparedAction === pendingDraft.choice) return;
+		if (preparationInFlight || !pendingDraft || pendingDraft.workId !== pack?.id || preparationReceipt?.preparedAction === pendingDraft.choice) return;
 		preparationPreviousEditor = savedEditorBaseline(pack);
 		preparationReceipt = preparationFromPending(pendingDraft);
 		preparationToolName = pendingDraft.source === 'webmcp' ? PREPARE_NEXT_ACTION_TOOL_NAME : '';
@@ -389,6 +393,7 @@ let showingCustom = $state(false);
 			source: 'webmcp'
 		};
 		invocation.markMutated();
+		preparationInFlight = true;
 		if (!preparationReceipt) preparationPreviousEditor = savedEditorBaseline(pack);
 		setNextEditorChoice(input.choice, desiredMode, false);
 		preparationReceipt = {
@@ -411,6 +416,7 @@ let showingCustom = $state(false);
 		});
 		if (!currentNextEditor) throw new Error('Prepare next action could not verify the visible editor.');
 		await savePendingNextActionDraft(pending);
+		preparationInFlight = false;
 		return {
 			changed: !alreadyDesired || !receiptAlreadyDesired,
 			focus: { id: NEXT_PREPARATION_RECEIPT_ID, ...focusReceipt },

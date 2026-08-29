@@ -495,12 +495,16 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(routeSource, /next-authority[\s\S]*?savedNextReceipt \? 'none · completed'[\s\S]*?savedNextReceipt \? 'updated'[\s\S]*?saved and approved by the person/u);
 	assert.match(routeSource, /function savedEditorBaseline\(target: DemoPack \| null\): EditorSnapshot[\s\S]*?defaultChoiceFor\(target\)[\s\S]*?NEXT_ACTION_CHOICES/u);
 	assert.match(routeSource, /function setHumanNextEditorChoice[\s\S]*?setNextEditorChoice\(nextChoice, mode\);[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);/u);
-	assert.match(routeSource, /if \(!pendingDraft[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);[\s\S]*?preparationFromPending/u);
+	assert.match(routeSource, /if \(preparationInFlight \|\| !pendingDraft[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);[\s\S]*?preparationFromPending/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);[\s\S]*?clearPreparation\(\);[\s\S]*?setNextEditorChoice\(previous\.choice, previous\.mode, false\)/u);
 	assert.match(routeSource, /let visiblePackId = \$derived\(pack\?\.id \|\| ''\);[\s\S]*?pendingNextActionDraftFor\(\$demoState, visiblePackId\)/u);
 	assert.match(routeSource, /\{#if preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?\{:else if pendingDraft\?\.source === 'human'\}[\s\S]*?Draft prepared by you\. Workspace unchanged until you approve Save\./u);
 	assert.match(routeSource, /preparationReceipt: preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME \? preparationReceipt : null/u);
 	assert.match(routeSource, /preparationToolName = PREPARE_NEXT_ACTION_TOOL_NAME;[\s\S]*?await tick\(\);[\s\S]*?NEXT_PREPARATION_RECEIPT_ID/u);
+	assert.match(routeSource, /let preparationInFlight = \$state\(false\);[\s\S]*?preparationInFlight \|\| !pendingDraft/u);
+	assert.match(routeSource, /invocation\.markMutated\(\);[\s\S]*?preparationInFlight = true;[\s\S]*?await savePendingNextActionDraft\(pending\);[\s\S]*?preparationInFlight = false;/u);
+	assert.match(routeSource, /preparationInFlight: boolean;/u);
+	assert.match(routeSource, /preparationToolName,[\s\S]*?preparationInFlight[\s\S]*?preparationInFlight = snapshot\.preparationInFlight;/u);
 	assert.equal(routeSource.match(/await setPackNextAction\(/gu)?.length, 1);
 	assert.match(routeSource, /const result = pendingDraft[\s\S]*?await setPackNextAction\(pack\.id\)/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);/u);
