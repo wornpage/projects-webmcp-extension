@@ -152,7 +152,7 @@
 	let renderLimit = $state(WORK_RENDER_LIMIT);
 
 	let filter = $derived($demoState?.filter || 'all');
-	let visible = $derived((()=>{let v=orderPacks(filterPacks(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone), sortBy);if(dueUrgencyFilter!=='all'){v=v.filter(p=>dueUrgency(p.due)===dueUrgencyFilter)}const sel=$demoState?.selectedId;if(focusMode&&sel){return v.filter(p=>p.id===sel)}return v})());
+	let visible = $derived((()=>{let v=orderPacks(filterPacks(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone), sortBy);if(dueUrgencyFilter!=='all'){v=v.filter(p=>dueUrgency(p)===dueUrgencyFilter)}const sel=$demoState?.selectedId;if(focusMode&&sel){return v.filter(p=>p.id===sel)}return v})());
 	let renderedVisible = $derived(visible.slice(0, renderLimit));
 	let hasMoreVisible = $derived(renderedVisible.length < visible.length);
 	let filterScope = $derived([filter, debouncedQuery, energyFilter, areaFilter, recurrenceFilter, ownerFilter, dueUrgencyFilter, sortBy, hideDone, focusMode].join('\u0000'));
@@ -220,7 +220,7 @@
 			title: workTitle(pack),
 			workflow: density === 'grid' ? packStatusLabel(pack.status) : workflowLabel(pack),
 			owner: density === 'grid' ? (pack.owner ? String(pack.owner) : null) : ownerLabel(pack.owner),
-			due: pack.due ? dueDateLabel(pack.due) : null,
+			due: pack.due ? dueDateLabel(pack) : null,
 			blocker: hasBlocker(pack) ? blockerText(pack) : null
 		}))
 	}));

@@ -74,7 +74,7 @@
 		{/if}
 		<span class="grid-card-status">{statusLabel}</span>
 		{#if pack.due}
-			<span class="due-{dueUrgency(pack.due)}">{dueDateLabel(pack.due)}</span>
+			<span class="due-{dueUrgency(pack)}">{dueDateLabel(pack)}</span>
 		{/if}
 	</div>
 	{#if hasBlocker(pack)}
