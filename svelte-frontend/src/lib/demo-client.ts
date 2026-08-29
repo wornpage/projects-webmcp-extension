@@ -50,6 +50,16 @@ export interface DemoToast {
 
 export const toasts = writable<DemoToast[]>([]);
 
+export type PendingNextActionDraft = {
+	workId: string;
+	choice: string;
+	mode: 'preset' | 'custom';
+	evidenceNote: string;
+	evidence: Array<{ workId: string; field: 'workflow' | 'blocker'; expectedValue: string }>;
+	originFingerprint: string;
+	source: 'human' | 'webmcp';
+};
+
 export class ChallengeStateError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -79,6 +89,46 @@ function assertDemoState(value: unknown): asserts value is DemoState {
 		}
 		ids.add(pack.id);
 	}
+	const pending = (value as DemoState).pendingNextActionDrafts;
+	if (pending !== undefined && (!Array.isArray(pending) || pending.some((draft) => !isPendingNextActionDraft(draft)))) {
+		throw new ChallengeStateError('Saved pending approvals are invalid. Clear this site\'s local data to restart.');
+	}
+}
+
+function isPendingNextActionDraft(value: unknown): value is PendingNextActionDraft {
+	if (!value || typeof value !== 'object') return false;
+	const draft = value as PendingNextActionDraft;
+	return typeof draft.workId === 'string' && Boolean(draft.workId.trim()) &&
+		typeof draft.choice === 'string' && Boolean(draft.choice.trim()) &&
+		(draft.mode === 'preset' || draft.mode === 'custom') &&
+		typeof draft.evidenceNote === 'string' && Array.isArray(draft.evidence) &&
+		typeof draft.originFingerprint === 'string' && Boolean(draft.originFingerprint) &&
+		(draft.source === 'human' || draft.source === 'webmcp') &&
+		draft.evidence.every((fact) => fact && typeof fact.workId === 'string' && (fact.field === 'workflow' || fact.field === 'blocker') && typeof fact.expectedValue === 'string');
+}
+
+export function pendingNextActionDrafts(state: DemoState | null): PendingNextActionDraft[] {
+	return state?.pendingNextActionDrafts && Array.isArray(state.pendingNextActionDrafts)
+		? state.pendingNextActionDrafts.filter(isPendingNextActionDraft)
+		: [];
+}
+
+export function pendingNextActionDraftFor(state: DemoState | null, workId: string): PendingNextActionDraft | null {
+	return pendingNextActionDrafts(state).find((draft) => draft.workId === workId) ?? null;
+}
+
+export async function savePendingNextActionDraft(draft: PendingNextActionDraft): Promise<DemoState | null> {
+	if (!isPendingNextActionDraft(draft)) throw new ChallengeStateError('Pending approval draft is invalid.');
+	return saveBrowserState((state) => {
+		const pending = pendingNextActionDrafts(state).filter((item) => item.workId !== draft.workId);
+		state.pendingNextActionDrafts = [...pending, structuredClone(draft)];
+	});
+}
+
+export async function discardPendingNextActionDraft(workId: string): Promise<DemoState | null> {
+	return saveBrowserState((state) => {
+		state.pendingNextActionDrafts = pendingNextActionDrafts(state).filter((draft) => draft.workId !== workId);
+	});
 }
 
 function cloneState(state: DemoState): DemoState {

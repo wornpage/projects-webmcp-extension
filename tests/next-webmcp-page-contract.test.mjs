@@ -19,6 +19,9 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
+const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
+const layoutSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.svelte'), 'utf8');
+const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmcp/reviewer-tests.md'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/next-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
@@ -469,4 +472,21 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /@media \(max-width: 500px\)[\s\S]*?\.next-save-help\s*\{\s*flex: 0 0 auto;/u);
 	assert.match(registrationSource, /const registrationController = new AbortController\(\);/u);
 	assert.doesNotMatch(helperSource, /modelContext|registerTool|fetch\(|jsonrpc|setPackNextAction|update_pack/u);
+});
+
+test('pending next-action approvals use one durable state owner and fail closed when stale', () => {
+	assert.match(demoClientSource, /export type PendingNextActionDraft = \{[\s\S]*?workId: string;[\s\S]*?evidence: Array<[\s\S]*?originFingerprint: string;[\s\S]*?source: 'human' \| 'webmcp';/u);
+	assert.match(demoClientSource, /export async function savePendingNextActionDraft[\s\S]*?saveBrowserState[\s\S]*?state\.pendingNextActionDrafts = \[\.\.\.pending, structuredClone\(draft\)\];/u);
+	assert.match(demoClientSource, /export async function discardPendingNextActionDraft[\s\S]*?saveBrowserState[\s\S]*?state\.pendingNextActionDrafts = pendingNextActionDrafts\(state\)\.filter/u);
+	assert.match(demoClientSource, /export async function resetDemoSampleState[\s\S]*?localStorage\.removeItem\(STORAGE_KEY\)[\s\S]*?return replaceDemoState\(seed\);/u);
+	assert.match(routeSource, /pendingNextActionDraftFor\(\$demoState, selectedId\)[\s\S]*?pendingDraftFingerprint/u);
+	assert.match(routeSource, /invocation\.markMutated\(\);[\s\S]*?if \(!currentNextEditor\)[\s\S]*?await savePendingNextActionDraft\(pending\);/u);
+	assert.match(routeSource, /pendingDraft && pendingDraftStale[\s\S]*?Draft is stale/u);
+	assert.match(routeSource, /disabled=\{busy \|\| !effectiveChoice \|\| pendingDraftStale\}/u);
+	assert.equal(routeSource.match(/await setPackNextAction\(/gu)?.length, 1);
+	assert.match(routeSource, /const result = await setPackNextAction\(pack\.id, effectiveChoice\);[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);/u);
+	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);/u);
+	assert.match(layoutSource, /pendingNextActionDrafts\(\$demoState\)[\s\S]*?pendingResumeHref[\s\S]*?Pending \{pendingApprovals\.length\}/u);
+	assert.doesNotMatch(routeSource, /localStorage|sessionStorage/u);
+	assert.doesNotMatch(reviewerTests, /reload discarded the proposal|reload removed 1\/1 draft/u);
 });

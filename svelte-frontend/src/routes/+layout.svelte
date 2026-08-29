@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { refreshDemoState, toasts } from '$lib/demo-client';
+	import { demoState, pendingNextActionDrafts, refreshDemoState, toasts } from '$lib/demo-client';
 	import WornToast from '$lib/components/WornToast.svelte';
 
 	type RouteItem = {
@@ -19,6 +19,8 @@
 	let { children }: { children: any } = $props();
 	let pathname = $derived($page.url.pathname);
 	let routeLabel = $derived(ROUTES.find((item) => item.href === pathname)?.label ?? 'WebMCP demo');
+	let pendingApprovals = $derived(pendingNextActionDrafts($demoState));
+	let pendingResumeHref = $derived(pendingApprovals[0] ? `/next?pack=${encodeURIComponent(pendingApprovals[0].workId)}` : '/next');
 
 	onMount(() => {
 		// The shared workspace shell hydrates the one browser-local state owner.
@@ -51,6 +53,11 @@
 					{item.label}
 				</a>
 			{/each}
+			{#if pendingApprovals.length > 0}
+				<a class="pending-approval-link" href={pendingResumeHref} aria-label={`Resume ${pendingApprovals.length} pending approval${pendingApprovals.length === 1 ? '' : 's'}`}>
+					Pending {pendingApprovals.length}
+				</a>
+			{/if}
 		</nav>
 	</header>
 

@@ -46,7 +46,7 @@ Public judge URL (no account required): <https://projects-webmcp-extension.pages
 | Guide | Exact rendered projection returned 3 steps, 3 authority statements, and the `Confirm storage bin delivery` prompt |
 | Work | Started 8 shown/8 matching/8 workspace/3 blocked; `Garage reset` returned 4 shown/4 matching/8 workspace/2 blocked, including `Garage reset: clear the floor` with workflow `Done` |
 | Review | Started 5 shown/5 filtered/5 total review/3 blocked; blocked `Garage reset` scope returned 2 shown/2 filtered/3 search matches/5 total review/2 blocked and the visible reason `Blocked: Waiting on storage bins.` |
-| Next | Started with exact custom action `Clear the garage floor`; prepared `Confirm storage bin delivery` with the visible evidence note; receipt reported `workspaceChanged: false` and `requiresHumanSave: true`; exact repeat returned `changed: false`; reload discarded the proposal |
+| Next | Started with exact custom action `Clear the garage floor`; prepared `Confirm storage bin delivery` with the visible evidence note; receipt reported `workspaceChanged: false` and `requiresHumanSave: true`; exact repeat returned `changed: false`; reload retained the pending approval and the shared navigation showed its exact resume count |
 | Receipt truthfulness | Work and Review receipts each measured 1 immediately after their tool action and 0 after a later human search edit made the receipt stale |
 | Focus | Work result, Review result, and Next receipt were all the active `:focus-visible` destination and fully in viewport; Next focus contrast measured 15.76:1 |
 | 390 × 844 dark matrix | Guide, Work, Review, and Next each applied `rgb(15, 23, 20)` body background with one navigation row and no horizontal overflow; landing also had no horizontal overflow |
@@ -115,7 +115,7 @@ The root and frontend locked installs completed from empty dependency directorie
 | Review scope | 5 total review / 5 filtered / 5 shown / 3 blocked became 5 total review / 3 search matches / 2 filtered / 2 shown / 2 blocked. |
 | Visible focus | Work result, Review result, and Next receipt passed 3/3 active-focus, `:focus-visible`, and in-viewport checks. |
 | Reduced motion | 1/1 emulated reduced-motion Work action retained verified visible focus with the reduced-motion media query active. |
-| Next authority | 1/1 current-editor read preserved `Clear the garage floor`; preparation reported `workspaceChanged: false` and `requiresHumanSave: true`; 1/1 exact repeat returned `changed: false`; 1/1 reload discarded the proposal and note. |
+| Next authority | 1/1 current-editor read preserved `Clear the garage floor`; preparation reported `workspaceChanged: false` and `requiresHumanSave: true`; 1/1 exact repeat returned `changed: false`; 1/1 reload retained the proposal and note as a pending approval. |
 | Clone-safe results | All 7/7 unique route tools returned through the browser WebMCP boundary without a serialization failure. |
 | Request ledger | 79/79 requests used `http://127.0.0.1:5197`; 0/79 targeted `/api/`; 0/79 used an external origin; 0 browser errors or warnings were observed. |
 
@@ -134,7 +134,7 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
 | Custom truth | Custom keeps the shared 120-character/control-character validation; an unmatched term projects 0 matching of 8 workspace and exposes disabled `No work matches`, without a fallback Work link or invented work. |
 | Focused arrival state | `/work?focus=garage-reset-sort-shelves` focuses and centers the matching card, applies a selected-surface wash, accent rail, 4px ring, and `Focused item` label for 4.2 seconds, then removes the arrival treatment while visible keyboard focus remains. |
 | Action accountability | Work and Review getters leave no agent-change receipt. Successful scope presenters show the normalized visible scope and exact live denominators. Next accepts 1–3 exact Work or Review field/value references, requires one for the current item, rejects stale or mismatched facts, and generates its visible evidence note from the verified values. The draft remains unsaved and Save stays human-owned. Human edits or route teardown clear the affected attribution. |
-| Verified Next evidence | Local in-app-browser WebMCP replay rejected 1/1 false blocker value with 0 editor or receipt changes; accepted 2/2 exact facts (`sort shelves` blocker and `clear the floor` workflow); returned 4/4 focus receipts true, `workspaceChanged: false`, and `requiresHumanSave: true`; exact repeat returned `changed: false`; reload removed 1/1 draft; browser errors/warnings were 0/0. |
+| Verified Next evidence | Local in-app-browser WebMCP replay rejected 1/1 false blocker value with 0 editor or receipt changes; accepted 2/2 exact facts (`sort shelves` blocker and `clear the floor` workflow); returned 4/4 focus receipts true, `workspaceChanged: false`, and `requiresHumanSave: true`; exact repeat returned `changed: false`; reload retained 1/1 pending draft and requires a fresh verified preparation if it becomes stale; browser errors/warnings were 0/0. |
 
 ## Browser-agent path
 
@@ -164,7 +164,7 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
    - Prepare `Confirm storage bin delivery` with two structured facts already returned by Work or Review: `{ workId: "garage-reset-sort-shelves", field: "blocker", expectedValue: "Waiting on storage bins" }` and `{ workId: "garage-reset-clear-floor", field: "workflow", expectedValue: "Done" }`.
    - Verify the visible receipt identifies an unsaved browser-agent draft and displays the page-generated note `Garage reset: sort shelves — Blocker: Waiting on storage bins. Garage reset: clear the floor — Workflow: Done.` Verify the returned receipt preserves both structured facts, says `workspaceChanged: false`, and says `requiresHumanSave: true`.
    - Retry with either expected value changed. Verify the tool rejects the stale evidence and preserves the prior valid draft.
-   - Repeat the exact call and verify `changed` is `false`; reload or choose Discard and verify the proposal and note were not persisted.
+   - Repeat the exact call and verify `changed` is `false`; reload and verify the pending count and resume link retain the proposal without changing workspace fields. Choose Discard and verify the draft clears without a workspace write.
 5. Navigate between routes.
    - Verify tools from the previous page are aborted and no longer active.
    - Verify ordinary page use still works when `document.modelContext` is unavailable.

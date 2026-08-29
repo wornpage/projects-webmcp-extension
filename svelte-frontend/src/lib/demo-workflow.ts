@@ -55,6 +55,7 @@ export interface DemoReceipt {
 
 export interface DemoState {
 	packs: DemoPack[];
+	pendingNextActionDrafts?: unknown[];
 	filter?: string;
 	selectedId?: string;
 	status?: string;

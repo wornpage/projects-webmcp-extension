@@ -8,9 +8,13 @@
 		demoStateError,
 		refreshDemoState,
 		setPackNextAction,
+		savePendingNextActionDraft,
+		discardPendingNextActionDraft,
+		pendingNextActionDraftFor,
 		setSelectedWork,
 		toasts,
-		ChallengeStateError
+		ChallengeStateError,
+		type PendingNextActionDraft
 	} from '$lib/demo-client';
 	import {
 		NEXT_ACTION_CHOICES,
@@ -120,6 +124,8 @@ let showingCustom = $state(false);
 			$demoState?.selectedId ||
 			''
 	);
+	let pendingDraft = $derived(pendingNextActionDraftFor($demoState, selectedId));
+	let pendingDraftStale = $derived(pendingDraft ? pendingDraft.originFingerprint !== pendingDraftFingerprint(pendingDraft.evidence, pendingDraft.workId) : false);
 	// An explicit selection never falls back to a different work item.
 	let demoLoaded = $derived(Boolean($demoState?.packs));
 	let pack = $derived(
@@ -246,6 +252,34 @@ let showingCustom = $state(false);
 		preparationPreviousEditor = null;
 	}
 
+	function pendingDraftFingerprint(evidence: NextEvidenceReference[], workId: string): string {
+		const facts = evidence.map((reference) => {
+			const candidate = packs.find((item) => item.id === reference.workId);
+			return {
+				workId: reference.workId,
+				field: reference.field,
+				value: candidate
+					? reference.field === 'workflow' ? workflowLabel(candidate) : hasBlocker(candidate) ? blockerText(candidate) : 'None'
+					: null
+			};
+		});
+		const origin = packs.find((item) => item.id === workId);
+		return JSON.stringify({ workId, origin: origin ? { title: workTitle(origin), workflow: workflowLabel(origin), blocker: hasBlocker(origin) ? blockerText(origin) : 'None', next: origin.next || '' } : null, facts });
+	}
+
+	function preparationFromPending(draft: PendingNextActionDraft): PreparationReceipt {
+		const evidence = draft.evidence.map((reference) => {
+			const candidate = packs.find((item) => item.id === reference.workId);
+			return {
+				work: { id: reference.workId, title: candidate ? workTitle(candidate) : reference.workId },
+				field: reference.field,
+				label: reference.field === 'workflow' ? 'Workflow' : 'Blocker',
+				value: reference.expectedValue
+			};
+		}) as NextVerifiedEvidence[];
+		return { summary: NEXT_PREPARATION_SUMMARY, work: { id: draft.workId, title: pack ? workTitle(pack) : draft.workId }, evidenceNote: draft.evidenceNote, evidence, preparedAction: draft.choice, workspaceChanged: false, requiresHumanSave: true };
+	}
+
 	function clonePreparationReceipt(receipt: PreparationReceipt | null): PreparationReceipt | null {
 		return receipt ? { ...receipt, work: { ...receipt.work } } : null;
 	}
@@ -278,6 +312,20 @@ let showingCustom = $state(false);
 		if (mode === 'custom') customValue = nextChoice;
 	}
 
+	function setHumanNextEditorChoice(nextChoice: string, mode: NextEditorMode) {
+		setNextEditorChoice(nextChoice, mode);
+		if (!pack?.id || !nextChoice.trim()) return;
+		void savePendingNextActionDraft({
+			workId: pack.id,
+			choice: nextChoice.trim(),
+			mode,
+			evidenceNote: 'Human-created draft; approval remains human-owned.',
+			evidence: [],
+			originFingerprint: pendingDraftFingerprint([], pack.id),
+			source: 'human'
+		});
+	}
+
 	$effect(() => {
 		const nextPackId = pack?.id || '';
 		if (!nextPackId || nextPackId === editorPackId) return;
@@ -288,6 +336,13 @@ let showingCustom = $state(false);
 			(NEXT_ACTION_CHOICES as readonly string[]).includes(initialChoice) ? 'preset' : 'custom'
 		);
 		errorText = '';
+	});
+
+	$effect(() => {
+		if (!pendingDraft || pendingDraft.workId !== pack?.id || preparationReceipt?.preparedAction === pendingDraft.choice) return;
+		preparationReceipt = preparationFromPending(pendingDraft);
+		preparationToolName = pendingDraft.source === 'webmcp' ? PREPARE_NEXT_ACTION_TOOL_NAME : '';
+		setNextEditorChoice(pendingDraft.choice, pendingDraft.mode, false);
 	});
 
 	async function prepareNextActionFromWebMcp(
@@ -320,6 +375,15 @@ let showingCustom = $state(false);
 		if (!alreadyDesired && !matchesExpected) {
 			throw new Error('Prepare next action rejected stale Next editor state.');
 		}
+		const pending: PendingNextActionDraft = {
+			workId: current.work.id,
+			choice: input.choice,
+			mode: desiredMode,
+			evidenceNote,
+			evidence: input.evidence,
+			originFingerprint: pendingDraftFingerprint(input.evidence, current.work.id),
+			source: 'webmcp'
+		};
 		invocation.markMutated();
 		if (!preparationReceipt) {
 			preparationPreviousEditor = { mode: current.editor.mode, choice: current.editor.choice };
@@ -343,6 +407,7 @@ let showingCustom = $state(false);
 			requireVisibleFocus: true
 		});
 		if (!currentNextEditor) throw new Error('Prepare next action could not verify the visible editor.');
+		await savePendingNextActionDraft(pending);
 		return {
 			changed: !alreadyDesired || !receiptAlreadyDesired,
 			focus: { id: NEXT_PREPARATION_RECEIPT_ID, ...focusReceipt },
@@ -361,8 +426,9 @@ let showingCustom = $state(false);
 		));
 	}
 
-	function discardPreparation() {
+	async function discardPreparation() {
 		const previous = preparationPreviousEditor;
+		if (pack?.id) await discardPendingNextActionDraft(pack.id);
 		clearPreparation();
 		if (previous) setNextEditorChoice(previous.choice, previous.mode, false);
 		void scheduleEditorFocus('choices');
@@ -386,12 +452,17 @@ let showingCustom = $state(false);
 
 	async function saveChoice() {
 		if (!pack?.id || busy || !effectiveChoice) return;
+		if (pendingDraft && pendingDraftStale) {
+			errorText = 'Draft is stale. Refresh the evidence and prepare it again before approval.';
+			return;
+		}
 		busy = true;
 		errorText = '';
 		if (saveFocusFrame !== null) cancelAnimationFrame(saveFocusFrame);
 		saveFocusFrame = null;
 		try {
 			const result = await setPackNextAction(pack.id, effectiveChoice);
+			await discardPendingNextActionDraft(pack.id);
 			const summary = result?.receipt?.summary || `Next action saved: ${effectiveChoice}.`;
 			savedNextReceipt = { summary, pack: result.pack };
 			clearPreparation();
@@ -504,28 +575,31 @@ let showingCustom = $state(false);
 				/>
 			{/if}
 		</div>
-		<p class="next-authority">Review the draft. Nothing changes until you choose Save.</p>
+		<p class="next-authority"><strong>Draft:</strong> pending approval · <strong>Workspace:</strong> unchanged · <strong>Authority:</strong> only you can approve Save.</p>
+		{#if pendingDraftStale}
+			<WornAlert tone="warning">Draft is stale. Refresh the visible work and re-prepare before approval; this draft cannot be saved.</WornAlert>
+		{/if}
 
 		<div class="demo-inline-form next-action-editor">
 			<div class="demo-field">
 				<div class="demo-chip-row" role="group" aria-label="Next action choices" data-next-choices>
 					{#each NEXT_ACTION_CHOICES as act}
 						<WornChip label={act} size="sm" pressed={!showingCustom && effectiveChoice === act}
-							onclick={() => setNextEditorChoice(act, 'preset')} />
+							onclick={() => setHumanNextEditorChoice(act, 'preset')} />
 					{/each}
 					<WornChip label="Custom…" size="sm" pressed={effectiveMode === 'custom'}
-						onclick={() => { setNextEditorChoice(customValue, 'custom'); scheduleEditorFocus('custom'); }} />
+						onclick={() => { setHumanNextEditorChoice(customValue, 'custom'); scheduleEditorFocus('custom'); }} />
 				</div>
 				{#if effectiveMode === 'custom'}
-					<WornInput id="custom-next-input" aria-label="Custom next action" placeholder="Type a custom next action…" bind:value={choice} oninput={() => { customValue = choice; clearPreparation(); savedNextReceipt = null; }} />
+					<WornInput id="custom-next-input" aria-label="Custom next action" placeholder="Type a custom next action…" bind:value={choice} oninput={() => { customValue = choice; setHumanNextEditorChoice(choice, 'custom'); savedNextReceipt = null; }} />
 				{/if}
 			</div>
 			<span id="apply-next-action-help" class="next-save-help">{saveNextHelp}</span>
 			<div class="next-save-actions">
 				{#if preparationReceipt}
-					<WornButton type="button" onclick={discardPreparation}>Discard draft</WornButton>
+					<WornButton type="button" onclick={() => void discardPreparation()}>Discard draft</WornButton>
 				{/if}
-				<WornButton variant="primary" disabled={busy || !effectiveChoice} aria-describedby="apply-next-action-help" onclick={saveChoice}>
+				<WornButton variant="primary" disabled={busy || !effectiveChoice || pendingDraftStale} aria-describedby="apply-next-action-help" onclick={saveChoice}>
 					{busy ? 'Saving…' : preparationReceipt ? 'Approve and save' : 'Save next action'}
 				</WornButton>
 			</div>
