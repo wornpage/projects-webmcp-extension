@@ -229,6 +229,7 @@
 		summary: string;
 		cells: Array<{ label: string; value: string }>;
 		scopeKey: string;
+		toolName: string;
 	} | null>(null);
 	let receiptVisible = $derived(Boolean(receipt?.summary && receipt.summary !== dismissedReceiptSummary));
 	let receiptFocusTimer: ReturnType<typeof setTimeout> | null = null;
@@ -245,7 +246,7 @@
 		const outcome = result as Parameters<typeof workSearchPresentationReceipt>[0] & {
 			focus?: ReturnType<typeof focusWorkSearchDestination>;
 		};
-		webMcpSearchReceipt = workSearchPresentationReceipt(outcome);
+		webMcpSearchReceipt = { ...workSearchPresentationReceipt(outcome), toolName };
 		await tick();
 		const finalFocus = focusWorkSearchDestination(true);
 		if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
@@ -975,6 +976,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	{#if density === 'grid'}
 		{#if webMcpSearchReceipt}
 			<div class="work-presenter-result" data-webmcp-receipt="work" aria-label="Latest Work WebMCP activity">
+				<p class="webmcp-tool-label">WebMCP · {webMcpSearchReceipt.toolName}</p>
 				<WornReceipt
 					summary={webMcpSearchReceipt.summary}
 					cells={webMcpSearchReceipt.cells}
@@ -1022,6 +1024,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	<div class="demo-work-list">
 		{#if webMcpSearchReceipt}
 			<div class="work-presenter-result" data-webmcp-receipt="work" aria-label="Latest Work WebMCP activity">
+				<p class="webmcp-tool-label">WebMCP · {webMcpSearchReceipt.toolName}</p>
 				<WornReceipt
 					summary={webMcpSearchReceipt.summary}
 					cells={webMcpSearchReceipt.cells}
@@ -1140,6 +1143,14 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	}
 	.work-presenter-result {
 		margin-block: 8px;
+		min-width: 0;
+	}
+	.webmcp-tool-label {
+		color: var(--worn-text-secondary);
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 12px;
+		margin: 0 0 4px;
+		overflow-wrap: anywhere;
 	}
 
 	/* Grid density view */

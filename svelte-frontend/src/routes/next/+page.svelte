@@ -40,6 +40,7 @@
 		NEXT_EDITOR_PREVIEW_ID,
 		NEXT_PREPARATION_RECEIPT_ID,
 		NEXT_PREPARATION_SUMMARY,
+		PREPARE_NEXT_ACTION_TOOL_NAME,
 		createCurrentNextEditorTool,
 		createPrepareNextActionTool,
 		nextEditorPageView
@@ -78,6 +79,7 @@ let showingCustom = $state(false);
 	let busy = $state(false);
 	let errorText = $state('');
 	let preparationReceipt = $state<PreparationReceipt | null>(null);
+	let preparationToolName = $state('');
 	let preparationPreviousEditor = $state<EditorSnapshot | null>(null);
 	let savedNextReceipt = $state<SavedNextReceipt | null>(null);
 	let editorPackId = $state('');
@@ -146,8 +148,8 @@ let showingCustom = $state(false);
 	});
 	let preparationCells = $derived(preparationReceipt ? [
 		{ label: 'Evidence note', value: preparationReceipt.agentNote },
-		{ label: 'Workspace data', value: 'Unchanged' },
-		{ label: 'Authority', value: 'Only you can Save' }
+		{ label: 'Status', value: 'Draft — waiting for your approval' },
+		{ label: 'Save', value: 'Not saved' }
 	] : []);
 	let savedNextCells = $derived(savedNextReceipt ? [
 		{ label: 'Work item', value: workTitle(savedNextReceipt.pack) },
@@ -175,7 +177,11 @@ let showingCustom = $state(false);
 				capture: captureNextPreparationSnapshot,
 				restore: restoreNextPreparationSnapshot
 			})
-		]);
+		], {
+			onResult: ({ toolName }) => {
+				if (toolName === PREPARE_NEXT_ACTION_TOOL_NAME) preparationToolName = toolName;
+			}
+		});
 		return () => {
 			stopNextWebMcp?.();
 			stopNextWebMcp = null;
@@ -219,6 +225,7 @@ let showingCustom = $state(false);
 
 	function clearPreparation() {
 		preparationReceipt = null;
+		preparationToolName = '';
 		preparationPreviousEditor = null;
 	}
 
@@ -434,9 +441,10 @@ let showingCustom = $state(false);
 			</div>
 			{#if preparationReceipt}
 				<div data-webmcp-receipt="next" aria-label="Latest Next WebMCP activity">
+					<p class="webmcp-tool-label">WebMCP · {preparationToolName}</p>
 					<WornReceipt
 						id={NEXT_PREPARATION_RECEIPT_ID}
-						summary={preparationReceipt.summary}
+						summary="Draft prepared — waiting for your approval."
 						cells={preparationCells}
 					/>
 				</div>
@@ -569,6 +577,14 @@ let showingCustom = $state(false);
 	.next-presenter-result {
 		display: grid;
 		gap: 8px;
+		min-width: 0;
+	}
+	.webmcp-tool-label {
+		color: var(--worn-text-secondary);
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 12px;
+		margin: 0;
+		overflow-wrap: anywhere;
 	}
 	.next-action-editor > .demo-field {
 		grid-column: 1 / -1;

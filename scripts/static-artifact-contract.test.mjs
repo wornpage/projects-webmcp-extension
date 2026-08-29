@@ -262,16 +262,17 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 test('built artifact keeps page-action receipts truthful and read-only getters silent', () => {
 	const artifactText = collectText(artifactRoot).join('\n');
 	for (const copy of [
-		'Browser agent cleared Work search to show all work.',
+		'Work search cleared to show all work.',
 		'Current scope',
+		'Visible search updated · Not saved',
 		'Visible Review scope',
 		'Current queue',
 		'Search-match evidence',
+		'Visible queue updated · Not saved',
 		'Browser agent prepared an unsaved draft. No workspace data was saved.',
 		'Evidence note',
-		'Workspace data',
-		'Unchanged',
-		'Only you can Save'
+		'Draft — waiting for your approval',
+		'Not saved'
 	]) {
 		assert.match(artifactText, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
 	}

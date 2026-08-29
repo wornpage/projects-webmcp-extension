@@ -243,10 +243,10 @@ export function workSearchPresentationReceipt(input) {
 	const { changed, query, work } = workSearchReceipt(input);
 	const queryLabel = query ? `“${query}”` : 'All work · search cleared';
 	const summary = query
-		? `Browser agent ${changed ? 'set' : 'confirmed'} Work search “${query}”.`
+		? `Work search ${changed ? 'updated' : 'confirmed'} for “${query}”.`
 		: changed
-			? 'Browser agent cleared Work search to show all work.'
-			: 'Browser agent confirmed Work search is clear.';
+			? 'Work search cleared to show all work.'
+			: 'Work search is already clear.';
 	return {
 		summary,
 		cells: [
@@ -255,8 +255,8 @@ export function workSearchPresentationReceipt(input) {
 				label: 'Current scope',
 				value: `${work.counts.shown} shown · ${work.counts.matching} matching · ${work.counts.workspace} workspace`
 			},
-			{ label: 'Browser agent changed', value: 'Visible Work search only' },
-			{ label: 'Workspace data', value: 'Unchanged' }
+			{ label: 'Evidence', value: `${work.counts.blocked} blocked in the matching work` },
+			{ label: 'Status', value: 'Visible search updated · Not saved' }
 		],
 		scopeKey: JSON.stringify({ scope: work.scope, counts: work.counts })
 	};
