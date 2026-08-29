@@ -82,7 +82,7 @@ test('presentation-changing tools produce truthful accessible receipts without m
 	assert.match(workRouteSource, /if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?workSearchPresentationReceipt/u);
 	assert.match(reviewRouteSource, /if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?reviewScopePresentationReceipt/u);
 	assert.doesNotMatch(nextRouteSource, /webMcpReadReceipt|data-webmcp-receipt="next-read"/u);
-	assert.match(nextRouteSource, /label: 'Evidence note'[\s\S]*?label: 'Status', value: 'Draft — waiting for your approval'[\s\S]*?label: 'Save', value: 'Not saved'/u);
+	assert.match(nextRouteSource, /label: 'Verified evidence'[\s\S]*?label: 'Status', value: 'Draft — waiting for your approval'[\s\S]*?label: 'Save', value: 'Not saved'/u);
 	assert.doesNotMatch(nextRouteSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '', /Work item|Prepared action|Browser agent changed/u);
 	assert.doesNotMatch(nextRouteSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '', /Workspace data|Authority|Only you can Save/u);
 	for (const [route, source] of [['work', workRouteSource], ['review', reviewRouteSource], ['next', nextRouteSource]]) {

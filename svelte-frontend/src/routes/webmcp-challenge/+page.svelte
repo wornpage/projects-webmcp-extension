@@ -28,7 +28,7 @@
 		},
 		{
 			title: 'Prepare the handoff',
-			description: 'On Next, prepare a clear next action with an evidence note, then stop before Save.',
+			description: 'On Next, prepare a clear next action from exact workspace facts, then stop before Save.',
 			action: 'Open the draft editor',
 			href: '/next'
 		}

@@ -270,7 +270,8 @@ test('built artifact keeps page-action receipts truthful and read-only getters s
 		'Search-match evidence',
 		'Visible queue updated · Not saved',
 		'Browser agent prepared an unsaved draft. No workspace data was saved.',
-		'Evidence note',
+		'Verified evidence',
+		'rejects stale or mismatched facts',
 		'Draft — waiting for your approval',
 		'Not saved'
 	]) {
@@ -280,6 +281,7 @@ test('built artifact keeps page-action receipts truthful and read-only getters s
 	assert.match(artifactText, /Reset live sample/u);
 	assert.doesNotMatch(artifactText, /WebMCP read \d+ visible (?:Work|Review)/u);
 	assert.doesNotMatch(artifactText, /WebMCP read the unsaved Next editor/u);
+	assert.doesNotMatch(artifactText, /agentNote/u);
 });
 
 test('built Guide publishes exact default and discovered scope denominators', () => {

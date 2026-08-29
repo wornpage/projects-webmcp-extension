@@ -5,15 +5,23 @@ export const NEXT_PREPARATION_RECEIPT_ID = 'next-preparation-receipt';
 export const NEXT_PREPARATION_SUMMARY = 'Browser agent prepared an unsaved draft. No workspace data was saved.';
 
 const SINGLE_LINE_CONTROL = /\p{Cc}/u;
-const PREPARE_INPUT_KEYS = ['choice', 'expectedMode', 'expectedChoice', 'agentNote'];
+const PREPARE_INPUT_KEYS = ['choice', 'expectedMode', 'expectedChoice', 'evidence'];
+const EVIDENCE_INPUT_KEYS = ['workId', 'field', 'expectedValue'];
+const EVIDENCE_FIELDS = ['workflow', 'blocker'];
+const EVIDENCE_FIELD_LABELS = Object.freeze({ workflow: 'Workflow', blocker: 'Blocker' });
+const MAX_EVIDENCE_REFERENCES = 3;
 
 /** @typedef {'preset' | 'custom'} NextEditorMode */
+/** @typedef {'workflow' | 'blocker'} NextEvidenceField */
 /** @typedef {{ id: string, title: string }} NextEditorWork */
 /** @typedef {{ mode: NextEditorMode, choice: string }} NextEditorChoice */
 /** @typedef {{ blocker: string | null, nextAction: string }} NextEditorPreview */
-/** @typedef {{ summary: string, work: NextEditorWork, agentNote: string, preparedAction: string, workspaceChanged: false, requiresHumanSave: true }} NextPreparationReceipt */
+/** @typedef {{ workId: string, field: NextEvidenceField, expectedValue: string }} NextEvidenceReference */
+/** @typedef {{ id: string, title: string, workflow: string, blocker: string }} NextEvidenceWork */
+/** @typedef {{ work: NextEditorWork, field: NextEvidenceField, label: string, value: string }} NextVerifiedEvidence */
+/** @typedef {{ summary: string, work: NextEditorWork, evidenceNote: string, evidence: NextVerifiedEvidence[], preparedAction: string, workspaceChanged: false, requiresHumanSave: true }} NextPreparationReceipt */
 /** @typedef {{ work: NextEditorWork, presetChoices: string[], editor: NextEditorChoice, preview: NextEditorPreview, preparationReceipt: NextPreparationReceipt | null, canSave: boolean, busy: boolean }} NextEditorView */
-/** @typedef {{ choice: string, expectedMode: NextEditorMode, expectedChoice: string, agentNote: string }} PrepareNextActionInput */
+/** @typedef {{ choice: string, expectedMode: NextEditorMode, expectedChoice: string, evidence: NextEvidenceReference[] }} PrepareNextActionInput */
 /** @typedef {{ changed: boolean, focus: { id: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }, next: NextEditorView }} PrepareNextActionReceipt */
 /** @typedef {{ markMutated: () => void }} PrepareNextActionInvocation */
 
@@ -96,16 +104,31 @@ export function createPrepareNextActionTool(prepareNextAction, transaction) {
 	return {
 		name: PREPARE_NEXT_ACTION_TOOL_NAME,
 		title: 'Prepare next-action preview',
-		description: 'Prepare an unsaved next-action preview and a concise evidence note for the current work item using the latest editor state. This changes only reversible page state for a person to review and never saves or writes workspace data.',
+		description: 'Prepare an unsaved next-action preview from one to three exact Work or Review facts. The page rejects stale or mismatched facts and generates the visible evidence note from the verified values. This changes only reversible page state for a person to review and never saves or writes workspace data.',
 		inputSchema: {
 			type: 'object',
 			properties: {
 				choice: { type: 'string', minLength: 1, maxLength: 200, description: 'Preset label or custom next action to preview.' },
 				expectedMode: { type: 'string', enum: ['preset', 'custom'], description: 'Editor mode returned by the latest current-editor read.' },
 				expectedChoice: { type: 'string', maxLength: 200, description: 'Editor choice returned by the latest current-editor read.' },
-				agentNote: { type: 'string', minLength: 1, maxLength: 280, description: 'Brief user-facing reason for the choice, grounded in the visible page evidence.' }
+				evidence: {
+					type: 'array',
+					minItems: 1,
+					maxItems: MAX_EVIDENCE_REFERENCES,
+					description: 'Exact facts previously read from Work or Review. At least one fact must reference the current work item.',
+					items: {
+						type: 'object',
+						properties: {
+							workId: { type: 'string', minLength: 1, maxLength: 200, description: 'Exact work item id returned by Work or Review.' },
+							field: { type: 'string', enum: EVIDENCE_FIELDS, description: 'Exact projected field being cited.' },
+							expectedValue: { type: 'string', minLength: 1, maxLength: 200, description: 'Exact field value returned by Work or Review.' }
+						},
+						required: EVIDENCE_INPUT_KEYS,
+						additionalProperties: false
+					}
+				}
 			},
-			required: ['choice', 'expectedMode', 'expectedChoice', 'agentNote'],
+			required: PREPARE_INPUT_KEYS,
 			additionalProperties: false
 		},
 		annotations: {
@@ -125,7 +148,7 @@ export function createPrepareNextActionTool(prepareNextAction, transaction) {
 				const receipt = prepareNextActionReceipt(
 					await prepareNextAction(fields, { markMutated: () => { mutated = true; } }),
 					fields.choice,
-					fields.agentNote
+					fields.evidence
 				);
 				options.signal?.throwIfAborted();
 				return receipt;
@@ -179,16 +202,19 @@ function nextPreparationReceipt(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	const work = nextEditorWork(candidate.work);
-	const agentNote = pageText(candidate.agentNote, 280);
+	const evidence = nextVerifiedEvidenceList(candidate.evidence);
+	const evidenceNote = evidence ? verifiedNextEvidenceNote(evidence) : '';
 	const preparedAction = pageText(candidate.preparedAction, 200);
 	if (
-		candidate.summary !== NEXT_PREPARATION_SUMMARY || !work || !agentNote || !preparedAction ||
+		candidate.summary !== NEXT_PREPARATION_SUMMARY || !work || !evidence ||
+		candidate.evidenceNote !== evidenceNote || !preparedAction ||
 		candidate.workspaceChanged !== false || candidate.requiresHumanSave !== true
 	) return null;
 	return {
 		summary: NEXT_PREPARATION_SUMMARY,
 		work,
-		agentNote,
+		evidenceNote,
+		evidence,
 		preparedAction,
 		workspaceChanged: false,
 		requiresHumanSave: true
@@ -210,33 +236,32 @@ function prepareNextActionInput(input) {
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	const keys = Object.keys(candidate);
 	if (keys.some((key) => !PREPARE_INPUT_KEYS.includes(key))) {
-		throw new TypeError('Prepare next action accepts only choice, expectedMode, expectedChoice, and agentNote.');
+		throw new TypeError('Prepare next action accepts only choice, expectedMode, expectedChoice, and evidence.');
 	}
 	if (!PREPARE_INPUT_KEYS.every((key) => Object.hasOwn(candidate, key))) {
-		throw new TypeError('Prepare next action requires choice, expectedMode, expectedChoice, and agentNote.');
+		throw new TypeError('Prepare next action requires choice, expectedMode, expectedChoice, and evidence.');
 	}
 	if (typeof candidate.choice !== 'string') throw new TypeError('choice must be a string.');
 	if (typeof candidate.expectedChoice !== 'string') throw new TypeError('expectedChoice must be a string.');
-	if (typeof candidate.agentNote !== 'string') throw new TypeError('agentNote must be a string.');
 	if (candidate.expectedMode !== 'preset' && candidate.expectedMode !== 'custom') {
 		throw new TypeError('expectedMode must be preset or custom.');
 	}
 	if (SINGLE_LINE_CONTROL.test(candidate.choice)) throw new TypeError('choice cannot contain control characters.');
 	if (SINGLE_LINE_CONTROL.test(candidate.expectedChoice)) throw new TypeError('expectedChoice cannot contain control characters.');
-	if (SINGLE_LINE_CONTROL.test(candidate.agentNote)) throw new TypeError('agentNote cannot contain control characters.');
 	const choice = candidate.choice.trim();
 	const expectedChoice = candidate.expectedChoice.trim();
-	const agentNote = candidate.agentNote.trim();
 	if (!choice) throw new TypeError('choice cannot be empty.');
-	if (!agentNote) throw new TypeError('agentNote cannot be empty.');
 	if (choice.length > 200) throw new TypeError('choice must be 200 characters or fewer.');
 	if (expectedChoice.length > 200) throw new TypeError('expectedChoice must be 200 characters or fewer.');
-	if (agentNote.length > 280) throw new TypeError('agentNote must be 280 characters or fewer.');
-	return { choice, expectedMode: candidate.expectedMode, expectedChoice, agentNote };
+	const evidence = nextEvidenceReferenceList(candidate.evidence);
+	if (!evidence) {
+		throw new TypeError(`evidence must contain one to ${MAX_EVIDENCE_REFERENCES} unique exact work facts.`);
+	}
+	return { choice, expectedMode: candidate.expectedMode, expectedChoice, evidence };
 }
 
-/** @param {unknown} input @param {string} choice @param {string} agentNote @returns {PrepareNextActionReceipt} */
-function prepareNextActionReceipt(input, choice, agentNote) {
+/** @param {unknown} input @param {string} choice @param {NextEvidenceReference[]} references @returns {PrepareNextActionReceipt} */
+function prepareNextActionReceipt(input, choice, references) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) {
 		throw new TypeError('Prepare next action did not return a verifiable page receipt.');
 	}
@@ -260,7 +285,7 @@ function prepareNextActionReceipt(input, choice, agentNote) {
 	}
 	if (
 		!next.preparationReceipt ||
-		next.preparationReceipt.agentNote !== agentNote ||
+		!evidenceMatchesReferences(next.preparationReceipt.evidence, references) ||
 		next.preparationReceipt.preparedAction !== choice
 	) {
 		throw new TypeError('Prepare next action did not preserve the visible evidence receipt.');
@@ -278,6 +303,121 @@ function prepareNextActionReceipt(input, choice, agentNote) {
 	};
 }
 
+/**
+ * Verify agent-supplied field/value references against the page's current,
+ * normalized workspace facts. The returned values, not agent prose, are the
+ * only source for the visible evidence note.
+ *
+ * @param {unknown} references
+ * @param {unknown} workspace
+ * @param {unknown} currentWorkId
+ * @returns {NextVerifiedEvidence[]}
+ */
+export function verifyNextPreparationEvidence(references, workspace, currentWorkId) {
+	const normalizedReferences = nextEvidenceReferenceList(references);
+	const normalizedCurrentWorkId = pageText(currentWorkId, 200);
+	if (!normalizedReferences || !normalizedCurrentWorkId) {
+		throw new TypeError('Prepare next action requires valid evidence references and a current work item.');
+	}
+	if (!Array.isArray(workspace)) throw new TypeError('Prepare next action requires current workspace evidence.');
+	const work = workspace.map(nextEvidenceWork);
+	if (work.some((candidate) => !candidate)) {
+		throw new TypeError('Prepare next action received malformed workspace evidence.');
+	}
+	const normalizedWork = /** @type {NextEvidenceWork[]} */ (work);
+	if (new Set(normalizedWork.map((candidate) => candidate.id)).size !== normalizedWork.length) {
+		throw new TypeError('Prepare next action received duplicate workspace evidence.');
+	}
+	if (!normalizedReferences.some((reference) => reference.workId === normalizedCurrentWorkId)) {
+		throw new TypeError('Prepare next action evidence must include the current work item.');
+	}
+	return normalizedReferences.map((reference) => {
+		const item = normalizedWork.find((candidate) => candidate.id === reference.workId);
+		if (!item) throw new TypeError(`Prepare next action could not verify work item ${reference.workId}.`);
+		const value = item[reference.field];
+		if (value !== reference.expectedValue) {
+			throw new TypeError(`Prepare next action rejected stale ${reference.field} evidence for ${reference.workId}.`);
+		}
+		return {
+			work: { id: item.id, title: item.title },
+			field: reference.field,
+			label: EVIDENCE_FIELD_LABELS[reference.field],
+			value
+		};
+	});
+}
+
+/** @param {unknown} input @returns {string} */
+export function verifiedNextEvidenceNote(input) {
+	const evidence = nextVerifiedEvidenceList(input);
+	if (!evidence) throw new TypeError('Verified Next evidence note requires one to three exact facts.');
+	return evidence.map((fact) => `${fact.work.title} — ${fact.label}: ${fact.value}.`).join(' ');
+}
+
+/** @param {unknown} input @returns {NextEvidenceReference[] | null} */
+function nextEvidenceReferenceList(input) {
+	if (!Array.isArray(input) || input.length < 1 || input.length > MAX_EVIDENCE_REFERENCES) return null;
+	const references = input.map(nextEvidenceReference);
+	if (references.some((reference) => !reference)) return null;
+	const normalized = /** @type {NextEvidenceReference[]} */ (references);
+	const keys = normalized.map((reference) => `${reference.workId}\u0000${reference.field}`);
+	return new Set(keys).size === keys.length ? normalized : null;
+}
+
+/** @param {unknown} input @returns {NextEvidenceReference | null} */
+function nextEvidenceReference(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const keys = Object.keys(candidate);
+	if (keys.length !== EVIDENCE_INPUT_KEYS.length || keys.some((key) => !EVIDENCE_INPUT_KEYS.includes(key))) return null;
+	const workId = trimmedPageText(candidate.workId, 200);
+	const expectedValue = trimmedPageText(candidate.expectedValue, 200);
+	if (!workId || !expectedValue || !EVIDENCE_FIELDS.includes(/** @type {string} */ (candidate.field))) return null;
+	return { workId, field: /** @type {NextEvidenceField} */ (candidate.field), expectedValue };
+}
+
+/** @param {unknown} input @returns {NextEvidenceWork | null} */
+function nextEvidenceWork(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const id = pageText(candidate.id, 200);
+	const title = pageText(candidate.title, 200);
+	const workflow = pageText(candidate.workflow, 200);
+	const blocker = pageText(candidate.blocker, 200);
+	return id && title && workflow && blocker ? { id, title, workflow, blocker } : null;
+}
+
+/** @param {unknown} input @returns {NextVerifiedEvidence[] | null} */
+function nextVerifiedEvidenceList(input) {
+	if (!Array.isArray(input) || input.length < 1 || input.length > MAX_EVIDENCE_REFERENCES) return null;
+	const evidence = input.map(nextVerifiedEvidence);
+	if (evidence.some((fact) => !fact)) return null;
+	const normalized = /** @type {NextVerifiedEvidence[]} */ (evidence);
+	const keys = normalized.map((fact) => `${fact.work.id}\u0000${fact.field}`);
+	return new Set(keys).size === keys.length ? normalized : null;
+}
+
+/** @param {unknown} input @returns {NextVerifiedEvidence | null} */
+function nextVerifiedEvidence(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const work = nextEditorWork(candidate.work);
+	const value = pageText(candidate.value, 200);
+	if (!work || !value || !EVIDENCE_FIELDS.includes(/** @type {string} */ (candidate.field))) return null;
+	const field = /** @type {NextEvidenceField} */ (candidate.field);
+	if (candidate.label !== EVIDENCE_FIELD_LABELS[field]) return null;
+	return { work, field, label: EVIDENCE_FIELD_LABELS[field], value };
+}
+
+/** @param {NextVerifiedEvidence[]} evidence @param {NextEvidenceReference[]} references */
+function evidenceMatchesReferences(evidence, references) {
+	return evidence.length === references.length && evidence.every((fact, index) => (
+		fact.work.id === references[index].workId &&
+		fact.field === references[index].field &&
+		fact.value === references[index].expectedValue
+	));
+}
+
 /** @param {unknown} view @returns {NextEditorView | null} */
 function cloneNextEditorView(view) {
 	return nextEditorPageView(view);
@@ -288,4 +428,11 @@ function pageText(value, limit, allowEmpty = false) {
 	if (typeof value !== 'string' || value.length > limit || SINGLE_LINE_CONTROL.test(value)) return null;
 	if (!allowEmpty && !value) return null;
 	return value;
+}
+
+/** @param {unknown} value @param {number} limit */
+function trimmedPageText(value, limit) {
+	if (typeof value !== 'string' || SINGLE_LINE_CONTROL.test(value)) return null;
+	const normalized = value.trim();
+	return normalized && normalized.length <= limit ? normalized : null;
 }

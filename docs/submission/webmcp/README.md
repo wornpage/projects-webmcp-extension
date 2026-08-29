@@ -4,7 +4,7 @@
 
 > A visible agent-to-human handoff: the browser agent finds the next move, explains it from page evidence, and stops at an unsaved proposal for the person to decide.
 
-The agent reads bounded page projections, can change reversible page scope, and can prepare—but not silently save—a next action with a concise evidence note. Successful presentation-changing actions leave a visible, screen-reader-announced receipt derived from the resulting page state; read-only getters do not impersonate a change. Receipts identify the visible scope or unsaved draft, freeze the current denominators, and state that workspace data is unchanged while the person retains Save.
+The agent reads bounded page projections, can change reversible page scope, and can prepare—but not silently save—a next action from exact Work or Review facts. Next requires one to three structured references, rejects stale or mismatched values, and generates the visible evidence note from the verified facts rather than agent prose. Successful presentation-changing actions leave a visible, screen-reader-announced receipt derived from the resulting page state; read-only getters do not impersonate a change. Receipts identify the visible scope or unsaved draft, freeze the current denominators, and state that workspace data is unchanged while the person retains Save.
 
 ## Eligibility record
 
