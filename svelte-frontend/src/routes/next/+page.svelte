@@ -7,10 +7,11 @@
 		demoState,
 		demoStateError,
 		refreshDemoState,
-		approvePendingNextActionDraft,
+		setPackNextAction,
 		savePendingNextActionDraft,
 		discardPendingNextActionDraft,
 		pendingNextActionDraftFor,
+		pendingDraftFingerprint,
 		setSelectedWork,
 		toasts,
 		ChallengeStateError,
@@ -92,6 +93,7 @@
 	preparationPreviousEditor: EditorSnapshot | null;
 	savedNextReceipt: SavedNextReceipt | null;
 	pendingDraft: PendingNextActionDraft | null;
+	invocationWorkId: string;
 	};
 
 	let chosenPackId = $state('');
@@ -126,7 +128,7 @@ let showingCustom = $state(false);
 			''
 	);
 	let pendingDraft = $derived(pendingNextActionDraftFor($demoState, selectedId));
-	let pendingDraftStale = $derived(pendingDraft ? pendingDraft.originFingerprint !== pendingDraftFingerprint(pendingDraft.evidence, pendingDraft.workId) : false);
+	let pendingDraftStale = $derived(pendingDraft ? pendingDraft.originFingerprint !== pendingDraftFingerprint($demoState!, pendingDraft) : false);
 	// An explicit selection never falls back to a different work item.
 	let demoLoaded = $derived(Boolean($demoState?.packs));
 	let pack = $derived(
@@ -166,8 +168,8 @@ let showingCustom = $state(false);
 				nextAction: effectiveChoice || 'Not set'
 			},
 			preparationReceipt,
-			canSave: Boolean(effectiveChoice) && !busy && !pendingDraftStale,
-			staleReason: pendingDraftStale ? 'Draft is stale. Refresh the evidence and prepare it again before approval.' : null,
+			canSave: Boolean(effectiveChoice) && !busy && Boolean(pendingDraft) && !pendingDraftStale,
+			staleReason: pendingDraftStale ? 'Draft is stale. Refresh the evidence and prepare it again before approval.' : pendingDraft ? null : 'No pending draft. Choose an action to create one before approval.',
 			busy
 		});
 	});
@@ -254,21 +256,6 @@ let showingCustom = $state(false);
 		preparationPreviousEditor = null;
 	}
 
-	function pendingDraftFingerprint(evidence: NextEvidenceReference[], workId: string): string {
-		const facts = evidence.map((reference) => {
-			const candidate = packs.find((item) => item.id === reference.workId);
-			return {
-				workId: reference.workId,
-				field: reference.field,
-				value: candidate
-					? reference.field === 'workflow' ? workflowLabel(candidate) : hasBlocker(candidate) ? blockerText(candidate) : 'None'
-					: null
-			};
-		});
-		const origin = packs.find((item) => item.id === workId);
-		return JSON.stringify({ workId, origin: origin ? { title: workTitle(origin), workflow: workflowLabel(origin), blocker: hasBlocker(origin) ? blockerText(origin) : 'None', next: origin.next || '' } : null, facts });
-	}
-
 	function preparationFromPending(draft: PendingNextActionDraft): PreparationReceipt {
 		const evidence = draft.evidence.map((reference) => {
 			const candidate = packs.find((item) => item.id === reference.workId);
@@ -294,7 +281,8 @@ let showingCustom = $state(false);
 			preparationReceipt: clonePreparationReceipt(preparationReceipt),
 		preparationPreviousEditor: preparationPreviousEditor ? { ...preparationPreviousEditor } : null,
 			savedNextReceipt,
-			pendingDraft: pendingDraft ? structuredClone(pendingDraft) : null
+			pendingDraft: pendingDraft ? structuredClone(pendingDraft) : null,
+			invocationWorkId: pack?.id || ''
 		};
 	}
 
@@ -306,7 +294,7 @@ let showingCustom = $state(false);
 		preparationPreviousEditor = snapshot.preparationPreviousEditor ? { ...snapshot.preparationPreviousEditor } : null;
 		savedNextReceipt = snapshot.savedNextReceipt;
 		if (snapshot.pendingDraft) await savePendingNextActionDraft(snapshot.pendingDraft);
-		else if (pack?.id) await discardPendingNextActionDraft(pack.id);
+		else if (snapshot.invocationWorkId) await discardPendingNextActionDraft(snapshot.invocationWorkId);
 	}
 
 	function setNextEditorChoice(nextChoice: string, mode: NextEditorMode, clearAgentPreparation = true) {
@@ -326,7 +314,7 @@ let showingCustom = $state(false);
 			mode,
 			evidenceNote: 'Human-created draft; approval remains human-owned.',
 			evidence: [],
-			originFingerprint: pendingDraftFingerprint([], pack.id),
+			originFingerprint: pendingDraftFingerprint($demoState!, { workId: pack.id, choice: nextChoice.trim(), mode, evidenceNote: '', evidence: [], originFingerprint: 'pending', source: 'human' }),
 			source: 'human'
 		});
 	}
@@ -386,7 +374,7 @@ let showingCustom = $state(false);
 			mode: desiredMode,
 			evidenceNote,
 			evidence: input.evidence,
-			originFingerprint: pendingDraftFingerprint(input.evidence, current.work.id),
+			originFingerprint: pendingDraftFingerprint($demoState!, { workId: current.work.id, choice: input.choice, mode: desiredMode, evidenceNote, evidence: input.evidence, originFingerprint: 'pending', source: 'webmcp' }),
 			source: 'webmcp'
 		};
 		invocation.markMutated();
@@ -467,7 +455,7 @@ let showingCustom = $state(false);
 		saveFocusFrame = null;
 		try {
 			const result = pendingDraft
-				? await approvePendingNextActionDraft(pack.id)
+				? await setPackNextAction(pack.id)
 				: null;
 			if (!result) throw new ChallengeStateError('Create a pending draft before approval.');
 			const summary = result?.receipt?.summary || `Next action saved: ${effectiveChoice}.`;
@@ -582,7 +570,7 @@ let showingCustom = $state(false);
 				/>
 			{/if}
 		</div>
-		<p class="next-authority"><strong>Draft:</strong> pending approval · <strong>Workspace:</strong> unchanged · <strong>Authority:</strong> only you can approve Save.</p>
+		<p class="next-authority"><strong>Draft:</strong> {pendingDraft ? pendingDraftStale ? 'stale' : 'pending approval' : 'none'} · <strong>Workspace:</strong> unchanged · <strong>Authority:</strong> {pendingDraft ? 'only you can approve Save' : 'create a draft before approval'}.</p>
 		{#if pendingDraftStale}
 			<WornAlert tone="warning">Draft is stale. Refresh the visible work and re-prepare before approval; this draft cannot be saved.</WornAlert>
 		{/if}
@@ -606,7 +594,7 @@ let showingCustom = $state(false);
 				{#if preparationReceipt}
 					<WornButton type="button" onclick={() => void discardPreparation()}>Discard draft</WornButton>
 				{/if}
-				<WornButton variant="primary" disabled={busy || !effectiveChoice || pendingDraftStale} aria-describedby="apply-next-action-help" onclick={saveChoice}>
+				<WornButton variant="primary" disabled={busy || !effectiveChoice || !pendingDraft || pendingDraftStale} aria-describedby="apply-next-action-help" onclick={saveChoice}>
 					{busy ? 'Saving…' : preparationReceipt ? 'Approve and save' : 'Save next action'}
 				</WornButton>
 			</div>

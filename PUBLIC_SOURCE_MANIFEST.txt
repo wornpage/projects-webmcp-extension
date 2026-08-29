@@ -41,6 +41,7 @@ svelte-frontend/src/lib/demo-workflow.ts
 svelte-frontend/src/lib/focus-pulse.mjs
 svelte-frontend/src/lib/guide-work-action.mjs
 svelte-frontend/src/lib/local-date.mjs
+svelte-frontend/src/lib/pending-next-action.mjs
 svelte-frontend/src/lib/progressive-reveal.mjs
 svelte-frontend/src/lib/recent-work.mjs
 svelte-frontend/src/lib/undo.ts

@@ -16,11 +16,13 @@ import {
 	verifiedNextEvidenceNote,
 	verifyNextPreparationEvidence
 } from '../svelte-frontend/src/routes/next/next-webmcp.mjs';
+import { approvePendingDraft, discardPendingDraft, pendingDraftFingerprint } from '../svelte-frontend/src/lib/pending-next-action.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
 const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
 const layoutSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.svelte'), 'utf8');
+const pendingStateSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/pending-next-action.mjs'), 'utf8');
 const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmcp/reviewer-tests.md'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/next-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
@@ -481,17 +483,40 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(demoClientSource, /export type PendingNextActionDraft = \{[\s\S]*?workId: string;[\s\S]*?evidence: Array<[\s\S]*?originFingerprint: string;[\s\S]*?source: 'human' \| 'webmcp';/u);
 	assert.match(demoClientSource, /export async function savePendingNextActionDraft[\s\S]*?saveBrowserState[\s\S]*?state\.pendingNextActionDrafts = \[\.\.\.pending, structuredClone\(draft\)\];/u);
 	assert.match(demoClientSource, /export async function discardPendingNextActionDraft[\s\S]*?saveBrowserState[\s\S]*?state\.pendingNextActionDrafts = pendingNextActionDrafts\(state\)\.filter/u);
-	assert.match(demoClientSource, /export async function approvePendingNextActionDraft[\s\S]*?const written = await saveBrowserState\([\s\S]*?pendingDraftFingerprint\(state, draft\)[\s\S]*?Object\.assign\(pack, nextChoiceForwardPath\(pack, draft\.choice\)\);[\s\S]*?state\.pendingNextActionDrafts = pendingNextActionDrafts\(state\)\.filter/u);
+	assert.match(demoClientSource, /export async function setPackNextAction\(workId: string\)[\s\S]*?const written = await saveBrowserState\([\s\S]*?approvePendingDraft\(state, workId,[\s\S]*?nextPath: nextChoiceForwardPath/u);
+	assert.doesNotMatch(demoClientSource, /approvePendingNextActionDraft/u);
+	assert.match(pendingStateSource, /export function pendingDraftFingerprint[\s\S]*?export function approvePendingDraft[\s\S]*?pendingDraftFingerprint\(state, draft, projectPack\)[\s\S]*?Object\.assign\(pack, nextPath\(pack, draft\.choice\)\);[\s\S]*?discardPendingDraft\(state, workId\);/u);
 	assert.match(demoClientSource, /export async function resetDemoSampleState[\s\S]*?localStorage\.removeItem\(STORAGE_KEY\)[\s\S]*?return replaceDemoState\(seed\);/u);
-	assert.match(routeSource, /pendingNextActionDraftFor\(\$demoState, selectedId\)[\s\S]*?pendingDraftFingerprint/u);
+	assert.match(routeSource, /pendingNextActionDraftFor\(\$demoState, selectedId\)[\s\S]*?pendingDraftFingerprint\(\$demoState!, pendingDraft\)/u);
 	assert.match(routeSource, /invocation\.markMutated\(\);[\s\S]*?if \(!currentNextEditor\)[\s\S]*?await savePendingNextActionDraft\(pending\);/u);
 	assert.match(routeSource, /pendingDraft && pendingDraftStale[\s\S]*?Draft is stale/u);
-	assert.match(routeSource, /canSave: Boolean\(effectiveChoice\) && !busy && !pendingDraftStale,[\s\S]*?staleReason: pendingDraftStale \? 'Draft is stale/u);
-	assert.match(routeSource, /disabled=\{busy \|\| !effectiveChoice \|\| pendingDraftStale\}/u);
-	assert.equal(routeSource.match(/await approvePendingNextActionDraft\(/gu)?.length, 1);
-	assert.match(routeSource, /const result = pendingDraft[\s\S]*?await approvePendingNextActionDraft\(pack\.id\)/u);
+	assert.match(routeSource, /canSave: Boolean\(effectiveChoice\) && !busy && Boolean\(pendingDraft\) && !pendingDraftStale,[\s\S]*?staleReason: pendingDraftStale \? 'Draft is stale[\s\S]*?No pending draft/u);
+	assert.match(routeSource, /disabled=\{busy \|\| !effectiveChoice \|\| !pendingDraft \|\| pendingDraftStale\}/u);
+	assert.equal(routeSource.match(/await setPackNextAction\(/gu)?.length, 1);
+	assert.match(routeSource, /const result = pendingDraft[\s\S]*?await setPackNextAction\(pack\.id\)/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);/u);
 	assert.match(layoutSource, /pendingNextActionDrafts\(\$demoState\)[\s\S]*?pendingResumeHref[\s\S]*?Pending \{pendingApprovals\.length\}/u);
 	assert.doesNotMatch(routeSource, /localStorage|sessionStorage/u);
 	assert.doesNotMatch(reviewerTests, /reload discarded the proposal|reload removed 1\/1 draft/u);
+});
+
+test('pending draft state operation atomically approves, rejects stale drafts, and discards by exact work id', () => {
+	const project = (pack) => ({ title: pack.title, workflow: pack.status, blocker: pack.blocker || 'None', next: pack.next || '' });
+	const state = { packs: [{ id: 'a', title: 'A', status: 'active', blocker: '', next: 'Open' }, { id: 'b', title: 'B', status: 'blocked', blocker: 'Waiting', next: 'Review' }], pendingNextActionDrafts: [] };
+	const draft = { workId: 'a', choice: 'Start', mode: 'preset', evidenceNote: 'A', evidence: [{ workId: 'a', field: 'workflow', expectedValue: 'active' }], originFingerprint: '', source: 'human' };
+	draft.originFingerprint = pendingDraftFingerprint(state, draft, project);
+	state.pendingNextActionDrafts.push(structuredClone(draft));
+	const beforePrepare = structuredClone(state.packs);
+	const approved = approvePendingDraft(state, 'a', { projectPack: project, nextPath: (pack, choice) => ({ ...pack, next: choice }) });
+	assert.equal(approved.pack.next, 'Start');
+	assert.deepEqual(state.pendingNextActionDrafts, []);
+	assert.deepEqual(state.packs[1], beforePrepare[1]);
+	state.pendingNextActionDrafts.push(structuredClone(draft));
+	state.packs[0].status = 'done';
+	const beforeStale = structuredClone(state);
+	assert.throws(() => approvePendingDraft(state, 'a', { projectPack: project, nextPath: () => ({}) }), /Draft is stale/u);
+	assert.deepEqual(state, beforeStale);
+	state.pendingNextActionDrafts.push({ ...draft, workId: 'b' });
+	discardPendingDraft(state, 'a');
+	assert.deepEqual(state.pendingNextActionDrafts.map((item) => item.workId), ['b']);
 });

@@ -25,6 +25,7 @@ import {
 	unblockPacksBlockedBy,
 	unblockedReceiptSentence
 } from './workflow-rules.mjs';
+import { approvePendingDraft, discardPendingDraft, pendingDraftFingerprint as fingerprintPendingDraft } from './pending-next-action.mjs';
 
 const STORAGE_KEY = 'projects-webmcp-challenge-state-v1';
 const SEED_URL = '/data/demo-packs.json';
@@ -130,35 +131,26 @@ export async function savePendingNextActionDraft(draft: PendingNextActionDraft):
 
 export async function discardPendingNextActionDraft(workId: string): Promise<DemoState | null> {
 	return saveBrowserState((state) => {
-		state.pendingNextActionDrafts = pendingNextActionDrafts(state).filter((draft) => draft.workId !== workId);
+		discardPendingDraft(state, workId);
 	});
 }
 
-function pendingDraftFingerprint(state: DemoState, draft: PendingNextActionDraft): string {
-	const valueFor = (pack: DemoPack, field: 'workflow' | 'blocker') => field === 'workflow'
-		? workflowLabel(pack)
-		: hasBlocker(pack) ? blockerText(pack) : 'None';
-	const origin = state.packs.find((pack) => pack.id === draft.workId);
-	return JSON.stringify({
-		workId: draft.workId,
-		origin: origin ? { title: workTitle(origin), workflow: workflowLabel(origin), blocker: valueFor(origin, 'blocker'), next: origin.next || '' } : null,
-		facts: draft.evidence.map((reference) => {
-			const pack = state.packs.find((item) => item.id === reference.workId);
-			return { workId: reference.workId, field: reference.field, value: pack ? valueFor(pack, reference.field) : null };
-		})
-	});
+export function pendingDraftFingerprint(state: DemoState, draft: PendingNextActionDraft): string {
+	return fingerprintPendingDraft(state, draft, (pack: DemoPack) => ({ title: workTitle(pack), workflow: workflowLabel(pack), blocker: hasBlocker(pack) ? blockerText(pack) : 'None', next: pack.next || '' }));
 }
 
-export async function approvePendingNextActionDraft(workId: string): Promise<{ saved: true; pack: DemoPack; receipt: DemoReceipt; state: DemoState }> {
+export async function setPackNextAction(workId: string): Promise<{ saved: true; pack: DemoPack; receipt: DemoReceipt; state: DemoState }> {
 	const written = await saveBrowserState((state) => {
-		const draft = pendingNextActionDraftFor(state, workId);
-		if (!draft) throw new ChallengeStateError('Pending approval draft was not found.');
-		if (pendingDraftFingerprint(state, draft) !== draft.originFingerprint) {
-			throw new ChallengeStateError('Draft is stale. Refresh the evidence and prepare it again before approval.');
+		let approved;
+		try {
+			approved = approvePendingDraft(state, workId, {
+				projectPack: (pack: DemoPack) => ({ title: workTitle(pack), workflow: workflowLabel(pack), blocker: hasBlocker(pack) ? blockerText(pack) : 'None', next: pack.next || '' }),
+				nextPath: nextChoiceForwardPath
+			});
+		} catch (error) {
+			throw new ChallengeStateError(error instanceof Error ? error.message : 'Pending approval could not be saved.');
 		}
-		const pack = state.packs.find((item) => item.id === workId);
-		if (!pack) throw new ChallengeStateError('Pending approval work item was not found.');
-		Object.assign(pack, nextChoiceForwardPath(pack, draft.choice));
+		const pack = approved.pack;
 		const summary = `Next action set to "${pack.next || 'open'}".`;
 		const receipt: DemoReceipt = { summary, pack };
 		state.selectedId = pack.id;
@@ -489,31 +481,6 @@ export async function savePackPath(
 	});
 	if (!written?.actionReceipt?.pack) throw new ChallengeStateError('Work path was not saved.');
 	displayToast('Saved.', 'success');
-	return {
-		saved: true,
-		pack: written.actionReceipt.pack,
-		receipt: written.actionReceipt,
-		state: written
-	};
-}
-
-export async function setPackNextAction(
-	packId: string,
-	next: string
-): Promise<{ saved: true; pack: DemoPack; receipt: DemoReceipt; state: DemoState }> {
-	const written = await saveBrowserState((draft) => {
-		const pack = draft.packs.find((item) => item.id === packId);
-		if (!pack) throw new ChallengeStateError('Work item was not found.');
-		const forwardPath = nextChoiceForwardPath(pack, next);
-		Object.assign(pack, forwardPath);
-		const summary = `Next action set to "${forwardPath.next || 'open'}".`;
-		const receipt: DemoReceipt = { summary, pack };
-		draft.selectedId = pack.id;
-		draft.status = summary;
-		draft.actionReceipt = receipt;
-	});
-	if (!written?.actionReceipt?.pack) throw new ChallengeStateError('Next action was not saved.');
-	displayToast('Next action saved.', 'success');
 	return {
 		saved: true,
 		pack: written.actionReceipt.pack,
