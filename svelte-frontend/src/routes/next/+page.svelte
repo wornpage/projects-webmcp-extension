@@ -251,6 +251,11 @@ let showingCustom = $state(false);
 		return 'Open';
 	}
 
+	function savedEditorBaseline(target: DemoPack | null): EditorSnapshot {
+		const choice = defaultChoiceFor(target);
+		return { choice, mode: (NEXT_ACTION_CHOICES as readonly string[]).includes(choice) ? 'preset' : 'custom' };
+	}
+
 	function clearPreparation() {
 		preparationReceipt = null;
 		preparationToolName = '';
@@ -307,6 +312,7 @@ let showingCustom = $state(false);
 
 	function setHumanNextEditorChoice(nextChoice: string, mode: NextEditorMode) {
 		setNextEditorChoice(nextChoice, mode);
+		preparationPreviousEditor = savedEditorBaseline(pack);
 		if (!pack?.id || !nextChoice.trim()) return;
 		void savePendingNextActionDraft({
 			workId: pack.id,
@@ -333,6 +339,7 @@ let showingCustom = $state(false);
 
 	$effect(() => {
 		if (!pendingDraft || pendingDraft.workId !== pack?.id || preparationReceipt?.preparedAction === pendingDraft.choice) return;
+		preparationPreviousEditor = savedEditorBaseline(pack);
 		preparationReceipt = preparationFromPending(pendingDraft);
 		preparationToolName = pendingDraft.source === 'webmcp' ? PREPARE_NEXT_ACTION_TOOL_NAME : '';
 		setNextEditorChoice(pendingDraft.choice, pendingDraft.mode, false);
@@ -378,9 +385,7 @@ let showingCustom = $state(false);
 			source: 'webmcp'
 		};
 		invocation.markMutated();
-		if (!preparationReceipt) {
-			preparationPreviousEditor = { mode: current.editor.mode, choice: current.editor.choice };
-		}
+		if (!preparationReceipt) preparationPreviousEditor = savedEditorBaseline(pack);
 		setNextEditorChoice(input.choice, desiredMode, false);
 		preparationReceipt = {
 			summary: NEXT_PREPARATION_SUMMARY,

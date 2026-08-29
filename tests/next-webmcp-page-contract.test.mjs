@@ -493,6 +493,10 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(routeSource, /canSave: Boolean\(effectiveChoice\) && !busy && Boolean\(pendingDraft\) && !pendingDraftStale,[\s\S]*?staleReason: pendingDraftStale \? 'Draft is stale[\s\S]*?No pending draft/u);
 	assert.match(routeSource, /disabled=\{busy \|\| !effectiveChoice \|\| !pendingDraft \|\| pendingDraftStale\}/u);
 	assert.match(routeSource, /next-authority[\s\S]*?savedNextReceipt \? 'none · completed'[\s\S]*?savedNextReceipt \? 'updated'[\s\S]*?saved and approved by the person/u);
+	assert.match(routeSource, /function savedEditorBaseline\(target: DemoPack \| null\): EditorSnapshot[\s\S]*?defaultChoiceFor\(target\)[\s\S]*?NEXT_ACTION_CHOICES/u);
+	assert.match(routeSource, /function setHumanNextEditorChoice[\s\S]*?setNextEditorChoice\(nextChoice, mode\);[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);/u);
+	assert.match(routeSource, /if \(!pendingDraft[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);[\s\S]*?preparationFromPending/u);
+	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);[\s\S]*?clearPreparation\(\);[\s\S]*?setNextEditorChoice\(previous\.choice, previous\.mode, false\)/u);
 	assert.equal(routeSource.match(/await setPackNextAction\(/gu)?.length, 1);
 	assert.match(routeSource, /const result = pendingDraft[\s\S]*?await setPackNextAction\(pack\.id\)/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);/u);
