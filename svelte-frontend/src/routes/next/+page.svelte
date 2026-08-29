@@ -445,7 +445,7 @@ let showingCustom = $state(false);
 				ondone={() => (savedNextReceipt = null)}
 			/>
 		{/if}
-		<div class="demo-command-lines compact" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">
+		<div class="demo-command-lines compact demo-focus-surface" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">
 			{#if hasBlocker(preview)}
 				<div class="demo-command-line" data-command-field="blocker"><span>Current blocker</span><strong>{blockerText(preview)}</strong></div>
 			{/if}
@@ -562,6 +562,10 @@ let showingCustom = $state(false);
 		align-items: center;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
+	}
+	.demo-command-lines.demo-focus-surface {
+		--demo-focus-ring-inset: -6px;
+		--demo-focus-ring-radius: calc(var(--worn-radius) + 6px);
 	}
 	.next-action-editor > .demo-field {
 		grid-column: 1 / -1;

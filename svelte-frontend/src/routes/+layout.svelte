@@ -270,6 +270,48 @@
 		outline-offset: 2px;
 	}
 
+	/* Card-like focused and arrival targets use the same rounded boundary as the
+	   surface itself. Draw the cue inside those surfaces so grid containment
+	   cannot clip one or more sides of the ring. */
+	:global(.demo-focus-surface:focus-visible),
+	:global(.demo-focus-surface.demo-focus-pulse[data-focus-arrival='true']) {
+		border-radius: var(--worn-radius);
+		outline: 0 !important;
+		position: relative;
+	}
+
+	:global(.demo-focus-surface:focus-visible::after),
+	:global(.demo-focus-surface.demo-focus-pulse[data-focus-arrival='true']::after) {
+		border-radius: var(--demo-focus-ring-radius, inherit);
+		box-sizing: border-box;
+		content: '';
+		inset: var(--demo-focus-ring-inset, 0);
+		pointer-events: none;
+		position: absolute;
+		z-index: 4;
+	}
+
+	/* A neutral backing keeps warning/success edge accents from showing through
+	   the gaps in the persistent dashed focus ring. */
+	:global(.demo-focus-surface:focus-visible::before) {
+		border: 2px solid var(--worn-bg);
+		border-radius: var(--demo-focus-ring-radius, inherit);
+		box-sizing: border-box;
+		content: '';
+		inset: var(--demo-focus-ring-inset, 0);
+		pointer-events: none;
+		position: absolute;
+		z-index: 3;
+	}
+
+	:global(.demo-focus-surface:focus-visible::after) {
+		border: 2px dashed var(--worn-focus);
+	}
+
+	:global(.demo-focus-surface.demo-focus-pulse[data-focus-arrival='true']::after) {
+		border: 2px solid var(--worn-focus);
+	}
+
 	@media (hover: hover) and (pointer: fine) {
 		.challenge-brand:hover,
 		.challenge-shell-nav nav a:hover {

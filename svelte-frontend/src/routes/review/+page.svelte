@@ -499,7 +499,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 		{@const firstCommandHref = PACK_ACTIONS.has(firstCommand.action) ? undefined : primaryCommandNavigation(firstReview)}
 		<div class="review-priority-shell">
 		<WornContainer label="Up next">
-		<article class="review-priority" data-pack-id={firstReview.id}>
+		<article class="review-priority demo-focus-surface" data-pack-id={firstReview.id}>
 			<div class="review-priority-head">
 				<div>
 					<div class="review-priority-title"><a class="demo-card-title" data-action="select" data-pack={firstReview.id} title="Set the next action for {workTitle(firstReview)}" aria-label="Set the next action for {workTitle(firstReview)}" href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(firstReview.id, event)}>{workTitle(firstReview)}</a></div>
@@ -583,7 +583,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 				     list's arrow navigation. Buttons inside remain reachable by
 				     Tab; key events aimed at them are ignored by handleCardKeys. -->
 				<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-				<WornFoldedSurface as="article" reveal="hover" draggable="true" tabindex={0} class={`demo-review-card ${cardCls}${pack.id === $demoState?.selectedId ? ' selected' : ''}`} data-review-card data-pack-id={pack.id} onkeydown={handleCardKeys}
+				<WornFoldedSurface as="article" reveal="hover" draggable="true" tabindex={0} class={`demo-review-card demo-focus-surface ${cardCls}${pack.id === $demoState?.selectedId ? ' selected' : ''}`} data-review-card data-pack-id={pack.id} onkeydown={handleCardKeys}
 					aria-label="Review {workTitle(pack)}" aria-keyshortcuts="ArrowUp ArrowDown Enter Space">
 					<div class="demo-card-head demo-review-card-head">
 						<a class="demo-card-title" data-action="select" data-pack={pack.id} title="Set the next action for {workTitle(pack)}" aria-label="Set the next action for {workTitle(pack)}" href={`/next?pack=${encodeURIComponent(pack.id || '')}`} onclick={(event) => handoffToNext(pack.id, event)}>{workTitle(pack)}</a>
@@ -694,12 +694,17 @@ async function handleCardKeys(e: KeyboardEvent) {
 	   shrinkable without clipping the container or its visible focus boundary. */
 	.review-priority-shell,
 	.review-priority {
+		border-radius: var(--worn-radius);
 		display: grid;
 		gap: 12px;
 		overflow: visible;
 		max-width: 100%;
 		min-width: 0;
 		width: 100%;
+	}
+	.review-priority {
+		--demo-focus-ring-inset: -8px;
+		--demo-focus-ring-radius: calc(var(--worn-radius) + 8px);
 	}
 	.review-priority-head,
 	.review-priority-actions {
