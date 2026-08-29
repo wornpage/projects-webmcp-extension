@@ -44,6 +44,7 @@ svelte-frontend/src/lib/local-date.mjs
 svelte-frontend/src/lib/progressive-reveal.mjs
 svelte-frontend/src/lib/recent-work.mjs
 svelte-frontend/src/lib/undo.ts
+svelte-frontend/src/lib/webmcp-activity-presentation.mjs
 svelte-frontend/src/lib/webmcp.mjs
 svelte-frontend/src/lib/WebMcpActivityStrip.svelte
 svelte-frontend/src/lib/work-item-issues.ts
@@ -68,6 +69,7 @@ svelte-frontend/svelte.check.config.js
 svelte-frontend/svelte.config.js
 svelte-frontend/tsconfig.json
 svelte-frontend/vite.config.ts
+tests/activity-presentation-webmcp-contract.test.mjs
 tests/challenge-brand-affordance-webmcp-contract.test.mjs
 tests/challenge-webmcp-page-contract.test.mjs
 tests/focus-pulse-webmcp-contract.test.mjs

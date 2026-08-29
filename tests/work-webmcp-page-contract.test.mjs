@@ -323,7 +323,7 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpSearchReceipt\.scopeKey !== workReceiptScopeKey[\s\S]*?webMcpSearchReceipt = null/u);
 	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: work\.scope, counts: work\.counts \}\)/u);
 	assert.match(routeSource, /import WebMcpActivityStrip from '\$lib\/WebMcpActivityStrip\.svelte';/u);
-	assert.match(routeSource, /\{#if webMcpSearchReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="work"[\s\S]*?outcome=\{webMcpSearchReceipt\.summary\}[\s\S]*?toolName=\{webMcpSearchReceipt\.toolName\}[\s\S]*?cells=\{webMcpSearchReceipt\.cells\}[\s\S]*?\/>[\s\S]*?<!-- Keep the last good local view/u);
+	assert.match(routeSource, /\{#if webMcpSearchReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id="work-webmcp-activity"[\s\S]*?route="work"[\s\S]*?outcome=\{webMcpSearchReceipt\.summary\}[\s\S]*?toolName=\{webMcpSearchReceipt\.toolName\}[\s\S]*?cells=\{webMcpSearchReceipt\.cells\}[\s\S]*?\/>[\s\S]*?\{#each densityPanelTabs/u);
 	assert.doesNotMatch(routeSource, /ondone=\{\(\) => \(webMcpSearchReceipt = null\)\}/u);
 	assert.doesNotMatch(routeSource, /work-presenter-result|webmcp-tool-label/u);
 	assert.match(activityStripSource, /data-webmcp-receipt=\{route\}[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/u);

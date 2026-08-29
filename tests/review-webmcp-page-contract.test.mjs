@@ -357,7 +357,7 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
 	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: review\.scope, counts: review\.counts \}\)/u);
 	assert.match(routeSource, /import WebMcpActivityStrip from '\$lib\/WebMcpActivityStrip\.svelte';/u);
-	assert.match(routeSource, /\{#if webMcpScopeReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="review"[\s\S]*?outcome=\{webMcpScopeReceipt\.summary\}[\s\S]*?toolName=\{webMcpScopeReceipt\.toolName\}[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}[\s\S]*?\/>[\s\S]*?\{#if \$demoStateError\}/u);
+	assert.match(routeSource, /\{#if webMcpScopeReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id="review-webmcp-activity"[\s\S]*?route="review"[\s\S]*?outcome=\{webMcpScopeReceipt\.summary\}[\s\S]*?toolName=\{webMcpScopeReceipt\.toolName\}[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}[\s\S]*?\/>[\s\S]*?\{#if firstReview\}/u);
 	assert.doesNotMatch(routeSource, /ondone=\{\(\) => \(webMcpScopeReceipt = null\)\}/u);
 	assert.doesNotMatch(routeSource, /review-presenter-result|webmcp-tool-label/u);
 	assert.match(activityStripSource, /route: 'work' \| 'review' \| 'next';[\s\S]*?Latest \$\{routeLabel\} agent activity/u);

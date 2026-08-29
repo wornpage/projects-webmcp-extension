@@ -23,6 +23,7 @@
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
+	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import {
 		REVIEW_SCOPE_TOOL_NAME,
@@ -290,6 +291,8 @@
 		const focusReceipt = requireVisibleFocus
 			? await settleReviewScopeFocus(runFocus)
 			: runFocus(false);
+		const activityPresenter = document.getElementById('review-webmcp-activity');
+		if (requireVisibleFocus && activityPresenter) keepActivityPresenterVisible(activityPresenter, focusTarget);
 		return firstTitle
 				? { target: 'item' as const, itemId: itemId as string, ...focusReceipt }
 				: focusTarget === filterInput
@@ -470,15 +473,6 @@ async function handleCardKeys(e: KeyboardEvent) {
 </svelte:head>
 
 <!-- Keep existing browser-local items visible during a background refresh. -->
-{#if webMcpScopeReceipt}
-	<WebMcpActivityStrip
-		route="review"
-		outcome={webMcpScopeReceipt.summary}
-		toolName={webMcpScopeReceipt.toolName}
-		cells={webMcpScopeReceipt.cells}
-	/>
-{/if}
-
 <WornPage sectionLabel="Step 2 of 3 · Narrow" title="Review" status={reviewTitle} variant="list" loading={$demoStateLoading && packs.length === 0}>
 	{#snippet headActions()}
 		<div class="review-head-actions">
@@ -492,6 +486,15 @@ async function handleCardKeys(e: KeyboardEvent) {
 
 	{#if $demoStateError}
 		<WornError message="Could not load review" detail={$demoStateError} onretry={refreshReview} />
+	{/if}
+	{#if webMcpScopeReceipt}
+		<WebMcpActivityStrip
+			id="review-webmcp-activity"
+			route="review"
+			outcome={webMcpScopeReceipt.summary}
+			toolName={webMcpScopeReceipt.toolName}
+			cells={webMcpScopeReceipt.cells}
+		/>
 	{/if}
 
 	{#if firstReview}

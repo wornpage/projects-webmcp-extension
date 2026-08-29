@@ -52,6 +52,7 @@
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { parseRecentWorkIds, prependRecentWorkId } from '$lib/recent-work.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
+	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import WorkDeleteConfirmDialog from '$lib/WorkDeleteConfirmDialog.svelte';
 	import WorkGridCard from '$lib/components/WorkGridCard.svelte';
@@ -485,6 +486,8 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			block: 'center',
 			requireVisibleFocus
 		});
+		const activityPresenter = document.getElementById('work-webmcp-activity');
+		if (requireVisibleFocus && activityPresenter) keepActivityPresenterVisible(activityPresenter, destination);
 		return firstItem
 			? { target: 'item' as const, itemId: firstItem.dataset.packId || '', ...focusReceipt }
 			: { target: 'search' as const, itemId: null, ...focusReceipt };
@@ -864,15 +867,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 
 <!-- Keep existing browser-local items visible during a background refresh;
      show the skeleton only when there is genuinely nothing to render. -->
-{#if webMcpSearchReceipt}
-	<WebMcpActivityStrip
-		route="work"
-		outcome={webMcpSearchReceipt.summary}
-		toolName={webMcpSearchReceipt.toolName}
-		cells={webMcpSearchReceipt.cells}
-	/>
-{/if}
-
 <WornPage sectionLabel="Step 1 of 3 · Inspect" title="Work" status={workStatus} variant="list" loading={$demoStateLoading && packs.length === 0}>
 
 	{#snippet headActions()}
@@ -974,6 +968,16 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			<WornButton variant="primary" type="button" onclick={() => (showShortcutHelp = false)}>Close</WornButton>
 		</div>
 	</WornDialog>
+
+	{#if webMcpSearchReceipt}
+		<WebMcpActivityStrip
+			id="work-webmcp-activity"
+			route="work"
+			outcome={webMcpSearchReceipt.summary}
+			toolName={webMcpSearchReceipt.toolName}
+			cells={webMcpSearchReceipt.cells}
+		/>
+	{/if}
 
 	{#each densityPanelTabs as densityTab (densityTab.id)}
 	<div
