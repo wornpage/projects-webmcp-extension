@@ -20,6 +20,27 @@ export function discardPendingDraft(state, workId) {
 	state.pendingNextActionDrafts = (state.pendingNextActionDrafts || []).filter((draft) => draft.workId !== workId);
 }
 
+export function upsertPendingDraft(state, draft) {
+	state.pendingNextActionDrafts = [...(state.pendingNextActionDrafts || []).filter((item) => item.workId !== draft.workId), structuredClone(draft)];
+}
+
+export function restorePendingDraft(state, workId, priorDraft) {
+	if (priorDraft) upsertPendingDraft(state, priorDraft);
+	else discardPendingDraft(state, workId);
+}
+
+export function pendingDraftNavigation(state) {
+	const drafts = state.pendingNextActionDrafts || [];
+	return { count: drafts.length, resumeHref: drafts[0] ? `/next?pack=${encodeURIComponent(drafts[0].workId)}` : '/next' };
+}
+
+export function cloneMutatePersist({ current, clone, mutate, persist, install }) {
+	const next = clone(current);
+	mutate(next);
+	persist(next);
+	return install(next);
+}
+
 export function approvePendingDraft(state, workId, { projectPack, nextPath }) {
 	const draft = pendingDraftFor(state, workId);
 	if (!draft) throw new Error('Pending approval draft was not found.');

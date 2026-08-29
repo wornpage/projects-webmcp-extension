@@ -10,6 +10,7 @@
 		setPackNextAction,
 		savePendingNextActionDraft,
 		discardPendingNextActionDraft,
+		restorePendingNextActionDraft,
 		pendingNextActionDraftFor,
 		pendingDraftFingerprint,
 		setSelectedWork,
@@ -293,8 +294,7 @@ let showingCustom = $state(false);
 		preparationReceipt = clonePreparationReceipt(snapshot.preparationReceipt);
 		preparationPreviousEditor = snapshot.preparationPreviousEditor ? { ...snapshot.preparationPreviousEditor } : null;
 		savedNextReceipt = snapshot.savedNextReceipt;
-		if (snapshot.pendingDraft) await savePendingNextActionDraft(snapshot.pendingDraft);
-		else if (snapshot.invocationWorkId) await discardPendingNextActionDraft(snapshot.invocationWorkId);
+		if (snapshot.invocationWorkId) await restorePendingNextActionDraft(snapshot.invocationWorkId, snapshot.pendingDraft);
 	}
 
 	function setNextEditorChoice(nextChoice: string, mode: NextEditorMode, clearAgentPreparation = true) {

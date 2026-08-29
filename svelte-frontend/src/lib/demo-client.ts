@@ -25,7 +25,7 @@ import {
 	unblockPacksBlockedBy,
 	unblockedReceiptSentence
 } from './workflow-rules.mjs';
-import { approvePendingDraft, discardPendingDraft, pendingDraftFingerprint as fingerprintPendingDraft } from './pending-next-action.mjs';
+import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, pendingDraftFingerprint as fingerprintPendingDraft, restorePendingDraft, upsertPendingDraft } from './pending-next-action.mjs';
 
 const STORAGE_KEY = 'projects-webmcp-challenge-state-v1';
 const SEED_URL = '/data/demo-packs.json';
@@ -124,9 +124,12 @@ export function pendingNextActionDraftFor(state: DemoState | null, workId: strin
 export async function savePendingNextActionDraft(draft: PendingNextActionDraft): Promise<DemoState | null> {
 	if (!isPendingNextActionDraft(draft)) throw new ChallengeStateError('Pending approval draft is invalid.');
 	return saveBrowserState((state) => {
-		const pending = pendingNextActionDrafts(state).filter((item) => item.workId !== draft.workId);
-		state.pendingNextActionDrafts = [...pending, structuredClone(draft)];
+		upsertPendingDraft(state, draft);
 	});
+}
+
+export async function restorePendingNextActionDraft(workId: string, priorDraft: PendingNextActionDraft | null): Promise<DemoState | null> {
+	return saveBrowserState((state) => restorePendingDraft(state, workId, priorDraft));
 }
 
 export async function discardPendingNextActionDraft(workId: string): Promise<DemoState | null> {
@@ -156,7 +159,6 @@ export async function setPackNextAction(workId: string): Promise<{ saved: true; 
 		state.selectedId = pack.id;
 		state.status = summary;
 		state.actionReceipt = receipt;
-		state.pendingNextActionDrafts = pendingNextActionDrafts(state).filter((item) => item.workId !== workId);
 	});
 	if (!written?.actionReceipt?.pack) throw new ChallengeStateError('Pending next action was not saved.');
 	displayToast('Next action saved.', 'success');
@@ -304,10 +306,7 @@ export async function saveBrowserState(
 	if (!browser) return null;
 	const current = get(demoState) ?? (await refreshDemoState());
 	if (!current) return null;
-	const draft = cloneState(current);
-	mutate(draft);
-	persistState(draft);
-	return replaceDemoState(draft);
+	return cloneMutatePersist({ current, clone: cloneState, mutate, persist: persistState, install: replaceDemoState });
 }
 
 function appendActivity(pack: DemoPack, detail: string): boolean {

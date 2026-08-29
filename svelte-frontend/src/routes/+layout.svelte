@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { demoState, pendingNextActionDrafts, refreshDemoState, toasts } from '$lib/demo-client';
+	import { pendingDraftNavigation } from '$lib/pending-next-action.mjs';
 	import WornToast from '$lib/components/WornToast.svelte';
 
 	type RouteItem = {
@@ -20,7 +21,8 @@
 	let pathname = $derived($page.url.pathname);
 	let routeLabel = $derived(ROUTES.find((item) => item.href === pathname)?.label ?? 'WebMCP demo');
 	let pendingApprovals = $derived(pendingNextActionDrafts($demoState));
-	let pendingResumeHref = $derived(pendingApprovals[0] ? `/next?pack=${encodeURIComponent(pendingApprovals[0].workId)}` : '/next');
+	let pendingNavigation = $derived(pendingDraftNavigation({ pendingNextActionDrafts: pendingApprovals }));
+	let pendingResumeHref = $derived(pendingNavigation.resumeHref);
 
 	onMount(() => {
 		// The shared workspace shell hydrates the one browser-local state owner.
@@ -53,9 +55,9 @@
 					{item.label}
 				</a>
 			{/each}
-			{#if pendingApprovals.length > 0}
-				<a class="pending-approval-link" href={pendingResumeHref} aria-label={`Resume ${pendingApprovals.length} pending approval${pendingApprovals.length === 1 ? '' : 's'}`}>
-					Pending {pendingApprovals.length}
+			{#if pendingNavigation.count > 0}
+				<a class="pending-approval-link" href={pendingResumeHref} aria-label={`Resume ${pendingNavigation.count} pending approval${pendingNavigation.count === 1 ? '' : 's'}`}>
+					Pending {pendingNavigation.count}
 				</a>
 			{/if}
 		</nav>
