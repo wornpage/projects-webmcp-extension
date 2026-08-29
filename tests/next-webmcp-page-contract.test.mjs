@@ -14,7 +14,8 @@ import {
 	createPrepareNextActionTool,
 	nextEditorPageView,
 	verifiedNextEvidenceNote,
-	verifyNextPreparationEvidence
+	verifyNextPreparationEvidence,
+	shouldHydratePendingDraft
 } from '../svelte-frontend/src/routes/next/next-webmcp.mjs';
 import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, hydrateSerializedState, pendingDraftFingerprint, pendingDraftNavigation, resetPersistedState, restorePendingDraft, upsertPendingDraft } from '../svelte-frontend/src/lib/pending-next-action.mjs';
 
@@ -495,13 +496,13 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(routeSource, /next-authority[\s\S]*?savedNextReceipt \? 'none · completed'[\s\S]*?savedNextReceipt \? 'updated'[\s\S]*?saved and approved by the person/u);
 	assert.match(routeSource, /function savedEditorBaseline\(target: DemoPack \| null\): EditorSnapshot[\s\S]*?defaultChoiceFor\(target\)[\s\S]*?NEXT_ACTION_CHOICES/u);
 	assert.match(routeSource, /function setHumanNextEditorChoice[\s\S]*?setNextEditorChoice\(nextChoice, mode\);[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);/u);
-	assert.match(routeSource, /if \(preparationInFlight \|\| !pendingDraft[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);[\s\S]*?preparationFromPending/u);
+	assert.match(routeSource, /const draft = pendingDraft;[\s\S]*?if \(!draft \|\| !shouldHydratePendingDraft\(\{ preparationInFlight, pendingDraft: draft, visibleWorkId: pack\?\.id \|\| '', preparationReceipt \}\)\) return;[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);[\s\S]*?preparationFromPending/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);[\s\S]*?clearPreparation\(\);[\s\S]*?setNextEditorChoice\(previous\.choice, previous\.mode, false\)/u);
 	assert.match(routeSource, /let visiblePackId = \$derived\(pack\?\.id \|\| ''\);[\s\S]*?pendingNextActionDraftFor\(\$demoState, visiblePackId\)/u);
 	assert.match(routeSource, /\{#if preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?\{:else if pendingDraft\?\.source === 'human'\}[\s\S]*?Draft prepared by you\. Workspace unchanged until you approve Save\./u);
 	assert.match(routeSource, /preparationReceipt: preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME \? preparationReceipt : null/u);
 	assert.match(routeSource, /preparationToolName = PREPARE_NEXT_ACTION_TOOL_NAME;[\s\S]*?await tick\(\);[\s\S]*?NEXT_PREPARATION_RECEIPT_ID/u);
-	assert.match(routeSource, /let preparationInFlight = \$state\(false\);[\s\S]*?preparationInFlight \|\| !pendingDraft/u);
+	assert.match(routeSource, /let preparationInFlight = \$state\(false\);[\s\S]*?shouldHydratePendingDraft\(\{ preparationInFlight/u);
 	assert.match(routeSource, /invocation\.markMutated\(\);[\s\S]*?preparationInFlight = true;[\s\S]*?await savePendingNextActionDraft\(pending\);[\s\S]*?preparationInFlight = false;/u);
 	assert.match(routeSource, /preparationInFlight: boolean;/u);
 	assert.match(routeSource, /preparationToolName,[\s\S]*?preparationInFlight[\s\S]*?preparationInFlight = snapshot\.preparationInFlight;/u);
@@ -586,4 +587,17 @@ test('pending approval transaction compositions persist atomically and restore e
 	cloneMutatePersist({ current: live, clone: structuredClone, mutate: (state) => upsertPendingDraft(state, { ...priorA, choice: 'Focus' }), persist, install });
 	cloneMutatePersist({ current: live, clone: structuredClone, mutate: (state) => restorePendingDraft(state, 'a', priorA), persist, install });
 	assert.equal(writes, 2); assert.deepEqual(live, original); assert.equal(bytes, JSON.stringify(original)); assert.equal(pendingDraftNavigation(live).resumeHref, '/next?pack=a');
+});
+
+test('WebMCP prepare transaction keeps a differing-choice human draft from rehydrating provisionally', async () => {
+	const human = { workId: 'next-current', choice: 'Review', source: 'human' };
+	let pageState = { choice: 'Review', source: 'human', presenter: 'human', inFlight: false, draft: human };
+	const tool = createPrepareNextActionTool(async (input, invocation) => {
+		invocation.markMutated(); pageState = { ...pageState, choice: input.choice, source: 'webmcp', presenter: 'webmcp', inFlight: true, draft: { ...human, choice: input.choice, source: 'webmcp' } };
+		assert.equal(shouldHydratePendingDraft({ preparationInFlight: pageState.inFlight, pendingDraft: human, visibleWorkId: 'next-current', preparationReceipt: { preparedAction: input.choice } }), false);
+		pageState.inFlight = false;
+		return { changed: true, focus: { id: NEXT_PREPARATION_RECEIPT_ID, focused: true, focusVisible: true, inViewport: true, pulsed: true }, next: editor({ editor: { mode: 'preset', choice: input.choice }, preparationReceipt: preparationReceipt(input.choice) }) };
+	}, { capture: () => structuredClone(pageState), restore: (snapshot) => { pageState = structuredClone(snapshot); } });
+	const input = { choice: 'Focus', expectedMode: 'preset', expectedChoice: 'Review', evidence: [currentEvidenceReference] };
+	await tool.execute(input); assert.equal(pageState.source, 'webmcp'); assert.equal(pageState.choice, 'Focus');
 });

@@ -53,7 +53,8 @@
 		createPrepareNextActionTool,
 		nextEditorPageView,
 		verifiedNextEvidenceNote,
-		verifyNextPreparationEvidence
+		verifyNextPreparationEvidence,
+		shouldHydratePendingDraft
 	} from './next-webmcp.mjs';
 
 	type NextEditorMode = 'preset' | 'custom';
@@ -346,11 +347,12 @@ let showingCustom = $state(false);
 	});
 
 	$effect(() => {
-		if (preparationInFlight || !pendingDraft || pendingDraft.workId !== pack?.id || preparationReceipt?.preparedAction === pendingDraft.choice) return;
+		const draft = pendingDraft;
+		if (!draft || !shouldHydratePendingDraft({ preparationInFlight, pendingDraft: draft, visibleWorkId: pack?.id || '', preparationReceipt })) return;
 		preparationPreviousEditor = savedEditorBaseline(pack);
-		preparationReceipt = preparationFromPending(pendingDraft);
-		preparationToolName = pendingDraft.source === 'webmcp' ? PREPARE_NEXT_ACTION_TOOL_NAME : '';
-		setNextEditorChoice(pendingDraft.choice, pendingDraft.mode, false);
+		preparationReceipt = preparationFromPending(draft);
+		preparationToolName = draft.source === 'webmcp' ? PREPARE_NEXT_ACTION_TOOL_NAME : '';
+		setNextEditorChoice(draft.choice, draft.mode, false);
 	});
 
 	async function prepareNextActionFromWebMcp(
