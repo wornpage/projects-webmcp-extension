@@ -426,21 +426,21 @@ let showingCustom = $state(false);
 		{/if}
 	</WornPage>
 {:else if pack && preview}
+	{#if preparationReceipt}
+		<WebMcpActivityStrip
+			id={NEXT_PREPARATION_RECEIPT_ID}
+			route="next"
+			outcome="Draft prepared — waiting for your approval."
+			toolName={preparationToolName}
+			cells={preparationCells}
+		/>
+	{/if}
 	<WornPage sectionLabel="Step 3 of 3 · Prepare" title={preparationReceipt ? 'Review the proposed next action' : 'Set the next action'} status={workTitle(pack)}>
 		{#if $demoStateError}
 			<WornError message="Could not load next actions" detail={$demoStateError} onretry={refreshNext} />
 		{/if}
 		{#if errorText}
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
-		{/if}
-		{#if preparationReceipt}
-			<WebMcpActivityStrip
-				id={NEXT_PREPARATION_RECEIPT_ID}
-				route="next"
-				outcome="Draft prepared — waiting for your approval."
-				toolName={preparationToolName}
-				cells={preparationCells}
-			/>
 		{/if}
 		<div class="next-presenter-result">
 			<div class="demo-command-lines compact demo-focus-surface" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">

@@ -47,15 +47,23 @@
 
 <style>
 	.webmcp-activity-strip {
+		align-self: start;
 		background: color-mix(in srgb, var(--worn-selected-bg) 58%, var(--worn-surface));
 		border: 1px solid var(--worn-border-strong);
 		border-left: 3px solid var(--worn-accent);
 		border-radius: var(--worn-radius);
+		box-sizing: border-box;
 		box-shadow: var(--worn-shadow-sm);
 		display: grid;
 		gap: 8px;
+		isolation: isolate;
+		max-inline-size: 100%;
 		min-width: 0;
 		padding: 12px 14px;
+		position: sticky;
+		top: calc(8px + env(safe-area-inset-top, 0px));
+		width: 100%;
+		z-index: 5;
 	}
 
 	.webmcp-activity-strip-head {

@@ -864,6 +864,15 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 
 <!-- Keep existing browser-local items visible during a background refresh;
      show the skeleton only when there is genuinely nothing to render. -->
+{#if webMcpSearchReceipt}
+	<WebMcpActivityStrip
+		route="work"
+		outcome={webMcpSearchReceipt.summary}
+		toolName={webMcpSearchReceipt.toolName}
+		cells={webMcpSearchReceipt.cells}
+	/>
+{/if}
+
 <WornPage sectionLabel="Step 1 of 3 · Inspect" title="Work" status={workStatus} variant="list" loading={$demoStateLoading && packs.length === 0}>
 
 	{#snippet headActions()}
@@ -883,15 +892,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			{/if}
 		</div>
 	{/snippet}
-
-	{#if webMcpSearchReceipt}
-		<WebMcpActivityStrip
-			route="work"
-			outcome={webMcpSearchReceipt.summary}
-			toolName={webMcpSearchReceipt.toolName}
-			cells={webMcpSearchReceipt.cells}
-		/>
-	{/if}
 
 	<!-- Keep the last good local view below a refresh error and offer Retry. -->
 	{#if $demoStateError}

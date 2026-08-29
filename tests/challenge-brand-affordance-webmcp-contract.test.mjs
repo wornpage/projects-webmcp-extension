@@ -41,6 +41,28 @@ test('shared challenge layout keeps content compact and receipts comfortably sep
 	assert.match(nextRouteSource, /\{#if preparationReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?route="next"[\s\S]*?<div class="next-presenter-result">[\s\S]*?data-next-preview/u);
 });
 
+test('the single activity strip stays in view without restoring route-local receipts', () => {
+	assert.match(
+		activityStripSource,
+		/\.webmcp-activity-strip \{[\s\S]*?align-self: start;[\s\S]*?background: color-mix\([\s\S]*?box-sizing: border-box;[\s\S]*?isolation: isolate;[\s\S]*?max-inline-size: 100%;[\s\S]*?position: sticky;[\s\S]*?top: calc\(8px \+ env\(safe-area-inset-top, 0px\)\);[\s\S]*?width: 100%;[\s\S]*?z-index: 5;/u
+	);
+	assert.match(activityStripSource, /grid-template-columns: repeat\(auto-fit, minmax\(min\(190px, 100%\), 1fr\)\);/u);
+	assert.match(activityStripSource, /@media \(max-width: 500px\) \{[\s\S]*?padding: 11px 12px;[\s\S]*?flex-direction: column;/u);
+
+	for (const [route, source, receiptState] of [
+		['work', workRouteSource, 'webMcpSearchReceipt'],
+		['review', reviewRouteSource, 'webMcpScopeReceipt'],
+		['next', nextRouteSource, 'preparationReceipt']
+	]) {
+		assert.equal((source.match(/<WebMcpActivityStrip/gu) ?? []).length, 1, `${route} must render one shared activity strip`);
+		assert.match(source, new RegExp(`\\{#if ${receiptState}\\}[\\s\\S]*?<WebMcpActivityStrip[\\s\\S]*?\\{/if\\}[\\s\\S]*?<WornPage`, 'u'));
+		assert.doesNotMatch(source, new RegExp(`data-webmcp-receipt=["']${route}["']`, 'u'));
+	}
+	assert.doesNotMatch(workRouteSource, /work-presenter-result|webmcp-tool-label/u);
+	assert.doesNotMatch(reviewRouteSource, /review-presenter-result|webmcp-tool-label/u);
+	assert.doesNotMatch(nextRouteSource, /webmcp-tool-label/u);
+});
+
 test('challenge motion is visible by default and removed for reduced motion', () => {
 	assert.match(layoutSource, /animation: challenge-route-arrive 380ms/u);
 	assert.match(layoutSource, /animation: challenge-receipt-arrive 440ms/u);

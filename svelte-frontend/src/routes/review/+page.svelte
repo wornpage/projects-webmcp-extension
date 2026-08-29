@@ -470,6 +470,15 @@ async function handleCardKeys(e: KeyboardEvent) {
 </svelte:head>
 
 <!-- Keep existing browser-local items visible during a background refresh. -->
+{#if webMcpScopeReceipt}
+	<WebMcpActivityStrip
+		route="review"
+		outcome={webMcpScopeReceipt.summary}
+		toolName={webMcpScopeReceipt.toolName}
+		cells={webMcpScopeReceipt.cells}
+	/>
+{/if}
+
 <WornPage sectionLabel="Step 2 of 3 · Narrow" title="Review" status={reviewTitle} variant="list" loading={$demoStateLoading && packs.length === 0}>
 	{#snippet headActions()}
 		<div class="review-head-actions">
@@ -480,15 +489,6 @@ async function handleCardKeys(e: KeyboardEvent) {
 			{/if}
 		</div>
 	{/snippet}
-
-	{#if webMcpScopeReceipt}
-		<WebMcpActivityStrip
-			route="review"
-			outcome={webMcpScopeReceipt.summary}
-			toolName={webMcpScopeReceipt.toolName}
-			cells={webMcpScopeReceipt.cells}
-		/>
-	{/if}
 
 	{#if $demoStateError}
 		<WornError message="Could not load review" detail={$demoStateError} onretry={refreshReview} />
