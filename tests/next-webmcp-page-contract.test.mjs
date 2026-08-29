@@ -69,6 +69,7 @@ function editor(overrides = {}) {
 		preparationReceipt: null,
 		canSave: true,
 		busy: false,
+		staleReason: null,
 		privateState: 'not exposed',
 		...overrides
 	});
@@ -83,7 +84,8 @@ test('Next projects only its exact current editor, choices, and visible preview'
 		preview: { blocker: 'Waiting for labels', nextAction: 'Unblock' },
 		preparationReceipt: null,
 		canSave: true,
-		busy: false
+		busy: false,
+		staleReason: null
 	});
 	assert.doesNotMatch(JSON.stringify(view), /not exposed/u);
 	assert.notEqual(view.presetChoices, presetChoices);
@@ -111,6 +113,7 @@ test('Next projects only its exact current editor, choices, and visible preview'
 		{ ...prepared, preparationReceipt: { ...prepared.preparationReceipt, evidence: [] } },
 		{ ...prepared, preparationReceipt: { ...prepared.preparationReceipt, evidence: [{ ...currentVerifiedEvidence, label: 'Status' }] } },
 		{ ...view, canSave: 'yes' },
+		{ ...view, staleReason: 'stale', canSave: true },
 		{ ...view, busy: 'no' }
 	]) {
 		assert.equal(nextEditorPageView(malformed), null);
@@ -191,7 +194,7 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 	assert.equal(tool.name, PREPARE_NEXT_ACTION_TOOL_NAME);
 	assert.equal(tool.name, 'prepare_next_action');
 	assert.equal(tool.title, 'Prepare next-action preview');
-	assert.match(tool.description, /unsaved next-action preview/u);
+	assert.match(tool.description, /durable browser-local pending next-action draft/u);
 	assert.match(tool.description, /rejects stale or mismatched facts/u);
 	assert.match(tool.description, /generates the visible evidence note from the verified values/u);
 	assert.match(tool.description, /never saves or writes workspace data/u);
@@ -478,13 +481,15 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(demoClientSource, /export type PendingNextActionDraft = \{[\s\S]*?workId: string;[\s\S]*?evidence: Array<[\s\S]*?originFingerprint: string;[\s\S]*?source: 'human' \| 'webmcp';/u);
 	assert.match(demoClientSource, /export async function savePendingNextActionDraft[\s\S]*?saveBrowserState[\s\S]*?state\.pendingNextActionDrafts = \[\.\.\.pending, structuredClone\(draft\)\];/u);
 	assert.match(demoClientSource, /export async function discardPendingNextActionDraft[\s\S]*?saveBrowserState[\s\S]*?state\.pendingNextActionDrafts = pendingNextActionDrafts\(state\)\.filter/u);
+	assert.match(demoClientSource, /export async function approvePendingNextActionDraft[\s\S]*?const written = await saveBrowserState\([\s\S]*?pendingDraftFingerprint\(state, draft\)[\s\S]*?Object\.assign\(pack, nextChoiceForwardPath\(pack, draft\.choice\)\);[\s\S]*?state\.pendingNextActionDrafts = pendingNextActionDrafts\(state\)\.filter/u);
 	assert.match(demoClientSource, /export async function resetDemoSampleState[\s\S]*?localStorage\.removeItem\(STORAGE_KEY\)[\s\S]*?return replaceDemoState\(seed\);/u);
 	assert.match(routeSource, /pendingNextActionDraftFor\(\$demoState, selectedId\)[\s\S]*?pendingDraftFingerprint/u);
 	assert.match(routeSource, /invocation\.markMutated\(\);[\s\S]*?if \(!currentNextEditor\)[\s\S]*?await savePendingNextActionDraft\(pending\);/u);
 	assert.match(routeSource, /pendingDraft && pendingDraftStale[\s\S]*?Draft is stale/u);
+	assert.match(routeSource, /canSave: Boolean\(effectiveChoice\) && !busy && !pendingDraftStale,[\s\S]*?staleReason: pendingDraftStale \? 'Draft is stale/u);
 	assert.match(routeSource, /disabled=\{busy \|\| !effectiveChoice \|\| pendingDraftStale\}/u);
-	assert.equal(routeSource.match(/await setPackNextAction\(/gu)?.length, 1);
-	assert.match(routeSource, /const result = await setPackNextAction\(pack\.id, effectiveChoice\);[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);/u);
+	assert.equal(routeSource.match(/await approvePendingNextActionDraft\(/gu)?.length, 1);
+	assert.match(routeSource, /const result = pendingDraft[\s\S]*?await approvePendingNextActionDraft\(pack\.id\)/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);/u);
 	assert.match(layoutSource, /pendingNextActionDrafts\(\$demoState\)[\s\S]*?pendingResumeHref[\s\S]*?Pending \{pendingApprovals\.length\}/u);
 	assert.doesNotMatch(routeSource, /localStorage|sessionStorage/u);

@@ -7,7 +7,7 @@
 		demoState,
 		demoStateError,
 		refreshDemoState,
-		setPackNextAction,
+		approvePendingNextActionDraft,
 		savePendingNextActionDraft,
 		discardPendingNextActionDraft,
 		pendingNextActionDraftFor,
@@ -89,8 +89,9 @@
 		customValue: string;
 		showingCustom: boolean;
 		preparationReceipt: PreparationReceipt | null;
-		preparationPreviousEditor: EditorSnapshot | null;
-		savedNextReceipt: SavedNextReceipt | null;
+	preparationPreviousEditor: EditorSnapshot | null;
+	savedNextReceipt: SavedNextReceipt | null;
+	pendingDraft: PendingNextActionDraft | null;
 	};
 
 	let chosenPackId = $state('');
@@ -165,7 +166,8 @@ let showingCustom = $state(false);
 				nextAction: effectiveChoice || 'Not set'
 			},
 			preparationReceipt,
-			canSave: Boolean(effectiveChoice) && !busy,
+			canSave: Boolean(effectiveChoice) && !busy && !pendingDraftStale,
+			staleReason: pendingDraftStale ? 'Draft is stale. Refresh the evidence and prepare it again before approval.' : null,
 			busy
 		});
 	});
@@ -290,18 +292,21 @@ let showingCustom = $state(false);
 			customValue,
 			showingCustom,
 			preparationReceipt: clonePreparationReceipt(preparationReceipt),
-			preparationPreviousEditor: preparationPreviousEditor ? { ...preparationPreviousEditor } : null,
-			savedNextReceipt
+		preparationPreviousEditor: preparationPreviousEditor ? { ...preparationPreviousEditor } : null,
+			savedNextReceipt,
+			pendingDraft: pendingDraft ? structuredClone(pendingDraft) : null
 		};
 	}
 
-	function restoreNextPreparationSnapshot(snapshot: NextPreparationSnapshot) {
+	async function restoreNextPreparationSnapshot(snapshot: NextPreparationSnapshot) {
 		choice = snapshot.choice;
 		customValue = snapshot.customValue;
 		showingCustom = snapshot.showingCustom;
 		preparationReceipt = clonePreparationReceipt(snapshot.preparationReceipt);
 		preparationPreviousEditor = snapshot.preparationPreviousEditor ? { ...snapshot.preparationPreviousEditor } : null;
 		savedNextReceipt = snapshot.savedNextReceipt;
+		if (snapshot.pendingDraft) await savePendingNextActionDraft(snapshot.pendingDraft);
+		else if (pack?.id) await discardPendingNextActionDraft(pack.id);
 	}
 
 	function setNextEditorChoice(nextChoice: string, mode: NextEditorMode, clearAgentPreparation = true) {
@@ -461,8 +466,10 @@ let showingCustom = $state(false);
 		if (saveFocusFrame !== null) cancelAnimationFrame(saveFocusFrame);
 		saveFocusFrame = null;
 		try {
-			const result = await setPackNextAction(pack.id, effectiveChoice);
-			await discardPendingNextActionDraft(pack.id);
+			const result = pendingDraft
+				? await approvePendingNextActionDraft(pack.id)
+				: null;
+			if (!result) throw new ChallengeStateError('Create a pending draft before approval.');
 			const summary = result?.receipt?.summary || `Next action saved: ${effectiveChoice}.`;
 			savedNextReceipt = { summary, pack: result.pack };
 			clearPreparation();
