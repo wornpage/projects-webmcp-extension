@@ -216,6 +216,22 @@ This local checkpoint corrects the expanded Recent activity outline through Worn
 | Wide rendered result | At 1265 × 720 in forced light mode, the expanded timeline retained exactly 6 level-2 entries, no horizontal overflow, and the same 8/8 denominator. The disclosure was 1176 × 44px with a dashed 1.74px focus-visible outline; activity links were at least 48.1px tall. |
 | WebMCP and console | Work's page catalog remained exactly `get_current_work_view` and `show_work_search`. Browser console remained at 0 warnings and 0 errors, and validation performed no workspace write or network mutation. |
 
+## Work terminal due-date truthfulness — August 29, 2026
+
+This local checkpoint keeps completed and archived work out of Work's urgency semantics while preserving their historical due dates. It changes no work data, filter control, storage path, page-tool registration, or workspace-write authority.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | Work displayed `Overdue 3`; selecting it rendered 3/3 matching of 8 workspace: one blocked item plus two completed items. Both completed cards and `get_current_work_view` called their past due dates overdue. The same two completed records also carried overdue wording in Review. |
+| Expected observable improvement | Terminal work keeps a neutral `Due YYYY-MM-DD` fact, receives no overdue styling, and never contributes to or appears in Work's Overdue scope. Open past-due work remains explicitly overdue. Human and page-tool counts and labels must stay exact. |
+| One active path | The existing `dueUrgency` and `dueDateLabel` owners now accept the complete work item and suppress urgency when status is done or the item is archived. Work metadata, urgency sorting/filtering, both Work card densities, Work and Review projections, and Review copy all migrated to that pack-aware contract. The date-only call path was removed; no compatibility wrapper, alias, fallback, or Wornpage change was added. |
+| Red-first and focused contract | The new Work contract first failed with 11/12 passing because metadata supplied only the due string and therefore could not distinguish terminal work. After the hard cutover, `node --test --test-reporter=spec tests/work-webmcp-page-contract.test.mjs` passed 12/12 and Svelte diagnostics passed with 0 errors and 0 warnings. |
+| Compact dark result | At 390 × 844 with a coarse pointer, dark color scheme, and reduced motion, the default Grid rendered `Overdue 1`; the two Done cards retained `Due 2026-08-25` and `Due 2026-08-23` with zero overdue classes. Selecting the focused `Overdue 1` chip rendered exactly one Blocked item and `1 shown · 1 matching · 8 workspace · 1 blocked`; the chip was focus-visible, fully inside the viewport, route animation was none, and horizontal overflow was zero. |
+| Density parity | Compact Cards preserved the exact one-item overdue scope and getter result. Clearing filters restored 8/8 work, two neutral Done dates, zero Done overdue classes, and `Overdue 1`, with zero horizontal overflow. |
+| Wide light result | At 1280 × 900 in light mode, Cards retained the two neutral Done dates, zero Done overdue classes, and `Overdue 1`. Selecting it again rendered the exact one blocked item with 1/1/8 counts, a focus-visible chip fully inside the viewport, and zero horizontal overflow. |
+| Page-tool truthfulness and lifecycle | Work retained exactly `get_current_work_view` and `show_work_search`; the overdue getter result matched the one rendered blocked item and exact 1/1/8/1 denominators. Review returned completed items with neutral dates. Navigating to Review made the prior Work handle fail as stale and exposed only `get_current_review_queue` and `set_review_scope`. Only read-only getters were invoked; no receipt, storage write, workspace mutation, or network mutation occurred. |
+| Bundle and cleanup | The production build remained 357 SSR and 328 client modules. Work changed from 78.98 / 16.39 to 78.94 / 16.39 kB gzip; Review from 37.69 / 9.16 to 37.68 / 9.15; their shared client nodes decreased from 48.55 / 15.34 to 48.52 / 15.32 and from 25.09 / 8.61 to 25.08 / 8.60. Cleanup restored Grid, unfiltered 8/8 work, normal motion, default Guide state, no pending navigation, and closed the temporary tab and preview. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.
