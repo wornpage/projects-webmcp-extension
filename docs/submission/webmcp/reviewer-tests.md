@@ -136,6 +136,70 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
 | Action accountability | Work and Review getters leave no agent-change receipt. Successful scope presenters show the normalized visible scope and exact live denominators. Next accepts 1–3 exact Work or Review field/value references, requires one for the current item, rejects stale or mismatched facts, and generates its visible evidence note from the verified values. The draft remains unsaved and Save stays human-owned. Human edits or route teardown clear the affected attribution. |
 | Verified Next evidence | Bare `/next` resumes the visible work item's human draft without agent provenance; a differing-choice WebMCP takeover presents Focus, rolls back exactly to the human draft on failure, and retains the WebMCP draft after success. Reload retains pending drafts, Discard restores the saved editor baseline without workspace writes, and approval atomically updates the target workspace item and consumes its draft. |
 
+## Priority read-only checkpoint — August 29, 2026
+
+This local checkpoint starts from merged source `b6d79be54124c8a94479023cf5369c3c9e5ca90e` on `newwork/priority-next-recommendation`. It is not a hosted-access claim. **Priority** is the competition-facing name and has one canonical `/priority` route; no prior route alias is retained.
+
+| Gate | Exact result |
+| --- | --- |
+| Public source boundary | Manifest matched 87/87 paths; the artifact contains `priority.html`, while the retired route name remains in the forbidden-route contract only. |
+| Automated gate | `npm run verify` passed: 0 Svelte errors, 0 warnings, 65/65 WebMCP contracts, 6/6 static-artifact contracts, and a completed static build. The focused Priority subset passed 3/3. |
+| Visible projection | Priority rendered one recommendation with 4/4 fields: id `garden-study-log-interviews`, title `Garden study: log interviews`, href `/next?pack=garden-study-log-interviews`, and reason `Due in 6 days · No blocker or pending decision.` |
+| Tool parity | The route catalog contained exactly 1/1 tool, `get_next_recommendation`. Its returned 4/4 fields matched the visible projection exactly, and the page URL was unchanged after invocation. |
+| Read-only authority | The descriptor is closed and declares `readOnlyHint: true`, `openWorldHint: false`, and `untrustedContentHint: true`. Focused source contracts reject navigation, fetch, storage, and workspace mutation paths; the browser invocation used no write-capable operation. |
+| Empty and unsupported fallback | With page scripts disabled, 1/1 direct `/priority` render showed `No actionable recommendation`, retained ordinary Guide/Priority/Work/Review/Next links, and exposed 0 WebMCP tools. |
+| Lifecycle teardown | After navigation, the prior Priority handle failed as stale and `get_next_recommendation` was absent from the destination route catalog. |
+| Responsive themes | At 390 × 844 with the single dark theme and reduced motion, document width was exactly 390px, horizontal overflow was false, all 5 nav links occupied 1 grid row, the recommendation stayed contained, and route animation was `none`. At 1280 × 720 in light mode, horizontal overflow was false and the 760px recommendation remained contained. |
+| Browser console | 0 warnings and 0 errors on a fresh direct Priority load. |
+
+## Priority single-destination focus — August 29, 2026
+
+This local follow-up keeps Priority's visible and WebMCP projection unchanged while removing redundant navigation semantics from the recommendation card. It does not change selection, page registration, data, storage, or Wornpage.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | The recommendation card exposed 3 links to the identical Next URL: its title, the literal Destination value, and `Open next action`. Under compact coarse-pointer emulation, the standalone Destination link was 288.2 × 21.5px. |
+| One explicit action | The title and Destination remain visible text, while `Open next action` is the sole linked control. A red-first contract observed 3 destination bindings before the change and now requires exactly 1 plus all four visible projection fields. |
+| Focused and full gates | Priority passed 3/3 focused contracts. `npm run verify` passed: manifest 87/87, Svelte 0 errors and 0 warnings, WebMCP 66/66, static artifacts 6/6, and a completed production build. |
+| Compact rendered result | At 390 × 844 in dark mode with reduced motion and a coarse pointer, the card exposed exactly 1 link, `Open next action`, at 156.3 × 44px. Its real focus-visible state used a dashed 1.74px outline; route animation was `none` and horizontal overflow was false. |
+| Rendered/tool parity | Title, reason, id, and href remained visible and matched the `get_next_recommendation` result exactly 4/4. Calling the getter did not change the URL. |
+| Wide rendered result | At 1280 × 720 in forced light mode, the 759.9px card retained exactly 1 destination control at 147.5 × 36px with no horizontal overflow. |
+| Lifecycle and fallback | Navigating to Work made the prior Priority handle fail as stale and exposed only Work's two page tools. With scripts disabled, Priority retained its empty explanation, `Open Work`, all five workflow links, no recommendation card, and 0 WebMCP tools. |
+| Ownership and console | Route-specific composition stayed in Projects; no Wornpage extraction or compatibility path was added. Browser console remained at 0 warnings and 0 errors, and validation performed no workspace write or network mutation. |
+
+## Work Quick Add density and compact parity — August 29, 2026
+
+This local checkpoint keeps Quick Add on Work's existing `createPack` path. It makes the form density-independent and adds one optional, human-owned proof-target disclosure without adding storage, requests, or a WebMCP write operation.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | Cards rendered 0 Quick Add forms while Grid rendered 1. At a requested 390 × 844 compact viewport (375px document client width), the form remained in the DOM but computed to `display: none`; the form, input, and button were all 0 × 0. The workspace stayed at `8 shown · 8 matching · 8 workspace · 3 blocked`. |
+| One active path | The route now renders exactly 1 density-independent form before the repeated density panels. Its submit handler trims both values and calls the one canonical `createPack` owner with `doneWhen`; the focused contract rejects direct storage, state-save, and fetch paths. No Wornpage extraction was warranted for this route-specific composition. |
+| Optional proof target | A native `details` disclosure labels the field `Proof target · Optional`, bounds it to 1,000 characters, and keeps the title-only path valid. Both fields reset after a successful create. Priority remains a separate read-only projection. |
+| Focused contract | `node --test tests/work-webmcp-page-contract.test.mjs` passed 11/11, including form cardinality, density independence, compact availability, proof-target bounds, field reset, and canonical create-path assertions. |
+| Automated gate | `npm run verify` passed: manifest 87/87, Svelte 0 errors and 0 warnings, WebMCP 67/67, static artifacts 6/6, and a completed production build. |
+| Compact Cards | With dark color scheme, reduced motion, and coarse pointer enabled, Cards rendered exactly 1 form at 359.3 × 44px. Its 16px input was 307.1 × 44px and Add was 44.2 × 44px. Document width and scroll width were both 375px, horizontal overflow was false, and route animation was `none`. |
+| Compact Grid | Switching to Grid retained exactly 1 form with the same dimensions and no horizontal overflow. Returning to Cards and collapsing filters left the input keyboard-focusable; the active element was `Quick-add a work item`, its value remained empty, and the workspace denominator stayed 8/8. |
+| Wide and theme parity | At 1265 × 720, Cards and Grid each rendered exactly 1 visible 1176px-wide form with no horizontal overflow. Forced light mode rendered the light surface and retained the form; the default dark surface also retained it. |
+| Rendered proof flow | In the production preview, opening the disclosure exposed one focusable proof-target textbox. Submitting title `Release proof target check` with proof `A reviewer can open the published proof note.` produced one success receipt, increased every honest workspace denominator from 8 to 9, rendered one new Work item, and cleared both inputs. The visible Guide reset restored the bundled 8-item sample afterward. |
+| WebMCP boundary | The live Work catalog remained exactly `get_current_work_view` and `show_work_search`; no create tool was registered. Only the explicit human Add submission changed browser-local workspace state; tool discovery and inspection performed no workspace write, navigation, or network mutation. |
+| Browser console | 0 warnings and 0 errors across the fresh production-preview acceptance. |
+| Remaining boundary | Quick Add is intentionally human-owned browser-local demo state. Exposing creation as a WebMCP write remains a separate authority decision and is not implied by the optional proof target. |
+
+## Work Recent activity heading hierarchy — August 29, 2026
+
+This local checkpoint corrects the expanded Recent activity outline through Worn Timeline's existing public API. It changes no activity data, disclosure behavior, navigation, storage, or WebMCP operation.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | With Recent activity expanded, the accessibility tree moved from Work's level-1 heading directly to 6 timeline entry headings at level 3. The accordion summary is a native disclosure control, not a level-2 heading. |
+| Ownership decision | Work already supplied Worn Timeline's public `headingLevel` prop, so the route changed that value from 3 to 2. `@wornpage/data-display` remains unmodified; its installed source-delivery v2 package explicitly supports levels 2–6 and passed its complete 20/20 package contract. |
+| Red-first contract | The new Work assertion failed with 10/11 passing while the route still supplied level 3, then passed 11/11 after the one-line correction. |
+| Automated gate | `npm run verify` passed: manifest 87/87, Svelte 0 errors and 0 warnings, WebMCP 67/67, static artifacts 6/6, and a completed production build. |
+| Compact rendered result | At a requested 390 × 844 compact viewport (375px document width) in dark mode with reduced motion and a coarse pointer, the expanded tree exposed exactly 6 level-2 and 0 level-3 entries. Cards and Grid retained the same six levels, no horizontal overflow, and `8 shown · 8 matching · 8 workspace · 3 blocked`. The disclosure was 359.3 × 44px and activity links were at least 65.1px tall. |
+| Wide rendered result | At 1265 × 720 in forced light mode, the expanded timeline retained exactly 6 level-2 entries, no horizontal overflow, and the same 8/8 denominator. The disclosure was 1176 × 44px with a dashed 1.74px focus-visible outline; activity links were at least 48.1px tall. |
+| WebMCP and console | Work's page catalog remained exactly `get_current_work_view` and `show_work_search`. Browser console remained at 0 warnings and 0 errors, and validation performed no workspace write or network mutation. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.
@@ -147,25 +211,29 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
    - If it says `Reader API unavailable`, use Copy brief and follow the three visible buttons. A nonempty derived or Custom scope must remain in the copied instructions.
    - In a compatible browser, discover `get_projects_handoff_guide`.
    - Confirm its result matches the visible three-step workflow, safety copy, current editable brief, every displayed scope choice and count, the selected query, and the workspace denominator.
-2. Open `/work`.
+2. Open `/priority`.
+   - Discover `get_next_recommendation` only.
+   - Verify its id, title, href, and reason match the single visible recommendation exactly, and that invoking it neither navigates nor changes workspace data.
+   - If no item is actionable, verify the visible empty state and a `null` result instead of an invented recommendation.
+3. Open `/work`.
    - Discover `get_current_work_view` and `show_work_search` only.
    - Read the view; verify workspace, matching, shown, and remaining denominators are explicit and that the getter does not create an agent-change receipt.
    - Set search to `  Garage reset  `; verify the visible query and receipt use normalized `Garage reset`, report exact shown/matching/workspace denominators, identify only the visible Work search as changed, and state `Workspace data: Unchanged`.
    - Change the search as a person; verify the now-stale agent attribution clears.
-3. Open `/review`.
+4. Open `/review`.
    - Discover `get_current_review_queue` and `set_review_scope` only.
    - Read the queue and verify the getter does not create an agent-change receipt.
    - Apply query `Garage reset` and the blocked scope; verify shown, filtered, search-match, and total-review denominators remain distinct in both the returned projection and visible receipt, alongside the current blocked/missing-next/missing-owner evidence counts.
    - Verify each returned `attentionReasons` entry is rendered verbatim beside the corresponding item.
    - Change either human filter; verify the stale agent attribution clears.
-4. Open `/next`.
+5. Open `/next`.
    - Discover `get_current_next_editor` and `prepare_next_action` only.
    - Open `?pack=garage-reset-sort-shelves`, read the editor without creating a receipt, and confirm the exact stored action `Clear the garage floor` is not collapsed to a generic command.
    - Prepare `Confirm storage bin delivery` with two structured facts already returned by Work or Review: `{ workId: "garage-reset-sort-shelves", field: "blocker", expectedValue: "Waiting on storage bins" }` and `{ workId: "garage-reset-clear-floor", field: "workflow", expectedValue: "Done" }`.
    - Verify the visible receipt identifies an unsaved browser-agent draft and displays the page-generated note `Garage reset: sort shelves — Blocker: Waiting on storage bins. Garage reset: clear the floor — Workflow: Done.` Verify the returned receipt preserves both structured facts, says `workspaceChanged: false`, and says `requiresHumanSave: true`.
    - Retry with either expected value changed. Verify the tool rejects the stale evidence and preserves the prior valid draft.
    - Repeat the exact call and verify `changed` is `false`; reload and verify the pending count and resume link retain the proposal without changing workspace fields. Choose Discard and verify the draft clears without a workspace write.
-5. Navigate between routes.
+6. Navigate between routes.
    - Verify tools from the previous page are aborted and no longer active.
    - Verify ordinary page use still works when `document.modelContext` is unavailable.
 

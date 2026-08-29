@@ -6,12 +6,13 @@
 	import WornToast from '$lib/components/WornToast.svelte';
 
 	type RouteItem = {
-		href: '/webmcp-challenge' | '/work' | '/review' | '/next';
+		href: '/webmcp-challenge' | '/priority' | '/work' | '/review' | '/next';
 		label: string;
 	};
 
 	const ROUTES: readonly RouteItem[] = [
 		{ href: '/webmcp-challenge', label: 'Guide' },
+		{ href: '/priority', label: 'Priority' },
 		{ href: '/work', label: '1 Work' },
 		{ href: '/review', label: '2 Review' },
 		{ href: '/next', label: '3 Next' }
@@ -338,7 +339,7 @@
 
 		.challenge-shell-nav nav {
 			display: grid;
-			grid-template-columns: repeat(4, minmax(0, 1fr));
+			grid-template-columns: repeat(5, minmax(0, 1fr));
 		}
 
 		.challenge-shell-nav nav a {

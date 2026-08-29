@@ -42,6 +42,76 @@ function isPlaceholderNext(label) {
 		|| value === 'set next';
 }
 
+function recommendationDay(value) {
+	const day = normalizeText(value, 40);
+	if (!ISO_CALENDAR_DAY.test(day)) return null;
+	const timestamp = Date.parse(`${day}T00:00:00.000Z`);
+	return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === day
+		? timestamp
+		: null;
+}
+
+function recommendationPriority(pack, todayMs) {
+	let score = pack.pinned === true ? 10_000 : 0;
+	const dueMs = recommendationDay(pack.due);
+	if (dueMs === null) return score;
+	const days = Math.round((dueMs - todayMs) / DAY_MS);
+	if (days < 0) return score + 1_000 + Math.min(365, Math.abs(days));
+	if (days === 0) return score + 900;
+	if (days <= 7) return score + 700 - days;
+	return score;
+}
+
+function recommendationReason(pack, todayMs) {
+	const parts = [];
+	if (pack.pinned === true) parts.push('Pinned');
+	const dueMs = recommendationDay(pack.due);
+	if (dueMs !== null) {
+		const days = Math.round((dueMs - todayMs) / DAY_MS);
+		if (days < 0) parts.push(`Overdue by ${Math.abs(days)} ${Math.abs(days) === 1 ? 'day' : 'days'}`);
+		else if (days === 0) parts.push('Due today');
+		else if (days <= 7) parts.push(`Due in ${days} ${days === 1 ? 'day' : 'days'}`);
+	}
+	if (parts.length === 0) parts.push('Highest-priority active work');
+	parts.push('No blocker or pending decision');
+	return `${parts.join(' · ')}.`;
+}
+
+/**
+ * Return the one recommendation Priority renders and its read-only page tool
+ * exposes. The projection is deliberately smaller than a work item: page
+ * agents receive only the same identity, link, and rationale a person sees.
+ */
+function selectNextRecommendation(packs, { todayIso = new Date().toISOString().slice(0, 10) } = {}) {
+	if (!Array.isArray(packs)) return null;
+	const todayMs = calendarDayTimestamp(todayIso);
+	const doneIds = new Set(
+		packs
+			.filter((pack) => pack && typeof pack === 'object' && pack.status === 'done')
+			.map((pack) => normalizeText(pack.id, 200))
+			.filter(Boolean)
+	);
+	let winner = null;
+	for (const [index, pack] of packs.entries()) {
+		if (!pack || typeof pack !== 'object' || pack.archived === true || pack.status !== 'active') continue;
+		if (pack.decision === true || !isUnblockedBlockerValue(pack.blocker)) continue;
+		const dependency = normalizeText(pack.blockedBy, 200);
+		if (dependency && dependency.toLowerCase() !== DEMO_BLOCKER_NONE && !doneIds.has(dependency)) continue;
+		const id = normalizeText(pack.id, 200);
+		const title = normalizeText(pack.title, 200);
+		if (!id || !title) continue;
+		const score = recommendationPriority(pack, todayMs);
+		if (!winner || score > winner.score) winner = { pack, id, title, score, index };
+	}
+	if (!winner) return null;
+	return {
+		id: winner.id,
+		title: winner.title,
+		href: `/next?pack=${encodeURIComponent(winner.id)}`,
+		reason: recommendationReason(winner.pack, todayMs)
+	};
+}
+
 function forwardPathStatusForBlocker(status, blocker, next = '') {
 	const normalizedStatus = normalizeText(status, 40) || 'active';
 	if (normalizedStatus === 'done') return 'done';
@@ -178,6 +248,7 @@ export {
 	forwardPathStatusForBlocker,
 	isPlaceholderNext,
 	isUnblockedBlockerValue,
+	selectNextRecommendation,
 	normalizeStoredBlocker,
 	normalizeText,
 	packActionEffect,

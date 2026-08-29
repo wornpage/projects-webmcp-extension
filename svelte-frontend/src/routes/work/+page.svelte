@@ -146,6 +146,7 @@
 		.filter((pack): pack is DemoPack => Boolean(pack)));
 	let snoozeDays = $state<Record<string, string>>({});
 	let quickTitle = $state('');
+	let quickProofTarget = $state('');
 	let quickCreating = $state(false);
 	let sortBy = $state('urgency');
 	let renderLimit = $state(WORK_RENDER_LIMIT);
@@ -639,11 +640,20 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 
 	async function quickCreate() {
 		const title = quickTitle.trim();
+		const proofTarget = quickProofTarget.trim();
 		if (!title || quickCreating) return;
 		quickCreating = true;
 		try {
-			await createPack({ title, status: 'active', next: 'Open', area: areaFilter !== 'all' && areaFilter !== '_none' ? areaFilter : undefined, recurrence: recurrenceFilter !== 'all' ? recurrenceFilter : undefined });
+			await createPack({
+				title,
+				status: 'active',
+				next: 'Open',
+				doneWhen: proofTarget || undefined,
+				area: areaFilter !== 'all' && areaFilter !== '_none' ? areaFilter : undefined,
+				recurrence: recurrenceFilter !== 'all' ? recurrenceFilter : undefined
+			});
 			quickTitle = '';
+			quickProofTarget = '';
 		} catch (e) {
 			displayToast('Quick create failed', 'error');
 		} finally {
@@ -979,6 +989,23 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		/>
 	{/if}
 
+	<form class="quick-create-row" onsubmit={(e) => { e.preventDefault(); quickCreate(); }}>
+		<WornInput class="quick-create-input" bind:value={quickTitle} placeholder="Quick-add a work item…" aria-label="Quick-add a work item" disabled={quickCreating} />
+		<WornButton class="quick-create-submit" data-work-quick-create-submit type="submit" variant="primary" size="sm" disabled={quickCreating || !quickTitle.trim()}>{quickCreating ? 'Adding…' : 'Add'}</WornButton>
+		<details class="quick-create-options">
+			<summary>Proof target <span>Optional</span></summary>
+			<WornInput
+				id="work-quick-proof-target"
+				class="quick-proof-input"
+				bind:value={quickProofTarget}
+				maxlength={1000}
+				placeholder="What will prove this is done?"
+				aria-label="Quick-add proof target"
+				disabled={quickCreating}
+			/>
+		</details>
+	</form>
+
 	{#each densityPanelTabs as densityTab (densityTab.id)}
 	<div
 		role={packs.length > 1 && secondaryFiltersOpen ? 'tabpanel' : undefined}
@@ -988,10 +1015,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	>
 	{#if densityTab.id === density}
 	{#if density === 'grid'}
-		<form class="quick-create-row" onsubmit={(e) => { e.preventDefault(); quickCreate(); }}>
-			<WornInput class="quick-create-input" bind:value={quickTitle} placeholder="Quick-add a work item…" aria-label="Quick-add a work item" disabled={quickCreating} />
-			<WornButton class="quick-create-submit" data-work-quick-create-submit type="submit" variant="primary" size="sm" disabled={quickCreating || !quickTitle.trim()}>{quickCreating ? 'Adding…' : 'Add'}</WornButton>
-		</form>
 		<div class="demo-work-grid" class:batch-active={batchMode} role="list" aria-label="Work items grid">
 			{#each renderedVisible as pack, i (pack.id)}
 				<WorkGridCard
@@ -1085,7 +1108,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 					entries={recentTimelineEntries}
 					ariaLabel="Recent work activity"
 					density="compact"
-					headingLevel={3}
+					headingLevel={2}
 					formatDate={relativeActivityTime}
 				/>
 			</WornAccordion>
@@ -1106,9 +1129,13 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		border-color: var(--worn-accent) !important;
 		color: var(--worn-accent-text) !important;
 	}
-	.quick-create-row{display:flex;gap:8px;align-items:center;margin-block:8px 6px}
+	.quick-create-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-block:8px 6px}
 	:global(.quick-create-input){flex:1;min-width:0}
 	.quick-create-row :global(.quick-create-submit){flex:0 0 auto;min-inline-size:max-content;white-space:nowrap}
+	.quick-create-options{grid-column:1 / -1;min-width:0}
+	.quick-create-options summary{align-items:center;color:var(--worn-text-secondary);cursor:pointer;display:flex;font-size:13px;font-weight:700;gap:8px;min-block-size:36px;width:max-content}
+	.quick-create-options summary span{color:var(--worn-text-muted);font-family:var(--font-typewriter);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+	.quick-create-options :global(.quick-proof-input){margin-top:4px;width:100%}
 	@media(min-width:421px){
 		.demo-batch-bar {
 			align-items: center;
@@ -1125,7 +1152,9 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		.demo-batch-bar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-width:0}
 		.demo-batch-count{grid-column:1 / -1}
 		.demo-batch-bar :global(.worn-btn){min-width:0;width:100%}
-		.quick-create-row{display:none}
+		.quick-create-row{align-items:stretch}
+		.quick-create-row :global(.quick-create-submit){min-block-size:44px}
+		.quick-create-options summary{min-block-size:44px}
 	}
 	@media(max-width:700px){
 		:global(.demo-panel-head:has(.work-head-actions)){gap:8px;padding-block:7px}

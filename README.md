@@ -1,6 +1,6 @@
 # Wornpage Projects — WebMCP Challenge
 
-A small, static edition of Wornpage Projects built for the 2026 WebMCP Challenge. People and browser agents operate the same visible Work, Review, and Next screens; the agent receives a bounded projection of what the person can already see.
+A small, static edition of Wornpage Projects built for the 2026 WebMCP Challenge. People and browser agents operate the same visible Priority, Work, Review, and Next screens; the agent receives a bounded projection of what the person can already see.
 
 Live submission: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
 
@@ -13,7 +13,7 @@ The deployment is intentionally static. It has no sign-in, payment flow, Worker 
 Projects was not invented during the challenge. A private predecessor records
 the earlier, human-operated workflow and broad application history. During the
 submission period, that foundation was extended in this separate, sanitized
-public repository with page-scoped WebMCP tools, a bounded four-route judge
+public repository with page-scoped WebMCP tools, a bounded five-route judge
 experience, lifecycle and fallback contracts, and an independently buildable
 static artifact.
 
@@ -30,6 +30,7 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 | Page | Tool | Authority |
 | --- | --- | --- |
 | Guide | `get_projects_handoff_guide` | Read the visible guide, editable brief, discovered Work scopes, selected query, and exact workspace denominator |
+| Priority | `get_next_recommendation` | Read the one visible actionable recommendation as its id, title, destination, and reason; no navigation, fetch, or write |
 | Work | `get_current_work_view` | Read the bounded, filtered list and its denominators |
 | Work | `show_work_search` | Change only the visible search scope |
 | Review | `get_current_review_queue` | Read the bounded queue, denominators, and visible reasons each item surfaced |
@@ -67,7 +68,7 @@ document.modelContext.registerTool({
 });
 ```
 
-The shipped implementation adds exact-input rejection, validated current-page projections, truthful annotations, and complete descriptors in each route. The Guide projection normalizes line endings, accepts an empty brief, permits only normal text plus tabs and newlines, and limits the brief to 1,000 characters. Its scope catalog is bounded to 24 derived choices and exposes shown, discovered, omitted, visible, matching, and workspace counts without hiding denominator changes. `workQuery` remains the deterministic Work-search mapping: All maps to empty, a derived choice maps to its displayed area text, and Custom maps to the bounded input. It trims boundary whitespace, accepts empty for all visible work, rejects control characters, and is limited to 120 characters. Duplicate, negative, inconsistent, or selected-choice-mismatched DOM projections are rejected. [`registerPageTools`](svelte-frontend/src/lib/webmcp.mjs) performs registration with one abort signal for the page-owned catalog; navigation removes the page tools together and any registration failure aborts the catalog.
+The shipped implementation adds exact-input rejection, validated current-page projections, truthful annotations, and complete descriptors in each route. Priority derives one actionable recommendation from the same browser-local workspace used by the visible page; its read-only tool returns only the rendered id, title, destination, and reason. Work's human-owned Quick Add can optionally include a proof target, but still submits once through the canonical `createPack` state owner and does not register a create tool. The Guide projection normalizes line endings, accepts an empty brief, permits only normal text plus tabs and newlines, and limits the brief to 1,000 characters. Its scope catalog is bounded to 24 derived choices and exposes shown, discovered, omitted, visible, matching, and workspace counts without hiding denominator changes. `workQuery` remains the deterministic Work-search mapping: All maps to empty, a derived choice maps to its displayed area text, and Custom maps to the bounded input. It trims boundary whitespace, accepts empty for all visible work, rejects control characters, and is limited to 120 characters. Duplicate, negative, inconsistent, or selected-choice-mismatched DOM projections are rejected. [`registerPageTools`](svelte-frontend/src/lib/webmcp.mjs) performs registration with one abort signal for the page-owned catalog; navigation removes the page tools together and any registration failure aborts the catalog.
 
 ## Run locally
 
@@ -104,13 +105,13 @@ The Pages build script performs the nested locked frontend install before buildi
 
 ## Repository boundary
 
-This is a fresh, challenge-only public extraction—not the production repository or its history. It contains four Svelte routes, deterministic sample data, their required shared UI, route-owned WebMCP descriptors, focused contracts, and a static build. Production authentication, billing, storage, private content, MCP servers, Worker code, deployment credentials, and unrelated routes are absent.
+This is a fresh, challenge-only public extraction—not the production repository or its history. It contains five Svelte routes, deterministic sample data, their required shared UI, route-owned WebMCP descriptors, focused contracts, and a static build. Production authentication, billing, storage, private content, MCP servers, Worker code, deployment credentials, and unrelated routes are absent.
 
 See [SOURCE_PROVENANCE.md](SOURCE_PROVENANCE.md) for the required pre-existing-versus-new-work record and [docs/submission/webmcp/public-repository-boundary.md](docs/submission/webmcp/public-repository-boundary.md) for the exact publication policy.
 
 | Directory | Why it is present |
 | --- | --- |
-| `svelte-frontend/src/routes/` | Guide, Work, Review, Next, their WebMCP descriptors, and the shared 404 shell |
+| `svelte-frontend/src/routes/` | Guide, Priority, Work, Review, Next, their WebMCP descriptors, and the shared 404 shell |
 | `svelte-frontend/src/lib/` | Browser-local state, visible work-item rules, and only the UI pieces those routes import |
 | `assets/` and `data/` | Challenge styling, landing media, and synthetic sample work |
 | `tests/` and `scripts/` | Focused WebMCP contracts and the reproducible static build |
@@ -124,7 +125,7 @@ There is no `server/`, `worker/`, Pages Functions, or hidden compatibility route
 npm run verify
 ```
 
-The gate runs Svelte diagnostics, focused WebMCP contracts, static-artifact contracts, and a production prerender. Current expected denominators are 80/80 public source paths, 45/45 WebMCP contracts, and 5/5 static-artifact contracts. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
+The gate runs Svelte diagnostics, focused WebMCP contracts, static-artifact contracts, and a production prerender. Current expected denominators are 87/87 public source paths, 67/67 WebMCP contracts, and 6/6 static-artifact contracts. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
 
 ## License and trademarks
 

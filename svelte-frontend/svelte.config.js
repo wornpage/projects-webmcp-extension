@@ -24,7 +24,7 @@ const config = {
 			assets: process.env.PROJECTS_SVELTE_ASSET_DIR || 'static'
 		},
 		version: { name: 'webmcp-challenge' },
-		prerender: { entries: ['/webmcp-challenge', '/work', '/review', '/next'] },
+		prerender: { entries: ['/webmcp-challenge', '/priority', '/work', '/review', '/next'] },
 		csp: {
 			mode: 'hash',
 			directives: {
