@@ -128,8 +128,6 @@ let showingCustom = $state(false);
 			$demoState?.selectedId ||
 			''
 	);
-	let pendingDraft = $derived(pendingNextActionDraftFor($demoState, selectedId));
-	let pendingDraftStale = $derived(pendingDraft ? pendingDraft.originFingerprint !== pendingDraftFingerprint($demoState!, pendingDraft) : false);
 	// An explicit selection never falls back to a different work item.
 	let demoLoaded = $derived(Boolean($demoState?.packs));
 	let pack = $derived(
@@ -137,6 +135,9 @@ let showingCustom = $state(false);
 			(!selectedId ? packs.find(isReview) || packs[0] : null) ||
 			null
 	);
+	let visiblePackId = $derived(pack?.id || '');
+	let pendingDraft = $derived(pendingNextActionDraftFor($demoState, visiblePackId));
+	let pendingDraftStale = $derived(pendingDraft ? pendingDraft.originFingerprint !== pendingDraftFingerprint($demoState!, pendingDraft) : false);
 	// Only declare not-found once the demo state has landed — until then the
 	// requested pack may simply not have arrived yet.
 	let notFound = $derived(Boolean(selectedId) && demoLoaded && !pack);
@@ -550,7 +551,7 @@ let showingCustom = $state(false);
 		{#if errorText}
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
 		{/if}
-		{#if preparationReceipt}
+		{#if preparationReceipt && pendingDraft?.source === 'webmcp'}
 			<WebMcpActivityStrip
 				id={NEXT_PREPARATION_RECEIPT_ID}
 				route="next"
@@ -558,6 +559,8 @@ let showingCustom = $state(false);
 				toolName={preparationToolName}
 				cells={preparationCells}
 			/>
+		{:else if pendingDraft?.source === 'human'}
+			<WornAlert tone="info">Draft prepared by you. Workspace unchanged until you approve Save.</WornAlert>
 		{/if}
 		<div class="next-presenter-result">
 			<div class="demo-command-lines compact demo-focus-surface" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">

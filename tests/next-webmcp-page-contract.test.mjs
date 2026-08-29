@@ -464,7 +464,7 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /<WornPage sectionLabel="Step 3 of 3 · Prepare"[^>]*>[\s\S]*?<dl class="next-work-context" data-next-current-work>[\s\S]*?<dt>Current work<\/dt>[\s\S]*?<dd>\{workTitle\(pack\)\}<\/dd>/u);
 	assert.match(routeSource, /\.next-work-context\s*\{[\s\S]*?background: var\(--worn-bg-secondary\);[\s\S]*?border: 1px solid var\(--worn-border-strong\);[\s\S]*?box-sizing: border-box;[\s\S]*?max-inline-size: 100%;[\s\S]*?min-inline-size: 0;[\s\S]*?padding: 12px 14px;/u);
 	assert.match(routeSource, /\.next-work-context dd\s*\{[\s\S]*?overflow-wrap: anywhere;/u);
-	assert.match(routeSource, /\{#if preparationReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?route="next"[\s\S]*?outcome="Draft prepared — waiting for your approval\."[\s\S]*?toolName=\{preparationToolName\}[\s\S]*?cells=\{preparationCells\}/u);
+	assert.match(routeSource, /\{#if preparationReceipt && pendingDraft\?\.source === 'webmcp'\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?route="next"[\s\S]*?outcome="Draft prepared — waiting for your approval\."[\s\S]*?toolName=\{preparationToolName\}[\s\S]*?cells=\{preparationCells\}/u);
 	assert.doesNotMatch(routeSource, /data-webmcp-receipt="next"|webmcp-tool-label/u);
 	assert.match(activityStripSource, /WebMCP · \{toolName\}[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence/u);
 	assert.match(routeSource, /\.next-authority\s*\{\s*margin-block-start:\s*12px;/u);
@@ -487,7 +487,7 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.doesNotMatch(demoClientSource, /approvePendingNextActionDraft/u);
 	assert.match(pendingStateSource, /export function pendingDraftFingerprint[\s\S]*?export function approvePendingDraft[\s\S]*?pendingDraftFingerprint\(state, draft, projectPack\)[\s\S]*?Object\.assign\(pack, nextPath\(pack, draft\.choice\)\);[\s\S]*?discardPendingDraft\(state, workId\);/u);
 	assert.match(demoClientSource, /export async function resetDemoSampleState[\s\S]*?resetPersistedState\([\s\S]*?remove: \(\) => localStorage\.removeItem\(STORAGE_KEY\),[\s\S]*?loadSeed: loadSeedState,[\s\S]*?install: replaceDemoState/u);
-	assert.match(routeSource, /pendingNextActionDraftFor\(\$demoState, selectedId\)[\s\S]*?pendingDraftFingerprint\(\$demoState!, pendingDraft\)/u);
+	assert.match(routeSource, /pendingNextActionDraftFor\(\$demoState, visiblePackId\)[\s\S]*?pendingDraftFingerprint\(\$demoState!, pendingDraft\)/u);
 	assert.match(routeSource, /invocation\.markMutated\(\);[\s\S]*?if \(!currentNextEditor\)[\s\S]*?await savePendingNextActionDraft\(pending\);/u);
 	assert.match(routeSource, /pendingDraft && pendingDraftStale[\s\S]*?Draft is stale/u);
 	assert.match(routeSource, /canSave: Boolean\(effectiveChoice\) && !busy && Boolean\(pendingDraft\) && !pendingDraftStale,[\s\S]*?staleReason: pendingDraftStale \? 'Draft is stale[\s\S]*?No pending draft/u);
@@ -497,6 +497,8 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(routeSource, /function setHumanNextEditorChoice[\s\S]*?setNextEditorChoice\(nextChoice, mode\);[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);/u);
 	assert.match(routeSource, /if \(!pendingDraft[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);[\s\S]*?preparationFromPending/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);[\s\S]*?clearPreparation\(\);[\s\S]*?setNextEditorChoice\(previous\.choice, previous\.mode, false\)/u);
+	assert.match(routeSource, /let visiblePackId = \$derived\(pack\?\.id \|\| ''\);[\s\S]*?pendingNextActionDraftFor\(\$demoState, visiblePackId\)/u);
+	assert.match(routeSource, /\{#if preparationReceipt && pendingDraft\?\.source === 'webmcp'\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?\{:else if pendingDraft\?\.source === 'human'\}[\s\S]*?Draft prepared by you\. Workspace unchanged until you approve Save\./u);
 	assert.equal(routeSource.match(/await setPackNextAction\(/gu)?.length, 1);
 	assert.match(routeSource, /const result = pendingDraft[\s\S]*?await setPackNextAction\(pack\.id\)/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);/u);
