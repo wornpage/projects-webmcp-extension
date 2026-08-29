@@ -9,8 +9,10 @@ import {
 	REVIEW_SCOPE_TOOL_NAME,
 	createCurrentReviewTool,
 	createSetReviewScopeTool,
+	normalizeReviewSearch,
 	reviewItemPageView,
 	reviewPageView,
+	reviewScopePresentationReceipt,
 	settleReviewScopeFocus
 } from '../svelte-frontend/src/routes/review/review-webmcp.mjs';
 
@@ -209,7 +211,7 @@ test('the Review scope descriptor declares and verifies one reversible page-stat
 	assert.deepEqual(tool.inputSchema, {
 		type: 'object',
 		properties: {
-			query: { type: 'string', description: 'Search text. Use an empty string to clear the search.' },
+			query: { type: 'string', maxLength: 120, description: 'Search text. Use an empty string to clear the search.' },
 			filter: {
 				type: 'string',
 				enum: ['all', 'blocked', 'missing-next', 'owner-gap'],
@@ -228,7 +230,7 @@ test('the Review scope descriptor declares and verifies one reversible page-stat
 	});
 
 	const result = await tool.execute({ query: ' garage ', filter: 'blocked' }, { signal: new AbortController().signal });
-	assert.deepEqual(calls, [{ query: ' garage ', filter: 'blocked' }]);
+	assert.deepEqual(calls, [{ query: 'garage', filter: 'blocked' }]);
 	assert.deepEqual(result, {
 		changed: true,
 		focus: { target: 'item', itemId: 'garage / one', ...focusProof },
@@ -247,11 +249,34 @@ test('the Review scope descriptor declares and verifies one reversible page-stat
 	}
 	await assert.rejects(() => tool.execute({ query: '', filter: 'unknown' }), /filter must be/u);
 	await assert.rejects(() => tool.execute({ query: '', filter: 'all', extra: true }), /accepts only query and filter/u);
-	await assert.rejects(() => tool.execute({ query: 42, filter: 'all' }), /query must be a string/u);
+	await assert.rejects(() => tool.execute({ query: 42, filter: 'all' }), /120 characters or fewer/u);
+	await assert.rejects(() => tool.execute({ query: 'line\nbreak', filter: 'all' }), /control characters/u);
+	await assert.rejects(() => tool.execute({ query: 'x'.repeat(121), filter: 'all' }), /120 characters or fewer/u);
 	const aborted = new AbortController();
 	aborted.abort();
 	await assert.rejects(() => tool.execute({ query: '', filter: 'all' }, { signal: aborted.signal }), { name: 'AbortError' });
 	assert.throws(() => createSetReviewScopeTool(null), /scope setter/u);
+});
+
+test('Review presentation receipts freeze normalized filters, counts, and visible evidence', () => {
+	assert.equal(normalizeReviewSearch('  Garage reset  '), 'Garage reset');
+	assert.equal(normalizeReviewSearch('line\nbreak'), null);
+	assert.equal(normalizeReviewSearch('x'.repeat(121)), null);
+	const review = queueView();
+	const receipt = reviewScopePresentationReceipt({
+		changed: true,
+		focus: { target: 'item', itemId: review.upNext.id, focused: true, focusVisible: true, inViewport: true, pulsed: true },
+		review
+	});
+	assert.equal(receipt.summary, 'Browser agent set Review scope: “garage” · Blocked.');
+	assert.deepEqual(receipt.cells, [
+		{ label: 'Visible Review scope', value: '“garage” · Blocked' },
+		{ label: 'Current queue', value: '2 shown · 3 filtered · 5 search matches · 12 total review' },
+		{ label: 'Search-match evidence', value: '3 blocked · 1 missing next · 0 missing owner' },
+		{ label: 'Browser agent changed', value: 'Visible Review search and queue filter only' },
+		{ label: 'Workspace data', value: 'Unchanged' }
+	]);
+	assert.equal(receipt.scopeKey, JSON.stringify({ scope: review.scope, counts: review.counts }));
 });
 
 test('Work-to-Review retained scroll settles before strict visible-focus proof', async () => {
@@ -325,16 +350,19 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /async function applyReviewScope\([\s\S]*?query = nextQuery;\s*reviewSubFilter = nextFilter;\s*await tick\(\);[\s\S]*?await focusReviewScopeDestination\(requireVisibleFocus\)/u);
 	assert.match(routeSource, /const requestedQueue = summarizeReviewQueue\(packs, nextQuery, 'all'\);[\s\S]*?nextFilter === reviewSubFilter[\s\S]*?const \{ changed, focus \} = await applyReviewScope\(nextQuery, nextFilter, 'results', true\);[\s\S]*?if \(!focus\)[\s\S]*?return \{ changed, focus, review: currentReviewView \};/u);
 	assert.match(routeSource, /async function focusReviewScopeDestination\(requireVisibleFocus: boolean\)[\s\S]*?\.review-priority\[data-pack-id\] \.demo-card-title[\s\S]*?focusAndPulse\(focusTarget, \{[\s\S]*?requireVisibleFocus: verify[\s\S]*?await settleReviewScopeFocus\(runFocus\)[\s\S]*?target: 'item'[\s\S]*?target: 'search'[\s\S]*?target: 'queue'/u);
-	assert.match(routeSource, /async function recordReviewWebMcpResult[\s\S]*?webMcpScopeReceipt = \{[\s\S]*?WebMCP[\s\S]*?Saved workspace changes[\s\S]*?None/u);
-	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?scopeKey:[\s\S]*?await tick\(\);[\s\S]*?toolName === REVIEW_SCOPE_TOOL_NAME[\s\S]*?await focusReviewScopeDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Review receipt focus did not match the rendered scope destination\.'\)/u);
+	assert.match(routeSource, /async function recordReviewWebMcpResult[\s\S]*?if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?webMcpScopeReceipt = reviewScopePresentationReceipt\(outcome\)/u);
+	assert.match(helperSource, /function reviewScopePresentationReceipt[\s\S]*?Visible Review scope[\s\S]*?Current queue[\s\S]*?Search-match evidence[\s\S]*?Browser agent changed[\s\S]*?Workspace data[\s\S]*?Unchanged/u);
+	assert.match(routeSource, /webMcpScopeReceipt = reviewScopePresentationReceipt\(outcome\);[\s\S]*?await tick\(\);[\s\S]*?await focusReviewScopeDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Review receipt focus did not match the rendered scope destination\.'\)/u);
 	assert.match(routeSource, /let reviewReceiptScopeKey = \$derived\([\s\S]*?currentReviewView\.scope[\s\S]*?currentReviewView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
-	assert.match(routeSource, /webMcpScopeReceipt = \{[\s\S]*?scopeKey: JSON\.stringify\(\{ scope: view\.scope, counts: view\.counts \}\)/u);
+	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: review\.scope, counts: review\.counts \}\)/u);
 	assert.match(routeSource, /data-webmcp-receipt="review"[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}/u);
 	assert.match(routeSource, /\.review-priority-shell,\s*\.review-priority\s*\{[\s\S]*?overflow:\s*visible;[\s\S]*?width:\s*100%;\s*\}/u);
 	assert.doesNotMatch(demoCss, /\.demo-card-facts\s*\{[^}]*grid-template-columns:\s*repeat\(3,/u);
 	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\], \{\s*onInvocationError: clearFailedReviewWebMcpReceipt,\s*onResult: recordReviewWebMcpResult\s*\}\)/u);
 	assert.match(routeSource, /stopReviewWebMcp\?\.\(\);\s*stopReviewWebMcp = null;/u);
+	assert.match(routeSource, /stopReviewWebMcp = null;\s*webMcpScopeReceipt = null;/u);
+	assert.match(routeSource, /id="review-filter-query"[\s\S]*?maxlength="120"/u);
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);
 	assert.doesNotMatch(`${routeSource}\n${helperSource}\n${registrationSource}`, /\/api\/mcp-proxy|jsonrpc|tools\/call|unregisterTool/u);
 	assert.doesNotMatch(helperSource, /\.\.\.(?:pack|item|review)|runPackAction|togglePackPinned|setSelectedWork/u);

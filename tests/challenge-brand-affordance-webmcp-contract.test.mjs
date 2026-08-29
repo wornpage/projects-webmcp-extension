@@ -45,31 +45,20 @@ test('challenge motion is visible by default and removed for reduced motion', ()
 	);
 });
 
-test('every successful route tool invocation produces a truthful accessible receipt', () => {
+test('presentation-changing tools produce truthful accessible receipts without making getters side-effectful', () => {
 	assert.match(registrationSource, /async execute\(input, invocationOptions\)[\s\S]*?await onResult\(\{ toolName: name, toolTitle, result \}\)/u);
 	assert.match(registrationSource, /if \(!registrationController\.signal\.aborted\)/u);
 
-	for (const [route, source] of [
-		['guide', guideRouteSource],
-		['work', workRouteSource],
-		['review', reviewRouteSource],
-		['next', nextRouteSource]
-	]) {
-		assert.match(source, /registerPageTools\(document,[\s\S]*?onResult:/u, `${route} must own its invocation receipt callback`);
-		assert.match(source, /registerPageTools\(document,[\s\S]*?onInvocationError:/u, `${route} must clear receipts after a failed invocation`);
-		assert.match(source, /label: 'Tool'/u, `${route} must identify the invoked tool`);
-		assert.match(source, /label: 'Invocation'/u, `${route} must distinguish repeated invocations`);
-		assert.match(source, /label: 'Page-local presentation'/u, `${route} must report page-local effects`);
-		assert.match(source, /label: 'Saved workspace changes', value: 'None'/u, `${route} must preserve the Save boundary`);
-		assert.match(source, /data-webmcp-receipt=/u, `${route} must render the receipt in the page`);
+	assert.match(guideRouteSource, /registerPageTools\(document,[\s\S]*?onResult:/u);
+	assert.match(workRouteSource, /if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?workSearchPresentationReceipt/u);
+	assert.match(reviewRouteSource, /if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?reviewScopePresentationReceipt/u);
+	assert.doesNotMatch(nextRouteSource, /webMcpReadReceipt|data-webmcp-receipt="next-read"/u);
+	assert.match(nextRouteSource, /label: 'Browser agent changed'[\s\S]*?Unsaved draft shown in this editor only/u);
+	assert.match(nextRouteSource, /label: 'Workspace data', value: 'Unchanged'/u);
+	assert.match(nextRouteSource, /label: 'Authority', value: 'Only you can Save'/u);
+	for (const [route, source] of [['work', workRouteSource], ['review', reviewRouteSource], ['next', nextRouteSource]]) {
+		assert.match(source, /data-webmcp-receipt=/u, `${route} must render the presenter receipt in the page`);
 	}
-
-	assert.match(guideRouteSource, /label: 'What it read'/u);
-	assert.match(workRouteSource, /toolName === WORK_CURRENT_TOOL_NAME \? 'What it read' : 'What it prepared'/u);
-	assert.match(reviewRouteSource, /toolName === REVIEW_CURRENT_TOOL_NAME \? 'What it read' : 'What it prepared'/u);
-	assert.match(nextRouteSource, /label: 'What it read'/u);
-	assert.match(nextRouteSource, /label: 'What it prepared'/u);
-	assert.match(nextRouteSource, /label: 'Authority', value: 'Awaiting your Save'/u);
 
 	for (const source of [guideRouteSource, workRouteSource, reviewRouteSource, nextRouteSource]) {
 		const webMcpReceiptBlocks = source.match(/data-webmcp-receipt=[\s\S]*?<WornReceipt[\s\S]*?\/>/gu) ?? [];
@@ -89,6 +78,7 @@ test('action presenters publish only after success and preserve valid pre-invoca
 	assert.doesNotMatch(reviewPresenter, /webMcpScopeReceipt\s*=/u);
 	assert.match(reviewRouteSource, /async function clearFailedReviewWebMcpReceipt\(\) \{\s*webMcpScopeReceipt = null;\s*await tick\(\);\s*\}/u);
 
-	assert.match(nextRouteSource, /async function clearFailedNextWebMcpReceipt\(\) \{\s*webMcpReadReceipt = null;\s*await tick\(\);\s*\}/u);
+	assert.doesNotMatch(nextRouteSource, /onResult:|onInvocationError:|webMcpReadReceipt/u);
+	assert.match(nextRouteSource, /createPrepareNextActionTool\(prepareNextActionFromWebMcp, \{[\s\S]*?capture: captureNextPreparationSnapshot,[\s\S]*?restore: restoreNextPreparationSnapshot/u);
 	assert.match(guideRouteSource, /onInvocationError: async \(\) => \{\s*webMcpGuideReceipt = null;\s*await tick\(\);\s*\}/u);
 });

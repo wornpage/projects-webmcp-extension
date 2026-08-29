@@ -24,12 +24,12 @@
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import {
-		REVIEW_CURRENT_TOOL_NAME,
 		REVIEW_SCOPE_TOOL_NAME,
 		createCurrentReviewTool,
 		createSetReviewScopeTool,
 		reviewItemPageView,
 		reviewPageView,
+		reviewScopePresentationReceipt,
 		settleReviewScopeFocus
 	} from './review-webmcp.mjs';
 	import {
@@ -123,7 +123,6 @@
 		cells: Array<{ label: string; value: string }>;
 		scopeKey: string;
 	} | null>(null);
-	let webMcpInvocationCount = $state(0);
 	let reviewSummaryText = $derived(buildReviewSummaryText(visible));
 	let blockedCount = $derived(reviewQueue.blockedCount);
 	let missingNextCount = $derived(reviewQueue.missingNextCount);
@@ -185,53 +184,16 @@
 		}
 	});
 
-	function reviewFilterLabel(filter: ReviewSubFilter) {
-		return filter === 'all'
-			? 'All review items'
-			: filter === 'blocked'
-				? 'Blocked'
-				: filter === 'missing-next'
-					? 'No next action'
-					: 'No owner';
-	}
-
 	async function recordReviewWebMcpResult({ toolName, result }: { toolName: string; result: unknown }) {
-		const outcome = result as {
-			changed?: boolean;
+		if (toolName !== REVIEW_SCOPE_TOOL_NAME) return;
+		const outcome = result as Parameters<typeof reviewScopePresentationReceipt>[0] & {
 			focus?: Awaited<ReturnType<typeof focusReviewScopeDestination>>;
-			review?: typeof currentReviewView;
 		};
-		const view = toolName === REVIEW_CURRENT_TOOL_NAME ? result as NonNullable<typeof currentReviewView> : outcome.review;
-		if (!view) throw new Error(`Review could not present a receipt for ${toolName}.`);
-		const changed = outcome.changed === true;
-		webMcpInvocationCount += 1;
-		webMcpScopeReceipt = {
-			summary: toolName === REVIEW_CURRENT_TOOL_NAME
-				? `WebMCP read ${view.counts.shown} visible Review ${view.counts.shown === 1 ? 'item' : 'items'}.`
-				: `WebMCP ${changed ? 'changed' : 'confirmed'} the Review scope.`,
-			cells: [
-				{ label: 'Tool', value: toolName },
-				{ label: 'Invocation', value: `#${webMcpInvocationCount}` },
-				{
-					label: toolName === REVIEW_CURRENT_TOOL_NAME ? 'What it read' : 'What it prepared',
-					value: `${view.counts.shown} shown of ${view.counts.filtered} scoped · ${view.counts.totalReview} total review`
-				},
-				{
-					label: 'Page-local presentation',
-					value: toolName === REVIEW_SCOPE_TOOL_NAME
-						? (changed ? `Search and queue set to ${reviewFilterLabel(view.scope.filter)}` : `Already showing ${reviewFilterLabel(view.scope.filter)}`)
-						: 'Unchanged'
-				},
-				{ label: 'Saved workspace changes', value: 'None' }
-			],
-			scopeKey: JSON.stringify({ scope: view.scope, counts: view.counts })
-		};
+		webMcpScopeReceipt = reviewScopePresentationReceipt(outcome);
 		await tick();
-		if (toolName === REVIEW_SCOPE_TOOL_NAME) {
-			const finalFocus = await focusReviewScopeDestination(true);
-			if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
-				throw new Error('Review receipt focus did not match the rendered scope destination.');
-			}
+		const finalFocus = await focusReviewScopeDestination(true);
+		if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
+			throw new Error('Review receipt focus did not match the rendered scope destination.');
 		}
 	}
 
@@ -371,6 +333,7 @@
 	onDestroy(() => {
 		stopReviewWebMcp?.();
 		stopReviewWebMcp = null;
+		webMcpScopeReceipt = null;
 	});
 
 	// Entering Review selects the preferred pack after a successful refresh.
@@ -588,6 +551,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 				<WornInput
 					id="review-filter-query"
 					type="search"
+					maxlength="120"
 					placeholder="Search review…"
 					aria-label="Filter review items by text"
 					bind:value={query}

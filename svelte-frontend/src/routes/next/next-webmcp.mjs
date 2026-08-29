@@ -2,7 +2,7 @@ export const CURRENT_NEXT_EDITOR_TOOL_NAME = 'get_current_next_editor';
 export const PREPARE_NEXT_ACTION_TOOL_NAME = 'prepare_next_action';
 export const NEXT_EDITOR_PREVIEW_ID = 'next-action-preview';
 export const NEXT_PREPARATION_RECEIPT_ID = 'next-preparation-receipt';
-export const NEXT_PREPARATION_SUMMARY = 'Prepared for review. No workspace data was saved.';
+export const NEXT_PREPARATION_SUMMARY = 'Browser agent prepared an unsaved draft. No workspace data was saved.';
 
 const SINGLE_LINE_CONTROL = /\p{Cc}/u;
 const PREPARE_INPUT_KEYS = ['choice', 'expectedMode', 'expectedChoice', 'agentNote'];
