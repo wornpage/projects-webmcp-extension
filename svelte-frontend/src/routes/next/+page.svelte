@@ -570,7 +570,7 @@ let showingCustom = $state(false);
 				/>
 			{/if}
 		</div>
-		<p class="next-authority"><strong>Draft:</strong> {pendingDraft ? pendingDraftStale ? 'stale' : 'pending approval' : 'none'} · <strong>Workspace:</strong> unchanged · <strong>Authority:</strong> {pendingDraft ? 'only you can approve Save' : 'create a draft before approval'}.</p>
+		<p class="next-authority"><strong>Draft:</strong> {savedNextReceipt ? 'none · completed' : pendingDraft ? pendingDraftStale ? 'stale' : 'pending approval' : 'none'} · <strong>Workspace:</strong> {savedNextReceipt ? 'updated' : 'unchanged'} · <strong>Authority:</strong> {savedNextReceipt ? 'saved and approved by the person' : pendingDraft ? 'only you can approve Save' : 'create a draft before approval'}.</p>
 		{#if pendingDraftStale}
 			<WornAlert tone="warning">Draft is stale. Refresh the visible work and re-prepare before approval; this draft cannot be saved.</WornAlert>
 		{/if}
