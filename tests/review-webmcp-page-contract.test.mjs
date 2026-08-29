@@ -18,6 +18,7 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
+const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
@@ -328,14 +329,17 @@ test('every visible Review to Next activation uses one canonical focused handoff
 	// Focusable card keyboard activation.
 	assert.match(routeSource, /async function handleCardKeys\(e: KeyboardEvent\)[\s\S]*?e\.key === ' '[^\n]*await handoffToNext\(packId\)[\s\S]*?e\.key === 'Enter'[^\n]*await handoffToNext\(packId\)/u);
 
-	// Primary Set next action navigation in both the priority and card surfaces.
-	assert.match(routeSource, /data-review-priority-navigation[\s\S]*?onclick=\{firstCommand\.action === 'set-next' \? \(event\) => handoffToNext\(firstReview\.id, event\) : undefined\}/u);
-	assert.match(routeSource, /data-review-card-navigation[\s\S]*?onclick=\{command\.action === 'set-next' \? \(event\) => handoffToNext\(pack\.id, event\) : undefined\}/u);
+	// Review always hands both card types to Next. It never promotes the shared
+	// Review-blocker command, which would only return to this same route.
+	assert.match(routeSource, /data-review-priority-navigation variant="primary" href=\{`\/next\?pack=\$\{encodeURIComponent\(firstReview\.id \|\| ''\)\}`\} onclick=\{\(event\) => handoffToNext\(firstReview\.id, event\)\}>Set next action<\/WornButton>/u);
+	assert.match(routeSource, /data-review-card-navigation variant="primary" href=\{`\/next\?pack=\$\{encodeURIComponent\(pack\.id \|\| ''\)\}`\} onclick=\{\(event\) => handoffToNext\(pack\.id, event\)\}>Set next action<\/WornButton>/u);
+	assert.doesNotMatch(routeSource, /data-review-(?:priority|card)-mutation|data-review-next-action|Review blocker|primaryCommandNavigation|PACK_ACTIONS/u);
+	assert.match(workflowSource, /export function primaryCommand\(pack: DemoPack\): PrimaryCommand \{[\s\S]*?\{ label: 'Review blocker', action: 'review', targetPackId: pack\.id \}/u);
+	assert.match(workflowSource, /export function primaryCommandNavigation\(pack: DemoPack\): string \{[\s\S]*?const id = encodeURIComponent\(pack\.id \|\| ''\);[\s\S]*?if \(action === 'review'\) return `\/review\?focus=\$\{id\}`;/u);
 
-	// Priority/list titles and the explicit secondary Set next action control.
+	// Priority and list titles use the same focused Next handoff.
 	assert.match(routeSource, /review-priority-title[\s\S]*?onclick=\{\(event\) => handoffToNext\(firstReview\.id, event\)\}/u);
 	assert.match(routeSource, /class="demo-card-title"[^\n]*data-pack=\{pack\.id\}[^\n]*onclick=\{\(event\) => handoffToNext\(pack\.id, event\)\}/u);
-	assert.match(routeSource, /data-review-next-action[^\n]*onclick=\{\(event\) => handoffToNext\(firstReview\.id, event\)\}/u);
 });
 
 test('Review owns one canonical rendered projection and scope setter', () => {

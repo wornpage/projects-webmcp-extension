@@ -35,9 +35,7 @@
 		settleReviewScopeFocus
 	} from './review-webmcp.mjs';
 	import {
-		PACK_ACTIONS,
 		primaryCommand,
-		primaryCommandNavigation,
 		workflowLabel,
 		blockerText,
 		hasBlocker,
@@ -499,8 +497,6 @@ async function handleCardKeys(e: KeyboardEvent) {
 
 	{#if firstReview}
 		{@const firstValidation = validationSummary(firstReview)}
-		{@const firstCommand = primaryCommand(firstReview)}
-		{@const firstCommandHref = PACK_ACTIONS.has(firstCommand.action) ? undefined : primaryCommandNavigation(firstReview)}
 		<div class="review-priority-shell">
 		<WornContainer label="Up next">
 		<article class="review-priority demo-focus-surface" data-pack-id={firstReview.id}>
@@ -512,16 +508,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 				{#if firstValidation}<WornBadge variant="warn" label={firstValidation.label} title={firstValidation.title} />{/if}
 			</div>
 			<div class="review-priority-actions">
-				{#if firstCommandHref}
-					<WornButton data-review-primary-action data-review-priority-navigation variant="primary" href={firstCommandHref} onclick={firstCommand.action === 'set-next' ? (event) => handoffToNext(firstReview.id, event) : undefined}>{firstCommand.label}</WornButton>
-				{:else}
-					<WornButton data-review-primary-action data-review-priority-mutation type="button" variant="primary" disabled={busyId === firstReview.id} onclick={() => doAction(firstReview, firstCommand.action)}>
-						{busyId === firstReview.id ? 'Running…' : firstCommand.label}
-					</WornButton>
-				{/if}
-				{#if firstCommand.action !== 'set-next'}
-					<WornButton data-review-next-action href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(firstReview.id, event)}>Set next action</WornButton>
-				{/if}
+				<WornButton data-review-primary-action data-review-priority-navigation variant="primary" href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(firstReview.id, event)}>Set next action</WornButton>
 			</div>
 			{#if hasBlocker(firstReview)}
 				<div class="demo-card-facts" role="group" aria-label="Blocker: {blockerText(firstReview)}.">
@@ -577,8 +564,6 @@ async function handleCardKeys(e: KeyboardEvent) {
 	<div class="demo-review-list" id="review-follow-on-list" data-review-list>
 		{#if renderedList.length > 0}
 			{#each renderedList as pack (pack.id)}
-				{@const command = primaryCommand(pack)}
-				{@const commandHref = PACK_ACTIONS.has(command.action) ? undefined : primaryCommandNavigation(pack)}
 				{@const workflow = workflowLabel(pack)}
 				{@const cardCls = workflowCardClass(pack, false, false)}
 				{@const validation = validationSummary(pack)}
@@ -601,13 +586,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 							</div>
 						{/if}
 						<div class="demo-review-card-actions">
-							{#if commandHref}
-								<WornButton data-review-primary-action data-review-card-navigation variant="primary" href={commandHref} onclick={command.action === 'set-next' ? (event) => handoffToNext(pack.id, event) : undefined}>{command.label}</WornButton>
-							{:else}
-								<WornButton data-review-primary-action data-review-card-mutation type="button" variant="primary" disabled={busyId === pack.id} onclick={() => doAction(pack, command.action)}>
-									{busyId === pack.id ? 'Running…' : command.label}
-								</WornButton>
-							{/if}
+							<WornButton data-review-primary-action data-review-card-navigation variant="primary" href={`/next?pack=${encodeURIComponent(pack.id || '')}`} onclick={(event) => handoffToNext(pack.id, event)}>Set next action</WornButton>
 						</div>
 					</div>
 					<div class="demo-card-meta">
