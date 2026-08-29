@@ -145,10 +145,7 @@ let showingCustom = $state(false);
 		});
 	});
 	let preparationCells = $derived(preparationReceipt ? [
-		{ label: 'Work item', value: preparationReceipt.work.title },
-		{ label: 'Prepared action', value: preparationReceipt.preparedAction },
 		{ label: 'Evidence note', value: preparationReceipt.agentNote },
-		{ label: 'Browser agent changed', value: 'Unsaved draft shown in this editor only' },
 		{ label: 'Workspace data', value: 'Unchanged' },
 		{ label: 'Authority', value: 'Only you can Save' }
 	] : []);
@@ -428,28 +425,30 @@ let showingCustom = $state(false);
 		{#if errorText}
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
 		{/if}
-		{#if preparationReceipt}
-			<div data-webmcp-receipt="next" aria-label="Latest Next WebMCP tool receipt">
-				<WornReceipt
-					id={NEXT_PREPARATION_RECEIPT_ID}
-					summary={preparationReceipt.summary}
-					cells={preparationCells}
-				/>
+		<div class="next-presenter-result">
+			<div class="demo-command-lines compact demo-focus-surface" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">
+				{#if hasBlocker(preview)}
+					<div class="demo-command-line" data-command-field="blocker"><span>Current blocker</span><strong>{blockerText(preview)}</strong></div>
+				{/if}
+				<div class="demo-command-line" data-command-field="button-runs-next"><span>Proposed next action</span><strong>{effectiveChoice || 'Not set'}</strong></div>
 			</div>
-		{/if}
-		{#if savedNextReceipt}
-			<WornReceipt
-				summary={savedNextReceipt.summary}
-				announce={false}
-				cells={savedNextCells}
-				ondone={() => (savedNextReceipt = null)}
-			/>
-		{/if}
-		<div class="demo-command-lines compact demo-focus-surface" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">
-			{#if hasBlocker(preview)}
-				<div class="demo-command-line" data-command-field="blocker"><span>Current blocker</span><strong>{blockerText(preview)}</strong></div>
+			{#if preparationReceipt}
+				<div data-webmcp-receipt="next" aria-label="Latest Next WebMCP activity">
+					<WornReceipt
+						id={NEXT_PREPARATION_RECEIPT_ID}
+						summary={preparationReceipt.summary}
+						cells={preparationCells}
+					/>
+				</div>
 			{/if}
-			<div class="demo-command-line" data-command-field="button-runs-next"><span>Proposed next action</span><strong>{effectiveChoice || 'Not set'}</strong></div>
+			{#if savedNextReceipt}
+				<WornReceipt
+					summary={savedNextReceipt.summary}
+					announce={false}
+					cells={savedNextCells}
+					ondone={() => (savedNextReceipt = null)}
+				/>
+			{/if}
 		</div>
 		<p class="next-authority">Review the draft. Nothing changes until you choose Save.</p>
 
@@ -566,6 +565,10 @@ let showingCustom = $state(false);
 	.demo-command-lines.demo-focus-surface {
 		--demo-focus-ring-inset: -6px;
 		--demo-focus-ring-radius: calc(var(--worn-radius) + 6px);
+	}
+	.next-presenter-result {
+		display: grid;
+		gap: 8px;
 	}
 	.next-action-editor > .demo-field {
 		grid-column: 1 / -1;

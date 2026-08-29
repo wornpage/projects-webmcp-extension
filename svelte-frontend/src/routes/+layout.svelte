@@ -67,6 +67,7 @@
 
 <style>
 	.challenge-shell {
+		--challenge-focus-mint: var(--worn-link);
 		align-content: start;
 		box-sizing: border-box;
 		display: grid;
@@ -174,7 +175,7 @@
 
 	.challenge-brand:focus-visible,
 	.challenge-shell-nav nav a:focus-visible {
-		outline: 2px dashed var(--worn-focus);
+		outline: 2px solid var(--challenge-focus-mint);
 		outline-offset: 2px;
 	}
 
@@ -262,11 +263,11 @@
 	}
 
 
-	/* Keep cross-route arrival distinct without competing with the focused
-	   control: this short-lived outline marks the destination for every motion
-	   preference, then the focused control keeps its normal keyboard outline. */
+	/* A solid, mint arrival ring is distinct from persistent keyboard focus
+	   without resembling a diagnostic boundary. */
 	:global(.demo-focus-pulse[data-focus-arrival='true']) {
-		outline: 2px solid var(--worn-focus) !important;
+		animation: challenge-focus-pulse 900ms ease-out both;
+		outline: 2px solid var(--challenge-focus-mint) !important;
 		outline-offset: 2px;
 	}
 
@@ -291,25 +292,19 @@
 		z-index: 4;
 	}
 
-	/* A neutral backing keeps warning/success edge accents from showing through
-	   the gaps in the persistent dashed focus ring. */
-	:global(.demo-focus-surface:focus-visible::before) {
-		border: 2px solid var(--worn-bg);
-		border-radius: var(--demo-focus-ring-radius, inherit);
-		box-sizing: border-box;
-		content: '';
-		inset: var(--demo-focus-ring-inset, 0);
-		pointer-events: none;
-		position: absolute;
-		z-index: 3;
-	}
-
 	:global(.demo-focus-surface:focus-visible::after) {
-		border: 2px dashed var(--worn-focus);
+		border: 2px solid var(--challenge-focus-mint);
 	}
 
 	:global(.demo-focus-surface.demo-focus-pulse[data-focus-arrival='true']::after) {
-		border: 2px solid var(--worn-focus);
+		animation: challenge-focus-pulse 900ms ease-out both;
+		border: 2px solid var(--challenge-focus-mint);
+	}
+
+	@keyframes challenge-focus-pulse {
+		0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--challenge-focus-mint) 0%, transparent); }
+		45% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--challenge-focus-mint) 26%, transparent); }
+		100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--challenge-focus-mint) 12%, transparent); }
 	}
 
 	@media (hover: hover) and (pointer: fine) {
@@ -357,6 +352,11 @@
 
 		.challenge-shell-nav nav a {
 			transition: none;
+		}
+
+		:global(.demo-focus-pulse[data-focus-arrival='true']),
+		:global(.demo-focus-surface.demo-focus-pulse[data-focus-arrival='true']::after) {
+			animation: none;
 		}
 	}
 

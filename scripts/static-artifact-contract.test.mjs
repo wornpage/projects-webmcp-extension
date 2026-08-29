@@ -227,7 +227,7 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	assert.equal(brandTextRule.declarations.get('white-space'), 'nowrap');
 
 	const focusRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)?:focus-visible$/u);
-	assert.equal(focusRule.declarations.get('outline'), '2px dashed var(--worn-focus)');
+	assert.equal(focusRule.declarations.get('outline'), '2px solid var(--challenge-focus-mint)');
 	assert.equal(focusRule.declarations.get('outline-offset'), '2px');
 
 	const hoverRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)?:hover$/u);
@@ -268,13 +268,15 @@ test('built artifact keeps page-action receipts truthful and read-only getters s
 		'Current queue',
 		'Search-match evidence',
 		'Browser agent prepared an unsaved draft. No workspace data was saved.',
-		'Unsaved draft shown in this editor only',
+		'Evidence note',
 		'Workspace data',
 		'Unchanged',
 		'Only you can Save'
 	]) {
 		assert.match(artifactText, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
 	}
+	assert.doesNotMatch(artifactText, /Unsaved draft shown in this editor only/u);
+	assert.match(artifactText, /Reset live sample/u);
 	assert.doesNotMatch(artifactText, /WebMCP read \d+ visible (?:Work|Review)/u);
 	assert.doesNotMatch(artifactText, /WebMCP read the unsaved Next editor/u);
 });

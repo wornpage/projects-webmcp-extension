@@ -22,6 +22,7 @@ const svelteConfig = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/svelte
 const appDocument = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/app.html'), 'utf8');
 const webManifest = fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8');
 const rootReadme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
+const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
 const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmcp/reviewer-tests.md'), 'utf8');
 const editorSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/AgentBriefEditor.svelte'), 'utf8');
 const guideActionSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/guide-work-action.mjs'), 'utf8');
@@ -347,6 +348,15 @@ test('handoff route owns one data-backed reader without navigation, write, or mo
 	assert.match(editorSource, /aria-live="polite" data-agent-scope-action/u);
 	assert.match(editorSource, /Local draft · not saved · workspace unchanged/u);
 	assert.match(editorSource, /@media \(max-width: 520px\)/u);
+});
+
+test('the live sample can be explicitly reset through the single browser-state owner', () => {
+	assert.match(pageSource, /Reset live sample/u);
+	assert.match(pageSource, /onclick=\{resetLiveSample\}/u);
+	assert.match(pageSource, /Explicitly restores this browser’s bundled sample and clears its prior local results\./u);
+	assert.match(pageSource, /import \{ ChallengeStateError, demoState, displayToast, resetDemoSampleState \} from '\$lib\/demo-client';/u);
+	assert.match(demoClientSource, /export async function resetDemoSampleState\(\): Promise<DemoState \| null> \{[\s\S]*?if \(!browser\) return null;[\s\S]*?stateRevision \+= 1;[\s\S]*?localStorage\.removeItem\(STORAGE_KEY\);[\s\S]*?const seed = await loadSeedState\(\);[\s\S]*?return replaceDemoState\(seed\);/u);
+	assert.doesNotMatch(pageSource, /localStorage|sessionStorage|fetch\(/u);
 });
 
 test('wide Guide layout keeps the existing steps in the left rail beside the editor without a dead quadrant', () => {

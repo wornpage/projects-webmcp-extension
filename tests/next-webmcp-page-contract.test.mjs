@@ -346,9 +346,12 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /function restoreNextPreparationSnapshot[\s\S]*?choice = snapshot\.choice;[\s\S]*?customValue = snapshot\.customValue;[\s\S]*?showingCustom = snapshot\.showingCustom;[\s\S]*?preparationReceipt = [\s\S]*?preparationPreviousEditor = [\s\S]*?savedNextReceipt = snapshot\.savedNextReceipt/u);
 	assert.match(routeSource, /id=\{NEXT_EDITOR_PREVIEW_ID\}[^>]*data-next-preview/u);
 	assert.match(routeSource, /<WornReceipt[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?cells=\{preparationCells\}/u);
-	assert.match(routeSource, /Evidence note[\s\S]*?Browser agent changed[\s\S]*?Unsaved draft shown in this editor only[\s\S]*?Workspace data[\s\S]*?Unchanged[\s\S]*?Only you can Save/u);
+	assert.match(routeSource, /Evidence note[\s\S]*?Workspace data[\s\S]*?Unchanged[\s\S]*?Only you can Save/u);
+	const preparationCellSource = routeSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '';
+	assert.doesNotMatch(preparationCellSource, /Work item|Prepared action|Browser agent changed/u);
 	assert.match(helperSource, /Browser agent prepared an unsaved draft\. No workspace data was saved\./u);
 	assert.match(routeSource, /Proposed next action<\/span><strong>\{effectiveChoice \|\| 'Not set'\}/u);
+	assert.match(routeSource, /<div class="next-presenter-result">[\s\S]*?id=\{NEXT_EDITOR_PREVIEW_ID\}[\s\S]*?data-webmcp-receipt="next"[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}/u);
 	assert.match(routeSource, /\.next-authority\s*\{\s*margin-block-start:\s*12px;/u);
 	assert.match(routeSource, /\.next-action-editor\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto;/u);
 	assert.match(routeSource, /\.next-action-editor > \.demo-field\s*\{[\s\S]*?grid-column:\s*1 \/ -1;[\s\S]*?width:\s*100%;/u);
