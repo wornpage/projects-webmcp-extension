@@ -127,13 +127,14 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
 
 | Gate | Current result |
 | --- | --- |
-| Public source boundary | 80 tracked public paths, including the route-owned editable Guide brief, scope chooser, and Work action mapping; no replacement CI or compatibility path remains. |
-| Local automated gate | `npm run verify` passes with 0 Svelte errors, 0 warnings, 47 WebMCP contracts, 6 static-artifact contracts, and a completed static build. |
+| Public source boundary | 83 tracked public paths, including the route-owned editable Guide brief, scope chooser, Work action mapping, and verified Next evidence contract; no replacement CI or compatibility path remains. |
+| Local automated gate | `npm run verify` passes with 0 Svelte errors, 0 warnings, 55/55 WebMCP contracts, 6/6 static-artifact contracts, and a completed static build. The earlier 47-contract denominator is superseded, not combined with this one. |
 | Guide default | `All visible work` is selected immediately and exposes `Open all 8 work items` to `/work` in the current sample. |
 | Discovered choices | The current sample renders `Household · 4` and `Research · 4` from observed area data and Work's shared search counter; these names are not fixed chooser behavior. |
 | Custom truth | Custom keeps the shared 120-character/control-character validation; an unmatched term projects 0 matching of 8 workspace and exposes disabled `No work matches`, without a fallback Work link or invented work. |
 | Focused arrival state | `/work?focus=garage-reset-sort-shelves` focuses and centers the matching card, applies a selected-surface wash, accent rail, 4px ring, and `Focused item` label for 4.2 seconds, then removes the arrival treatment while visible keyboard focus remains. |
-| Action accountability | Work and Review getters leave no agent-change receipt. Successful scope presenters show the normalized visible scope and exact live denominators; Next labels the agent-prepared draft unsaved, repeats its evidence note, reports workspace data unchanged, and leaves Save human-owned. Human edits or route teardown clear the affected attribution. |
+| Action accountability | Work and Review getters leave no agent-change receipt. Successful scope presenters show the normalized visible scope and exact live denominators. Next accepts 1–3 exact Work or Review field/value references, requires one for the current item, rejects stale or mismatched facts, and generates its visible evidence note from the verified values. The draft remains unsaved and Save stays human-owned. Human edits or route teardown clear the affected attribution. |
+| Verified Next evidence | Local in-app-browser WebMCP replay rejected 1/1 false blocker value with 0 editor or receipt changes; accepted 2/2 exact facts (`sort shelves` blocker and `clear the floor` workflow); returned 4/4 focus receipts true, `workspaceChanged: false`, and `requiresHumanSave: true`; exact repeat returned `changed: false`; reload removed 1/1 draft; browser errors/warnings were 0/0. |
 
 ## Browser-agent path
 
@@ -160,8 +161,9 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
 4. Open `/next`.
    - Discover `get_current_next_editor` and `prepare_next_action` only.
    - Open `?pack=garage-reset-sort-shelves`, read the editor without creating a receipt, and confirm the exact stored action `Clear the garage floor` is not collapsed to a generic command.
-   - Prepare `Confirm storage bin delivery` with an evidence note explaining that the floor is already done and the bins remain the blocker.
-   - Verify the visible receipt identifies an unsaved browser-agent draft, repeats the exact action and evidence note, says `Workspace data: Unchanged`, and says `Authority: Only you can Save`.
+   - Prepare `Confirm storage bin delivery` with two structured facts already returned by Work or Review: `{ workId: "garage-reset-sort-shelves", field: "blocker", expectedValue: "Waiting on storage bins" }` and `{ workId: "garage-reset-clear-floor", field: "workflow", expectedValue: "Done" }`.
+   - Verify the visible receipt identifies an unsaved browser-agent draft and displays the page-generated note `Garage reset: sort shelves — Blocker: Waiting on storage bins. Garage reset: clear the floor — Workflow: Done.` Verify the returned receipt preserves both structured facts, says `workspaceChanged: false`, and says `requiresHumanSave: true`.
+   - Retry with either expected value changed. Verify the tool rejects the stale evidence and preserves the prior valid draft.
    - Repeat the exact call and verify `changed` is `false`; reload or choose Discard and verify the proposal and note were not persisted.
 5. Navigate between routes.
    - Verify tools from the previous page are aborted and no longer active.

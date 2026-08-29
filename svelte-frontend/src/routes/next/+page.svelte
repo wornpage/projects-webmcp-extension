@@ -18,6 +18,7 @@
 		blockerText,
 		isReview,
 		hasBlocker,
+		workflowLabel,
 		workTitle,
 		type DemoPack
 	} from '$lib/demo-workflow';
@@ -44,20 +45,35 @@
 		PREPARE_NEXT_ACTION_TOOL_NAME,
 		createCurrentNextEditorTool,
 		createPrepareNextActionTool,
-		nextEditorPageView
+		nextEditorPageView,
+		verifiedNextEvidenceNote,
+		verifyNextPreparationEvidence
 	} from './next-webmcp.mjs';
 
 	type NextEditorMode = 'preset' | 'custom';
+	type NextEvidenceField = 'workflow' | 'blocker';
+	type NextEvidenceReference = {
+		workId: string;
+		field: NextEvidenceField;
+		expectedValue: string;
+	};
+	type NextVerifiedEvidence = {
+		work: { id: string; title: string };
+		field: NextEvidenceField;
+		label: string;
+		value: string;
+	};
 	type PrepareNextActionInput = {
 		choice: string;
 		expectedMode: NextEditorMode;
 		expectedChoice: string;
-		agentNote: string;
+		evidence: NextEvidenceReference[];
 	};
 	type PreparationReceipt = {
 		summary: string;
 		work: { id: string; title: string };
-		agentNote: string;
+		evidenceNote: string;
+		evidence: NextVerifiedEvidence[];
 		preparedAction: string;
 		workspaceChanged: false;
 		requiresHumanSave: true;
@@ -148,7 +164,7 @@ let showingCustom = $state(false);
 		});
 	});
 	let preparationCells = $derived(preparationReceipt ? [
-		{ label: 'Evidence note', value: preparationReceipt.agentNote },
+		{ label: 'Verified evidence', value: preparationReceipt.evidenceNote },
 		{ label: 'Status', value: 'Draft — waiting for your approval' },
 		{ label: 'Save', value: 'Not saved' }
 	] : []);
@@ -284,9 +300,21 @@ let showingCustom = $state(false);
 		const desiredMode: NextEditorMode = (NEXT_ACTION_CHOICES as readonly string[]).includes(input.choice)
 			? 'preset'
 			: 'custom';
+		const verifiedEvidence = verifyNextPreparationEvidence(
+			input.evidence,
+			packs.map((candidate) => ({
+				id: candidate.id,
+				title: workTitle(candidate),
+				workflow: workflowLabel(candidate),
+				blocker: hasBlocker(candidate) ? blockerText(candidate) : 'None'
+			})),
+			current.work.id
+		) as NextVerifiedEvidence[];
+		const evidenceNote = verifiedNextEvidenceNote(verifiedEvidence);
 		const alreadyDesired = current.editor.mode === desiredMode && current.editor.choice === input.choice;
 		const receiptAlreadyDesired = preparationReceipt?.preparedAction === input.choice &&
-			preparationReceipt.agentNote === input.agentNote &&
+			preparationReceipt.evidenceNote === evidenceNote &&
+			evidenceMatchesReceipt(preparationReceipt.evidence, input.evidence) &&
 			preparationReceipt.work.id === current.work.id;
 		const matchesExpected = current.editor.mode === input.expectedMode && current.editor.choice === input.expectedChoice;
 		if (!alreadyDesired && !matchesExpected) {
@@ -300,7 +328,8 @@ let showingCustom = $state(false);
 		preparationReceipt = {
 			summary: NEXT_PREPARATION_SUMMARY,
 			work: current.work,
-			agentNote: input.agentNote,
+			evidenceNote,
+			evidence: verifiedEvidence,
 			preparedAction: input.choice,
 			workspaceChanged: false,
 			requiresHumanSave: true
@@ -319,6 +348,17 @@ let showingCustom = $state(false);
 			focus: { id: NEXT_PREPARATION_RECEIPT_ID, ...focusReceipt },
 			next: currentNextEditor
 		};
+	}
+
+	function evidenceMatchesReceipt(
+		verifiedEvidence: NextVerifiedEvidence[],
+		references: NextEvidenceReference[]
+	) {
+		return verifiedEvidence.length === references.length && verifiedEvidence.every((fact, index) => (
+			fact.work.id === references[index].workId &&
+			fact.field === references[index].field &&
+			fact.value === references[index].expectedValue
+		));
 	}
 
 	function discardPreparation() {

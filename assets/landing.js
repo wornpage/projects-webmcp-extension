@@ -21,7 +21,7 @@
   var stepNotes = [
     "Observed the exact visible queue — a client handoff is blocked while details are pending.",
     "Narrowed Work and Review to the relevant items — the denominators stay visible and workspace data is unchanged.",
-    "Prepared a next action with an evidence note — the draft is still unsaved.",
+    "Prepared a next action from verified workspace facts — the draft is still unsaved.",
     "Decision stays with the person — approve and save the draft, edit it, or discard it."
   ];
 
