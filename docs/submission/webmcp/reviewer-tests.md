@@ -12,6 +12,22 @@ npm run verify
 
 Expected: zero Svelte errors and warnings, all focused contracts pass, and `dist/static-publish` contains the prerendered challenge.
 
+## Priority and Quick Add production release — August 29, 2026
+
+Verified at `2026-08-29T11:54:56-04:00`. Pull request [#39](https://github.com/wornpage/projects-webmcp-extension/pull/39) merged as `dbd0d5f6fc77f4e4f261ee66808b18b41438d55b`. The reviewed branch and squash merge have the identical tree `9a26589d3dcb9f3909b613b9b064215596f77f4f`.
+
+Public judge URL (no account required): <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
+
+| Gate | Exact result |
+| --- | --- |
+| Automated gate | `npm run verify` passed: public manifest 87/87, Svelte 0 errors and 0 warnings, WebMCP 67/67, static artifacts 6/6, and a completed production prerender. |
+| Cloudflare production | Deployment `41ab7c04-aa5e-4aca-850f-f48556061f59` recorded Production, branch `main`, and source `dbd0d5f`; the version URL is <https://41ab7c04.projects-webmcp-extension.pages.dev>. |
+| Public route ledger | Guide, Priority, Work, Review, and Next each returned HTTP 200 from the production alias. The retired `/heartbeat` route returned HTTP 404; no compatibility route was deployed. |
+| Priority rendered parity | The live page rendered one recommendation with id `garden-study-log-interviews`, title `Garden study: log interviews`, href `/next?pack=garden-study-log-interviews`, and the current due-date reason. Browser discovery exposed exactly `get_next_recommendation`; its descriptor remained read-only and stated that it cannot navigate, fetch, or write. |
+| Work Quick Add | The live Work page exposed one native `Proof target · Optional` disclosure and one focusable proof-target textbox while preserving the honest 8 shown / 8 matching / 8 workspace / 3 blocked denominator. |
+| Work tool boundary | Browser discovery exposed exactly `get_current_work_view` and `show_work_search`; no create tool or second draft/storage path was present. |
+| Human write evidence | In the production preview, explicit Add submitted title plus proof target through the canonical `createPack` owner, produced one visible success receipt, changed every workspace denominator from 8 to 9, and cleared both fields. The visible Guide reset restored the bundled sample afterward. |
+
 ## Local verification record — August 26, 2026
 
 Source baseline: `57d0fe1de5c3ef8d1d22a38cf363394968f0870c`, committed at `2026-08-26T17:31:15-04:00` with the message `Create minimal static WebMCP challenge edition`.
