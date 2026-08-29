@@ -591,13 +591,16 @@ test('pending approval transaction compositions persist atomically and restore e
 
 test('WebMCP prepare transaction keeps a differing-choice human draft from rehydrating provisionally', async () => {
 	const human = { workId: 'next-current', choice: 'Review', source: 'human' };
-	let pageState = { choice: 'Review', source: 'human', presenter: 'human', inFlight: false, draft: human };
+	const original = { choice: 'Review', source: 'human', presenter: 'human', inFlight: false, draft: human };
+	let pageState = structuredClone(original); let fail = true; let restores = 0;
 	const tool = createPrepareNextActionTool(async (input, invocation) => {
 		invocation.markMutated(); pageState = { ...pageState, choice: input.choice, source: 'webmcp', presenter: 'webmcp', inFlight: true, draft: { ...human, choice: input.choice, source: 'webmcp' } };
 		assert.equal(shouldHydratePendingDraft({ preparationInFlight: pageState.inFlight, pendingDraft: human, visibleWorkId: 'next-current', preparationReceipt: { preparedAction: input.choice } }), false);
+		if (fail) throw new Error('persist failed');
 		pageState.inFlight = false;
 		return { changed: true, focus: { id: NEXT_PREPARATION_RECEIPT_ID, focused: true, focusVisible: true, inViewport: true, pulsed: true }, next: editor({ editor: { mode: 'preset', choice: input.choice }, preparationReceipt: preparationReceipt(input.choice) }) };
-	}, { capture: () => structuredClone(pageState), restore: (snapshot) => { pageState = structuredClone(snapshot); } });
+	}, { capture: () => structuredClone(pageState), restore: (snapshot) => { restores += 1; pageState = structuredClone(snapshot); } });
 	const input = { choice: 'Focus', expectedMode: 'preset', expectedChoice: 'Review', evidence: [currentEvidenceReference] };
-	await tool.execute(input); assert.equal(pageState.source, 'webmcp'); assert.equal(pageState.choice, 'Focus');
+	await assert.rejects(() => tool.execute(input), /persist failed/u); assert.equal(restores, 1); assert.deepEqual(pageState, original);
+	fail = false; const result = await tool.execute(input); assert.deepEqual(result.focus, { id: NEXT_PREPARATION_RECEIPT_ID, focused: true, focusVisible: true, inViewport: true, pulsed: true }); assert.equal(restores, 1); assert.equal(pageState.source, 'webmcp'); assert.equal(pageState.choice, 'Focus'); assert.equal(pageState.draft.source, 'webmcp'); assert.equal(pageState.presenter, 'webmcp'); assert.equal(pageState.inFlight, false);
 });

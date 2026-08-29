@@ -128,7 +128,7 @@ This record covers the discoverable Guide scope rework on top of the earlier rev
 | Gate | Current result |
 | --- | --- |
 | Public source boundary | 83 tracked public paths, including the route-owned editable Guide brief, scope chooser, Work action mapping, and verified Next evidence contract; no replacement CI or compatibility path remains. |
-| Local automated gate | `npm run verify` passes with 0 Svelte errors, 0 warnings, 63/63 WebMCP contracts, 6/6 static-artifact contracts, and a completed static build. The earlier 47-contract denominator is superseded, not combined with this one. |
+| Local automated gate | `npm run verify` passes with 84 tracked public paths, 0 Svelte errors, 0 warnings, 62/62 WebMCP contracts, 6/6 static-artifact contracts, and a completed static build. The earlier 47-contract denominator is superseded, not combined with this one. |
 | Guide default | `All visible work` is selected immediately and exposes `Open all 8 work items` to `/work` in the current sample. |
 | Discovered choices | The current sample renders `Household · 4` and `Research · 4` from observed area data and Work's shared search counter; these names are not fixed chooser behavior. |
 | Custom truth | Custom keeps the shared 120-character/control-character validation; an unmatched term projects 0 matching of 8 workspace and exposes disabled `No work matches`, without a fallback Work link or invented work. |
