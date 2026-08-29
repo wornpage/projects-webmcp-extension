@@ -23,6 +23,8 @@
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
+	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
+	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import {
 		REVIEW_SCOPE_TOOL_NAME,
 		createCurrentReviewTool,
@@ -289,6 +291,8 @@
 		const focusReceipt = requireVisibleFocus
 			? await settleReviewScopeFocus(runFocus)
 			: runFocus(false);
+		const activityPresenter = document.getElementById('review-webmcp-activity');
+		if (requireVisibleFocus && activityPresenter) keepActivityPresenterVisible(activityPresenter, focusTarget);
 		return firstTitle
 				? { target: 'item' as const, itemId: itemId as string, ...focusReceipt }
 				: focusTarget === filterInput
@@ -483,6 +487,15 @@ async function handleCardKeys(e: KeyboardEvent) {
 	{#if $demoStateError}
 		<WornError message="Could not load review" detail={$demoStateError} onretry={refreshReview} />
 	{/if}
+	{#if webMcpScopeReceipt}
+		<WebMcpActivityStrip
+			id="review-webmcp-activity"
+			route="review"
+			outcome={webMcpScopeReceipt.summary}
+			toolName={webMcpScopeReceipt.toolName}
+			cells={webMcpScopeReceipt.cells}
+		/>
+	{/if}
 
 	{#if firstReview}
 		{@const firstValidation = validationSummary(firstReview)}
@@ -525,16 +538,6 @@ async function handleCardKeys(e: KeyboardEvent) {
 					{#each attentionReasons(firstReview) as reason (reason)}<li>{reason}</li>{/each}
 				</ul>
 			</div>
-			{#if webMcpScopeReceipt}
-				<div class="review-presenter-result" data-webmcp-receipt="review" aria-label="Latest Review WebMCP activity">
-					<p class="webmcp-tool-label">WebMCP · {webMcpScopeReceipt.toolName}</p>
-					<WornReceipt
-						summary={webMcpScopeReceipt.summary}
-						cells={webMcpScopeReceipt.cells}
-						ondone={() => (webMcpScopeReceipt = null)}
-					/>
-				</div>
-			{/if}
 		</article>
 		</WornContainer>
 		</div>
@@ -783,17 +786,6 @@ async function handleCardKeys(e: KeyboardEvent) {
 		padding: 10px 12px;
 		border: 1px solid var(--worn-border);
 		font-size: 0.85rem;
-	}
-	.review-presenter-result {
-		margin-block-start: 4px;
-		min-width: 0;
-	}
-	.webmcp-tool-label {
-		color: var(--worn-text-secondary);
-		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-		font-size: 12px;
-		margin: 0 0 4px;
-		overflow-wrap: anywhere;
 	}
 	.review-list-reveal {
 		align-items: center;

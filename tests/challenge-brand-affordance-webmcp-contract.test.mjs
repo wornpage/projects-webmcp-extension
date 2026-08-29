@@ -10,6 +10,7 @@ const guideRouteSource = readFileSync(path.join(repoRoot, 'svelte-frontend', 'sr
 const workRouteSource = readFileSync(path.join(repoRoot, 'svelte-frontend', 'src', 'routes', 'work', '+page.svelte'), 'utf8');
 const reviewRouteSource = readFileSync(path.join(repoRoot, 'svelte-frontend', 'src', 'routes', 'review', '+page.svelte'), 'utf8');
 const nextRouteSource = readFileSync(path.join(repoRoot, 'svelte-frontend', 'src', 'routes', 'next', '+page.svelte'), 'utf8');
+const activityStripSource = readFileSync(path.join(repoRoot, 'svelte-frontend', 'src', 'lib', 'WebMcpActivityStrip.svelte'), 'utf8');
 const registrationSource = readFileSync(path.join(repoRoot, 'svelte-frontend', 'src', 'lib', 'webmcp.mjs'), 'utf8');
 
 test('shared challenge brand keeps a padded, keyboard-visible landing affordance', () => {
@@ -33,10 +34,33 @@ test('shared challenge layout keeps content compact and receipts comfortably sep
 		/\.challenge-route :global\(\.worn-receipt\) \{[\s\S]*?margin-block: 14px 16px;[\s\S]*?padding: 16px 18px;/u
 	);
 	assert.match(layoutSource, /@media \(max-width: 700px\) \{[\s\S]*?padding: 14px;/u);
-	assert.match(nextRouteSource, /data-webmcp-receipt="next"[\s\S]*?<WornReceipt[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}/u);
-	assert.match(workRouteSource, /\{#if density === 'grid'\}[\s\S]*?data-webmcp-receipt="work"[\s\S]*?<form class="quick-create-row"/u);
-	assert.match(reviewRouteSource, /<article class="review-priority demo-focus-surface"[\s\S]*?data-webmcp-receipt="review"[\s\S]*?<\/article>/u);
-	assert.match(nextRouteSource, /<div class="next-presenter-result">[\s\S]*?data-next-preview[\s\S]*?data-webmcp-receipt="next"/u);
+	assert.match(activityStripSource, /\.webmcp-activity-strip \{[\s\S]*?padding: 12px 14px;/u);
+	assert.match(activityStripSource, /@media \(max-width: 500px\) \{[\s\S]*?padding: 11px 12px;/u);
+	assert.match(workRouteSource, /\{#if webMcpSearchReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="work"[\s\S]*?\{#each densityPanelTabs/u);
+	assert.match(reviewRouteSource, /\{#if \$demoStateError\}[\s\S]*?\{#if webMcpScopeReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="review"[\s\S]*?\{#if firstReview\}/u);
+	assert.match(nextRouteSource, /\{#if preparationReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?route="next"[\s\S]*?<div class="next-presenter-result">[\s\S]*?data-next-preview/u);
+});
+
+test('the single activity strip stays in regular flow without restoring route-local receipts', () => {
+	assert.match(
+		activityStripSource,
+		/\.webmcp-activity-strip \{[\s\S]*?background: color-mix\([\s\S]*?box-sizing: border-box;[\s\S]*?max-inline-size: 100%;[\s\S]*?position: static;[\s\S]*?width: 100%;/u
+	);
+	assert.doesNotMatch(activityStripSource, /position: sticky|position: fixed|z-index:/u);
+	assert.match(activityStripSource, /grid-template-columns: repeat\(auto-fit, minmax\(min\(190px, 100%\), 1fr\)\);/u);
+	assert.match(activityStripSource, /@media \(max-width: 500px\) \{[\s\S]*?padding: 11px 12px;[\s\S]*?flex-direction: column;/u);
+
+	for (const [route, source] of [
+		['work', workRouteSource],
+		['review', reviewRouteSource],
+		['next', nextRouteSource]
+	]) {
+		assert.equal((source.match(/<WebMcpActivityStrip/gu) ?? []).length, 1, `${route} must render one shared activity strip`);
+		assert.doesNotMatch(source, new RegExp(`data-webmcp-receipt=["']${route}["']`, 'u'));
+	}
+	assert.doesNotMatch(workRouteSource, /work-presenter-result|webmcp-tool-label/u);
+	assert.doesNotMatch(reviewRouteSource, /review-presenter-result|webmcp-tool-label/u);
+	assert.doesNotMatch(nextRouteSource, /webmcp-tool-label/u);
 });
 
 test('challenge motion is visible by default and removed for reduced motion', () => {
@@ -60,14 +84,11 @@ test('presentation-changing tools produce truthful accessible receipts without m
 	assert.doesNotMatch(nextRouteSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '', /Work item|Prepared action|Browser agent changed/u);
 	assert.doesNotMatch(nextRouteSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '', /Workspace data|Authority|Only you can Save/u);
 	for (const [route, source] of [['work', workRouteSource], ['review', reviewRouteSource], ['next', nextRouteSource]]) {
-		assert.match(source, /data-webmcp-receipt=/u, `${route} must render the presenter receipt in the page`);
+		assert.match(source, /import WebMcpActivityStrip from '\$lib\/WebMcpActivityStrip\.svelte';/u, `${route} must render the shared activity strip`);
 	}
-
-	for (const source of [guideRouteSource, workRouteSource, reviewRouteSource, nextRouteSource]) {
-		const webMcpReceiptBlocks = source.match(/data-webmcp-receipt=[\s\S]*?<WornReceipt[\s\S]*?\/>/gu) ?? [];
-		assert.ok(webMcpReceiptBlocks.length > 0);
-		assert.ok(webMcpReceiptBlocks.every((block) => !block.includes('announce={false}')), 'WebMCP receipts must retain the polite live region');
-	}
+	assert.match(activityStripSource, /data-webmcp-receipt=\{route\}[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/u);
+	assert.match(activityStripSource, /Agent activity[\s\S]*?WebMCP · \{toolName\}[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence/u);
+	assert.doesNotMatch(activityStripSource, /WornReceipt|ondone|JSON\.stringify|localStorage|sessionStorage|fetch\(/u);
 });
 
 test('action presenters publish only after success and preserve valid pre-invocation state on failure', () => {
