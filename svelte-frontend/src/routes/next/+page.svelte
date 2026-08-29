@@ -466,7 +466,13 @@ let showingCustom = $state(false);
 		{/if}
 	</WornPage>
 {:else if pack && preview}
-	<WornPage sectionLabel="Step 3 of 3 · Prepare" title={preparationReceipt ? 'Review the proposed next action' : 'Set the next action'} status={workTitle(pack)}>
+	<WornPage sectionLabel="Step 3 of 3 · Prepare" title={preparationReceipt ? 'Review the proposed next action' : 'Set the next action'}>
+		<dl class="next-work-context" data-next-current-work>
+			<div>
+				<dt>Current work</dt>
+				<dd>{workTitle(pack)}</dd>
+			</div>
+		</dl>
 		{#if $demoStateError}
 			<WornError message="Could not load next actions" detail={$demoStateError} onretry={refreshNext} />
 		{/if}
@@ -525,9 +531,13 @@ let showingCustom = $state(false);
 			</div>
 		</div>
 
-		{#each workItemIssues(pack) as v}
-			<WornAlert tone="warning">{v.message}</WornAlert>
-		{/each}
+		{#if workItemIssues(pack).length > 0}
+			<div class="next-item-warnings" data-next-item-warnings>
+				{#each workItemIssues(pack) as v}
+					<WornAlert tone="warning">{v.message}</WornAlert>
+				{/each}
+			</div>
+		{/if}
 
 		{#if otherCandidates.length > 0}
 			<WornAccordion label={`Choose another item (${otherCandidates.length})`}>
@@ -605,6 +615,42 @@ let showingCustom = $state(false);
 		color: var(--worn-text-muted);
 		font-size: 12px;
 	}
+	.next-work-context {
+		background: var(--worn-bg-secondary);
+		border: 1px solid var(--worn-border-strong);
+		border-left: 3px solid var(--worn-accent);
+		border-radius: var(--worn-radius);
+		box-sizing: border-box;
+		margin: 0 0 14px;
+		max-inline-size: 100%;
+		min-inline-size: 0;
+		padding: 12px 14px;
+	}
+	.next-work-context > div {
+		display: grid;
+		gap: 4px;
+		min-inline-size: 0;
+	}
+	.next-work-context dt,
+	.next-work-context dd {
+		margin: 0;
+		min-inline-size: 0;
+	}
+	.next-work-context dt {
+		color: var(--worn-text-muted);
+		font-family: var(--font-typewriter);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+	.next-work-context dd {
+		color: var(--worn-text);
+		font-size: 15px;
+		font-weight: 700;
+		line-height: 1.4;
+		overflow-wrap: anywhere;
+	}
 	.next-action-editor {
 		align-items: center;
 		display: grid;
@@ -648,7 +694,17 @@ let showingCustom = $state(false);
 		justify-content: flex-end;
 		justify-self: end;
 	}
+	.next-item-warnings {
+		display: grid;
+		gap: 8px;
+		margin-block-start: 16px;
+		max-inline-size: 100%;
+		min-inline-size: 0;
+	}
 	@media (max-width: 500px) {
+		.next-work-context {
+			padding: 12px;
+		}
 		.next-action-editor {
 			grid-template-columns: minmax(0, 1fr);
 		}
