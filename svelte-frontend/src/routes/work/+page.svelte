@@ -16,7 +16,6 @@
 		savePackPath,
 		savePackBrowserFields,
 		setStateFilter,
-		toasts,
 		ChallengeStateError,
 		displayToast,
 		actionBusy,
@@ -355,10 +354,6 @@
 		return fallback;
 	}
 
-	function toast(message: string, kind: 'info' | 'error' | 'success' = 'info') {
-		toasts.update((t) => [...t.slice(-4), { id: `work-${Date.now()}`, message, kind }]);
-	}
-
 	async function applyFilter(key: string): Promise<boolean> {
 		errorText = '';
 		try {
@@ -414,7 +409,7 @@
 		batchMode = !batchMode;
 		if (!batchMode) batchSelected.clear();
 		document.documentElement.classList.toggle('batch-mode', batchMode);
-		if (batchMode) toast('Select cards to act on them.', 'info');
+		if (batchMode) displayToast('Select cards to act on them.', 'info');
 	}
 
 	function clearBatchSelection() {
@@ -440,7 +435,7 @@
 	function toggleFocusMode() {
 		focusMode = !focusMode;
 		document.documentElement.classList.toggle('focus-mode', focusMode);
-		if (focusMode) toast('Focus on. Press F to exit.', 'info');
+		if (focusMode) displayToast('Focus on. Press F to exit.', 'info');
 	}
 
 	// In batch mode a tap anywhere on the card toggles selection; inner
@@ -577,7 +572,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				}
 			}
 			const label = { done: 'done', start: 'started', block: 'blocked', delete: 'deleted' }[action];
-			toast(`${ids.length} ${ids.length === 1 ? 'item' : 'items'} ${label}.`, 'success');
+			displayToast(`${ids.length} ${ids.length === 1 ? 'item' : 'items'} ${label}.`, 'success');
 			batchSelected.clear();
 		} catch (error) {
 			const message = describeError(error, 'The batch action failed partway — check the list.');
@@ -827,7 +822,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			const [item] = draft.packs.splice(from, 1);
 			draft.packs.splice(to, 0, item);
 		}).catch(() => {
-			toast('Reorder did not save.', 'error');
+			displayToast('Reorder did not save.', 'error');
 		});
 	}
 	// Drag-to-energy: drop a card on an energy chip to set its energy level

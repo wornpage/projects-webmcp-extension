@@ -261,8 +261,7 @@ export function displayToast(
 ): void {
 	if (!browser) return;
 	const id = `toast-${++toastCounter}`;
-	toasts.update((items) => [...items.slice(-4), { id, message, kind }]);
-	setTimeout(() => toasts.update((items) => items.filter((item) => item.id !== id)), 4000);
+	toasts.update((items) => [...items, { id, message, kind }]);
 }
 
 export async function refreshDemoState(
