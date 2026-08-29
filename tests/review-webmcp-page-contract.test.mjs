@@ -357,6 +357,7 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
 	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: review\.scope, counts: review\.counts \}\)/u);
 	assert.match(routeSource, /data-webmcp-receipt="review"[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}/u);
+	assert.match(routeSource, /<article class="review-priority demo-focus-surface"[\s\S]*?<div class="review-presenter-result" data-webmcp-receipt="review"[\s\S]*?<\/article>/u);
 	assert.match(routeSource, /\.review-priority-shell,\s*\.review-priority\s*\{[\s\S]*?overflow:\s*visible;[\s\S]*?width:\s*100%;\s*\}/u);
 	assert.doesNotMatch(demoCss, /\.demo-card-facts\s*\{[^}]*grid-template-columns:\s*repeat\(3,/u);
 	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\], \{\s*onInvocationError: clearFailedReviewWebMcpReceipt,\s*onResult: recordReviewWebMcpResult\s*\}\)/u);

@@ -83,8 +83,10 @@ test('the route arrival treatment is calm, perceptible, and clears cleanly', (t)
 	assert.equal(target.classList.contains('demo-focus-pulse'), false);
 	assert.match(focusPulseSource, /FOCUS_PULSE_DURATION_MS = 2400/u);
 	assert.match(layoutSource, /\.demo-focus-pulse\[data-focus-arrival='true'\]/u);
-	assert.match(layoutSource, /outline: 2px solid var\(--worn-focus\) !important;/u);
+	assert.match(layoutSource, /outline: 2px solid var\(--challenge-focus-mint\) !important;/u);
 	assert.match(layoutSource, /outline-offset: 2px;/u);
+	assert.match(layoutSource, /animation: challenge-focus-pulse 900ms ease-out both;/u);
+	assert.match(layoutSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?demo-focus-pulse[\s\S]*?animation: none;/u);
 	assert.doesNotMatch(layoutSource, /content: 'Focused item'/u);
 	assert.doesNotMatch(layoutSource, /inset 5px 0 0 var\(--worn-accent\)/u);
 	assert.doesNotMatch(layoutSource, /0 10px 24px rgb\(0 0 0 \/ 0\.28\)/u);
@@ -95,9 +97,9 @@ test('card-like arrivals use a complete radius-aware ring inside their real boun
 	assert.match(layoutSource, /\.demo-focus-surface\.demo-focus-pulse\[data-focus-arrival='true'\][\s\S]*?border-radius: var\(--worn-radius\);[\s\S]*?outline: 0 !important;/u);
 	assert.match(layoutSource, /\.demo-focus-surface:focus-visible::after\),?\s*:global\(\.demo-focus-surface\.demo-focus-pulse/u);
 	assert.match(layoutSource, /\.demo-focus-surface:focus-visible::after\),?[\s\S]*?\.demo-focus-surface\.demo-focus-pulse\[data-focus-arrival='true'\]::after[\s\S]*?border-radius: var\(--demo-focus-ring-radius, inherit\);[\s\S]*?inset: var\(--demo-focus-ring-inset, 0\);[\s\S]*?pointer-events: none;/u);
-	assert.match(layoutSource, /\.demo-focus-surface:focus-visible::after\)\s*\{[\s\S]*?border: 2px dashed var\(--worn-focus\);/u);
-	assert.match(layoutSource, /\.demo-focus-surface\.demo-focus-pulse\[data-focus-arrival='true'\]::after\)\s*\{[\s\S]*?border: 2px solid var\(--worn-focus\);/u);
-	assert.match(layoutSource, /\.demo-focus-surface:focus-visible::before\)\s*\{[\s\S]*?border: 2px solid var\(--worn-bg\);[\s\S]*?inset: var\(--demo-focus-ring-inset, 0\);[\s\S]*?z-index: 3;/u);
+	assert.match(layoutSource, /\.demo-focus-surface:focus-visible::after\)\s*\{[\s\S]*?border: 2px solid var\(--challenge-focus-mint\);/u);
+	assert.match(layoutSource, /\.demo-focus-surface\.demo-focus-pulse\[data-focus-arrival='true'\]::after\)\s*\{[\s\S]*?animation: challenge-focus-pulse 900ms ease-out both;[\s\S]*?border: 2px solid var\(--challenge-focus-mint\);/u);
+	assert.doesNotMatch(`${layoutSource}\n${demoCssSource}`, /outline:\s*2px dashed|border:\s*2px dashed/u);
 	assert.match(workGridCardSource, /class="demo-grid-card demo-focus-surface"/u);
 	assert.match(workListCardSource, /demo-work-card demo-focus-surface/u);
 	assert.match(reviewSource, /review-priority demo-focus-surface/u);
@@ -110,6 +112,9 @@ test('card-like arrivals use a complete radius-aware ring inside their real boun
 	assert.doesNotMatch(workListCardSource, /\.demo-work-card:focus-visible\)\s*\{[^}]*outline:/u);
 	assert.match(demoCssSource, /\.demo-card-title:focus-visible\s*\{[\s\S]*?text-decoration: underline;[\s\S]*?text-decoration-thickness: 2px;/u);
 	assert.doesNotMatch(demoCssSource, /\.demo-card-title:focus-visible\s*\{[^}]*outline:\s*2px dashed/u);
+	assert.match(demoCssSource, /\.demo-card-receipt:focus-visible\s*\{[\s\S]*?outline: 2px solid var\(--worn-link\);/u);
+	assert.match(workGridCardSource, /\.grid-card-fact\{[\s\S]*?display:grid;[\s\S]*?grid-template-columns:auto minmax\(0,1fr\);[\s\S]*?overflow:visible;[\s\S]*?white-space:normal\}/u);
+	assert.match(workGridCardSource, /\.grid-card-fact strong\{[\s\S]*?overflow-wrap:anywhere;[\s\S]*?white-space:normal\}/u);
 });
 
 test('required visible focus still rejects fit-sized clipping and wholly off-screen oversized targets', (t) => {

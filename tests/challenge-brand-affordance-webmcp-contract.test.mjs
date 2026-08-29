@@ -21,7 +21,7 @@ test('shared challenge brand keeps a padded, keyboard-visible landing affordance
 		layoutSource,
 		/\.challenge-brand \{[\s\S]*?min-height: 44px;[\s\S]*?padding: 0 12px;[\s\S]*?text-decoration: none;/u
 	);
-	assert.match(layoutSource, /\.challenge-brand:focus-visible,[\s\S]*?outline: 2px dashed var\(--worn-focus\);/u);
+	assert.match(layoutSource, /\.challenge-brand:focus-visible,[\s\S]*?outline: 2px solid var\(--challenge-focus-mint\);/u);
 	assert.match(layoutSource, /\.challenge-brand:hover,[\s\S]*?background: var\(--worn-hover-bg\);/u);
 	assert.match(layoutSource, /\.challenge-brand span \{[\s\S]*?text-overflow: ellipsis;/u);
 });
@@ -34,6 +34,9 @@ test('shared challenge layout keeps content compact and receipts comfortably sep
 	);
 	assert.match(layoutSource, /@media \(max-width: 700px\) \{[\s\S]*?padding: 14px;/u);
 	assert.match(nextRouteSource, /data-webmcp-receipt="next"[\s\S]*?<WornReceipt[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}/u);
+	assert.match(workRouteSource, /\{#if density === 'grid'\}[\s\S]*?data-webmcp-receipt="work"[\s\S]*?<form class="quick-create-row"/u);
+	assert.match(reviewRouteSource, /<article class="review-priority demo-focus-surface"[\s\S]*?data-webmcp-receipt="review"[\s\S]*?<\/article>/u);
+	assert.match(nextRouteSource, /<div class="next-presenter-result">[\s\S]*?data-next-preview[\s\S]*?data-webmcp-receipt="next"/u);
 });
 
 test('challenge motion is visible by default and removed for reduced motion', () => {
@@ -53,7 +56,8 @@ test('presentation-changing tools produce truthful accessible receipts without m
 	assert.match(workRouteSource, /if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?workSearchPresentationReceipt/u);
 	assert.match(reviewRouteSource, /if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?reviewScopePresentationReceipt/u);
 	assert.doesNotMatch(nextRouteSource, /webMcpReadReceipt|data-webmcp-receipt="next-read"/u);
-	assert.match(nextRouteSource, /label: 'Browser agent changed'[\s\S]*?Unsaved draft shown in this editor only/u);
+	assert.match(nextRouteSource, /label: 'Evidence note'[\s\S]*?label: 'Workspace data', value: 'Unchanged'[\s\S]*?label: 'Authority', value: 'Only you can Save'/u);
+	assert.doesNotMatch(nextRouteSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '', /Work item|Prepared action|Browser agent changed/u);
 	assert.match(nextRouteSource, /label: 'Workspace data', value: 'Unchanged'/u);
 	assert.match(nextRouteSource, /label: 'Authority', value: 'Only you can Save'/u);
 	for (const [route, source] of [['work', workRouteSource], ['review', reviewRouteSource], ['next', nextRouteSource]]) {

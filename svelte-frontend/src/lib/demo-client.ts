@@ -199,6 +199,23 @@ export async function refreshDemoState(
 	}
 }
 
+/**
+ * Restore the bundled live sample only after a person explicitly requests it.
+ * This stays in the single browser-state owner: it clears this demo's local
+ * workspace snapshot, then replaces the live view with the immutable seed.
+ */
+export async function resetDemoSampleState(): Promise<DemoState | null> {
+	if (!browser) return null;
+	stateRevision += 1;
+	try {
+		localStorage.removeItem(STORAGE_KEY);
+	} catch {
+		throw new ChallengeStateError('Browser storage is unavailable. The live sample could not be reset.');
+	}
+	const seed = await loadSeedState();
+	return replaceDemoState(seed);
+}
+
 export async function saveBrowserState(
 	mutate: (state: DemoState) => void
 ): Promise<DemoState | null> {

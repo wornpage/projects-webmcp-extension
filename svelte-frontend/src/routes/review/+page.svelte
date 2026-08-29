@@ -483,16 +483,6 @@ async function handleCardKeys(e: KeyboardEvent) {
 		<WornError message="Could not load review" detail={$demoStateError} onretry={refreshReview} />
 	{/if}
 
-	{#if webMcpScopeReceipt}
-		<div data-webmcp-receipt="review">
-			<WornReceipt
-				summary={webMcpScopeReceipt.summary}
-				cells={webMcpScopeReceipt.cells}
-				ondone={() => (webMcpScopeReceipt = null)}
-			/>
-		</div>
-	{/if}
-
 	{#if firstReview}
 		{@const firstValidation = validationSummary(firstReview)}
 		{@const firstCommand = primaryCommand(firstReview)}
@@ -534,6 +524,15 @@ async function handleCardKeys(e: KeyboardEvent) {
 					{#each attentionReasons(firstReview) as reason (reason)}<li>{reason}</li>{/each}
 				</ul>
 			</div>
+			{#if webMcpScopeReceipt}
+				<div class="review-presenter-result" data-webmcp-receipt="review" aria-label="Latest Review WebMCP activity">
+					<WornReceipt
+						summary={webMcpScopeReceipt.summary}
+						cells={webMcpScopeReceipt.cells}
+						ondone={() => (webMcpScopeReceipt = null)}
+					/>
+				</div>
+			{/if}
 		</article>
 		</WornContainer>
 		</div>
@@ -782,6 +781,9 @@ async function handleCardKeys(e: KeyboardEvent) {
 		padding: 10px 12px;
 		border: 1px solid var(--worn-border);
 		font-size: 0.85rem;
+	}
+	.review-presenter-result {
+		margin-block-start: 4px;
 	}
 	.review-list-reveal {
 		align-items: center;

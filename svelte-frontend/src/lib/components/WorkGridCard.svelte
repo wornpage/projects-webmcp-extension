@@ -116,9 +116,9 @@
 	.grid-card-status{background:none;border:1px solid var(--worn-border);border-radius:2px;cursor:default;font-size:11px;font-weight:560;padding:0 4px;min-height:unset;line-height:1.6;color:var(--worn-text-muted);font-family:var(--font-typewriter)}
 	.is-done .grid-card-status{background:var(--worn-success-bg);border-color:var(--worn-success-border);color:var(--worn-success-text)}
 	.grid-card-facts{display:flex;gap:8px;flex-wrap:wrap;padding:2px 0}
-	.grid-card-fact{display:flex;gap:3px;align-items:baseline;font-size:12px;font-family:var(--font-typewriter);color:var(--worn-text-muted);min-width:0;max-width:100%;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+	.grid-card-fact{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px;align-items:start;font-size:12px;font-family:var(--font-typewriter);color:var(--worn-text-muted);min-width:0;max-width:100%;width:100%;overflow:visible;white-space:normal}
 	.grid-card-fact-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0;color:var(--worn-text-muted)}
-	.grid-card-fact strong{font-size:12px;font-weight:550;color:var(--worn-text);min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+	.grid-card-fact strong{font-size:12px;font-weight:550;color:var(--worn-text);min-width:0;overflow:visible;overflow-wrap:anywhere;text-overflow:clip;white-space:normal}
 	.grid-card-quick{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;padding-top:2px;border-top:1px solid var(--worn-border);min-width:0;max-width:100%}
 	:global(.grid-card-action){width:100%}
 	:global(.grid-card-action){background:var(--worn-surface);border-color:var(--worn-border-strong);color:var(--worn-text)}

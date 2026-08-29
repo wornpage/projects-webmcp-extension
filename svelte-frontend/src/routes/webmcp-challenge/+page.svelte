@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { WornAccordion, WornButton, WornPage, WornReceipt } from '$lib/components';
 	import AgentBriefEditor from '$lib/AgentBriefEditor.svelte';
-	import { demoState } from '$lib/demo-client';
+	import { ChallengeStateError, demoState, displayToast, resetDemoSampleState } from '$lib/demo-client';
 	import { filterPacks, type DemoPack } from '$lib/demo-workflow';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import seedPacks from '../../../../data/demo-packs.json';
@@ -44,6 +44,7 @@
 		cells: Array<{ label: string; value: string }>;
 	} | null>(null);
 	let webMcpInvocationCount = $state(0);
+	let resettingSample = $state(false);
 	let selectedScopeId = $state('all');
 	let workQuery = $state('');
 	let guidePacks = $derived(($demoState?.packs ?? seedPacks) as DemoPack[]);
@@ -54,6 +55,22 @@
 		(query) => filterPacks(guidePacks, 'all', query).length
 	));
 	let selectedMatchingCount = $derived(filterPacks(guidePacks, 'all', workQuery).length);
+
+	async function resetLiveSample() {
+		if (resettingSample) return;
+		resettingSample = true;
+		try {
+			await resetDemoSampleState();
+			displayToast('Live sample reset. Previous local results were cleared.', 'success');
+		} catch (error) {
+			displayToast(
+				error instanceof ChallengeStateError ? error.message : 'The live sample could not be reset.',
+				'error'
+			);
+		} finally {
+			resettingSample = false;
+		}
+	}
 
 	onMount(() => {
 		// This is intentionally capability detection, not a registration-success claim.
@@ -119,6 +136,12 @@
 				<div class="challenge-intro">
 					<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
 					<p class="challenge-purpose">Choose visible work and edit the brief; the browser agent can inspect and prepare while you control Save.</p>
+					<div class="challenge-sample-reset">
+						<WornButton type="button" size="sm" disabled={resettingSample} onclick={resetLiveSample}>
+							{resettingSample ? 'Resetting sample…' : 'Reset live sample'}
+						</WornButton>
+						<span>Explicitly restores this browser’s bundled sample and clears its prior local results.</span>
+					</div>
 				</div>
 				<ol class="challenge-steps" aria-label="Three-step Projects handoff workflow">
 					{#each steps as step, index (step.href)}
@@ -206,6 +229,15 @@
 		font-size: 17px;
 		line-height: 1.6;
 		margin: 0;
+	}
+	.challenge-sample-reset {
+		align-items: center;
+		color: var(--worn-text-muted);
+		display: flex;
+		flex-wrap: wrap;
+		font-size: 12px;
+		gap: 8px;
+		line-height: 1.45;
 	}
 	.challenge-safety h2 {
 		font-size: 14px;
