@@ -515,6 +515,7 @@ test('pending next-action approvals use one durable state owner and fail closed 
 });
 
 test('pending draft state operation atomically approves, rejects stale drafts, and discards by exact work id', () => {
+	assert.throws(() => pendingDraftFingerprint({}, { workId: 'missing', choice: 'Open', mode: 'preset', evidenceNote: '', evidence: [], originFingerprint: '', source: 'human' }, () => ({})), /find/u);
 	const project = (pack) => ({ title: pack.title, workflow: pack.status, blocker: pack.blocker || 'None', next: pack.next || '' });
 	const state = { packs: [{ id: 'a', title: 'A', status: 'active', blocker: '', next: 'Open' }, { id: 'b', title: 'B', status: 'blocked', blocker: 'Waiting', next: 'Review' }], pendingNextActionDrafts: [] };
 	const draft = { workId: 'a', choice: 'Start', mode: 'preset', evidenceNote: 'A', evidence: [{ workId: 'a', field: 'workflow', expectedValue: 'active' }], originFingerprint: '', source: 'human' };
