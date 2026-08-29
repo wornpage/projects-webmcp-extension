@@ -21,7 +21,11 @@ export function discardPendingDraft(state, workId) {
 }
 
 export function upsertPendingDraft(state, draft) {
-	state.pendingNextActionDrafts = [...(state.pendingNextActionDrafts || []).filter((item) => item.workId !== draft.workId), structuredClone(draft)];
+	const pending = state.pendingNextActionDrafts || [];
+	const index = pending.findIndex((item) => item.workId === draft.workId);
+	state.pendingNextActionDrafts = index < 0
+		? [...pending, structuredClone(draft)]
+		: pending.map((item, itemIndex) => itemIndex === index ? structuredClone(draft) : item);
 }
 
 export function restorePendingDraft(state, workId, priorDraft) {
@@ -39,6 +43,19 @@ export function cloneMutatePersist({ current, clone, mutate, persist, install })
 	mutate(next);
 	persist(next);
 	return install(next);
+}
+
+export function hydrateSerializedState(serialized, assertState) {
+	if (serialized === null) return null;
+	const state = JSON.parse(serialized);
+	assertState(state);
+	return state;
+}
+
+export async function resetPersistedState({ remove, loadSeed, install }) {
+	remove();
+	const seed = await loadSeed();
+	return install(seed);
 }
 
 export function approvePendingDraft(state, workId, { projectPack, nextPath }) {

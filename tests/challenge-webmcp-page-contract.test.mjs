@@ -355,7 +355,7 @@ test('the live sample can be explicitly reset through the single browser-state o
 	assert.match(pageSource, /onclick=\{resetLiveSample\}/u);
 	assert.match(pageSource, /Explicitly restores this browser’s bundled sample and clears its prior local results\./u);
 	assert.match(pageSource, /import \{ ChallengeStateError, demoState, displayToast, resetDemoSampleState \} from '\$lib\/demo-client';/u);
-	assert.match(demoClientSource, /export async function resetDemoSampleState\(\): Promise<DemoState \| null> \{[\s\S]*?if \(!browser\) return null;[\s\S]*?stateRevision \+= 1;[\s\S]*?localStorage\.removeItem\(STORAGE_KEY\);[\s\S]*?const seed = await loadSeedState\(\);[\s\S]*?return replaceDemoState\(seed\);/u);
+	assert.match(demoClientSource, /export async function resetDemoSampleState\(\): Promise<DemoState \| null> \{[\s\S]*?if \(!browser\) return null;[\s\S]*?stateRevision \+= 1;[\s\S]*?resetPersistedState\([\s\S]*?remove: \(\) => localStorage\.removeItem\(STORAGE_KEY\),[\s\S]*?loadSeed: loadSeedState,[\s\S]*?install: replaceDemoState/u);
 	assert.doesNotMatch(pageSource, /localStorage|sessionStorage|fetch\(/u);
 });
 

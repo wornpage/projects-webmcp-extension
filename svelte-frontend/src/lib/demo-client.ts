@@ -25,7 +25,7 @@ import {
 	unblockPacksBlockedBy,
 	unblockedReceiptSentence
 } from './workflow-rules.mjs';
-import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, pendingDraftFingerprint as fingerprintPendingDraft, restorePendingDraft, upsertPendingDraft } from './pending-next-action.mjs';
+import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, hydrateSerializedState, pendingDraftFingerprint as fingerprintPendingDraft, resetPersistedState, restorePendingDraft, upsertPendingDraft } from './pending-next-action.mjs';
 
 const STORAGE_KEY = 'projects-webmcp-challenge-state-v1';
 const SEED_URL = '/data/demo-packs.json';
@@ -183,11 +183,8 @@ function readStoredState(): DemoState | null {
 	} catch {
 		throw new ChallengeStateError('Browser storage is unavailable. Local changes cannot be loaded.');
 	}
-	if (serialized === null) return null;
 	try {
-		const parsed = JSON.parse(serialized) as unknown;
-		assertDemoState(parsed);
-		return parsed;
+		return hydrateSerializedState(serialized, assertDemoState) as DemoState | null;
 	} catch (error) {
 		if (error instanceof ChallengeStateError) throw error;
 		throw new ChallengeStateError('Saved workspace data is invalid JSON. Clear this site\'s local data to restart.');
@@ -292,12 +289,15 @@ export async function resetDemoSampleState(): Promise<DemoState | null> {
 	if (!browser) return null;
 	stateRevision += 1;
 	try {
-		localStorage.removeItem(STORAGE_KEY);
-	} catch {
+		return await resetPersistedState({
+			remove: () => localStorage.removeItem(STORAGE_KEY),
+			loadSeed: loadSeedState,
+			install: replaceDemoState
+		});
+	} catch (error) {
+		if (error instanceof ChallengeStateError) throw error;
 		throw new ChallengeStateError('Browser storage is unavailable. The live sample could not be reset.');
 	}
-	const seed = await loadSeedState();
-	return replaceDemoState(seed);
 }
 
 export async function saveBrowserState(

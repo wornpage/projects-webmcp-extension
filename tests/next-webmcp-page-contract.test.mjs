@@ -16,7 +16,7 @@ import {
 	verifiedNextEvidenceNote,
 	verifyNextPreparationEvidence
 } from '../svelte-frontend/src/routes/next/next-webmcp.mjs';
-import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, pendingDraftFingerprint, pendingDraftNavigation, restorePendingDraft, upsertPendingDraft } from '../svelte-frontend/src/lib/pending-next-action.mjs';
+import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, hydrateSerializedState, pendingDraftFingerprint, pendingDraftNavigation, resetPersistedState, restorePendingDraft, upsertPendingDraft } from '../svelte-frontend/src/lib/pending-next-action.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
@@ -486,7 +486,7 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(demoClientSource, /export async function setPackNextAction\(workId: string\)[\s\S]*?const written = await saveBrowserState\([\s\S]*?approvePendingDraft\(state, workId,[\s\S]*?nextPath: nextChoiceForwardPath/u);
 	assert.doesNotMatch(demoClientSource, /approvePendingNextActionDraft/u);
 	assert.match(pendingStateSource, /export function pendingDraftFingerprint[\s\S]*?export function approvePendingDraft[\s\S]*?pendingDraftFingerprint\(state, draft, projectPack\)[\s\S]*?Object\.assign\(pack, nextPath\(pack, draft\.choice\)\);[\s\S]*?discardPendingDraft\(state, workId\);/u);
-	assert.match(demoClientSource, /export async function resetDemoSampleState[\s\S]*?localStorage\.removeItem\(STORAGE_KEY\)[\s\S]*?return replaceDemoState\(seed\);/u);
+	assert.match(demoClientSource, /export async function resetDemoSampleState[\s\S]*?resetPersistedState\([\s\S]*?remove: \(\) => localStorage\.removeItem\(STORAGE_KEY\),[\s\S]*?loadSeed: loadSeedState,[\s\S]*?install: replaceDemoState/u);
 	assert.match(routeSource, /pendingNextActionDraftFor\(\$demoState, selectedId\)[\s\S]*?pendingDraftFingerprint\(\$demoState!, pendingDraft\)/u);
 	assert.match(routeSource, /invocation\.markMutated\(\);[\s\S]*?if \(!currentNextEditor\)[\s\S]*?await savePendingNextActionDraft\(pending\);/u);
 	assert.match(routeSource, /pendingDraft && pendingDraftStale[\s\S]*?Draft is stale/u);
@@ -535,4 +535,21 @@ test('pending draft transaction persists atomically and preserves exact hydratio
 	assert.deepEqual(live, beforeFailure); assert.equal(store.get('state'), bytes);
 	const selectedElsewhere = { packs: live.packs, pendingNextActionDrafts: [{ ...draft, workId: 'a' }, { ...draft, workId: 'b' }] };
 	restorePendingDraft(selectedElsewhere, 'a', null); assert.deepEqual(selectedElsewhere.pendingNextActionDrafts.map((item) => item.workId), ['b']);
+});
+
+test('pending draft persistence preserves order, hydrates, and resets through production helpers', async () => {
+	const a = { workId: 'a', choice: 'Start', mode: 'preset', evidenceNote: 'A', evidence: [], originFingerprint: 'a', source: 'human' };
+	const b = { ...a, workId: 'b', choice: 'Review', originFingerprint: 'b' };
+	let live = { packs: [{ id: 'a', next: 'Open' }, { id: 'b', next: 'Review' }], pendingNextActionDrafts: [structuredClone(a), structuredClone(b)] };
+	const before = structuredClone(live); let bytes = JSON.stringify(live); let writes = 0; let removes = 0;
+	const persist = (state) => { writes += 1; bytes = JSON.stringify(state); };
+	const install = (state) => { live = state; return state; };
+	cloneMutatePersist({ current: live, clone: structuredClone, mutate: (state) => upsertPendingDraft(state, { ...a, choice: 'Focus' }), persist, install });
+	assert.deepEqual(live.pendingNextActionDrafts.map((draft) => draft.workId), ['a', 'b']);
+	restorePendingDraft(live, 'a', before.pendingNextActionDrafts[0]);
+	assert.deepEqual(live, before); assert.deepEqual(pendingDraftNavigation(live), { count: 2, resumeHref: '/next?pack=a' });
+	const hydrated = hydrateSerializedState(bytes, (state) => assert.ok(Array.isArray(state.packs)));
+	assert.deepEqual(hydrated.packs, before.packs);
+	await resetPersistedState({ remove: () => { removes += 1; bytes = ''; }, loadSeed: async () => ({ packs: [{ id: 'seed' }], pendingNextActionDrafts: [] }), install });
+	assert.equal(removes, 1); assert.deepEqual(live.pendingNextActionDrafts, []); assert.ok(writes === 1);
 });
