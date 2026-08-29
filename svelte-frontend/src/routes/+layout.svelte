@@ -21,7 +21,7 @@
 	let pathname = $derived($page.url.pathname);
 	let routeLabel = $derived(ROUTES.find((item) => item.href === pathname)?.label ?? 'WebMCP demo');
 	let pendingApprovals = $derived(pendingNextActionDrafts($demoState));
-	let pendingNavigation = $derived(pendingDraftNavigation({ packs: [], pendingNextActionDrafts: pendingApprovals }));
+	let pendingNavigation = $derived(pendingDraftNavigation({ pendingNextActionDrafts: pendingApprovals }));
 	let pendingResumeHref = $derived(pendingNavigation.resumeHref);
 
 	onMount(() => {
