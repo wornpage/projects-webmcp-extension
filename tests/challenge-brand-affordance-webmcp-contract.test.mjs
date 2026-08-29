@@ -35,6 +35,8 @@ test('shared challenge layout keeps content compact and receipts comfortably sep
 	);
 	assert.match(layoutSource, /@media \(max-width: 700px\) \{[\s\S]*?padding: 14px;/u);
 	assert.match(activityStripSource, /\.webmcp-activity-strip \{[\s\S]*?padding: 12px 14px;/u);
+	assert.match(activityStripSource, /\.webmcp-activity-inset \{[\s\S]*?padding: 12px;[\s\S]*?width: 100%;/u);
+	assert.match(activityStripSource, /@media \(max-width: 500px\) \{[\s\S]*?\.webmcp-activity-inset \{[\s\S]*?padding: 8px;/u);
 	assert.match(activityStripSource, /@media \(max-width: 500px\) \{[\s\S]*?padding: 11px 12px;/u);
 	assert.match(workRouteSource, /\{#if webMcpSearchReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="work"[\s\S]*?\{#each densityPanelTabs/u);
 	assert.match(reviewRouteSource, /\{#if \$demoStateError\}[\s\S]*?\{#if webMcpScopeReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="review"[\s\S]*?\{#if firstReview\}/u);

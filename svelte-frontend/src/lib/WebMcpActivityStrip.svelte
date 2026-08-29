@@ -21,31 +21,40 @@
 	const routeLabel = $derived(route[0].toUpperCase() + route.slice(1));
 </script>
 
-<section
-	{id}
-	class="webmcp-activity-strip"
-	data-webmcp-receipt={route}
-	aria-label={`Latest ${routeLabel} agent activity`}
-	role="status"
-	aria-live="polite"
-	aria-atomic="true"
->
-	<div class="webmcp-activity-strip-head">
-		<p class="webmcp-activity-kicker">Agent activity</p>
-		<p class="webmcp-tool-provenance">WebMCP · {toolName}</p>
-	</div>
-	<p class="webmcp-activity-outcome">{outcome}</p>
-	<dl class="webmcp-activity-evidence">
-		{#each cells as cell (cell.label)}
-			<div>
-				<dt>{cell.label}</dt>
-				<dd>{cell.value}</dd>
-			</div>
-		{/each}
-	</dl>
-</section>
+<div class="webmcp-activity-inset">
+	<section
+		{id}
+		class="webmcp-activity-strip"
+		data-webmcp-receipt={route}
+		aria-label={`Latest ${routeLabel} agent activity`}
+		role="status"
+		aria-live="polite"
+		aria-atomic="true"
+	>
+		<div class="webmcp-activity-strip-head">
+			<p class="webmcp-activity-kicker">Agent activity</p>
+			<p class="webmcp-tool-provenance">WebMCP · {toolName}</p>
+		</div>
+		<p class="webmcp-activity-outcome">{outcome}</p>
+		<dl class="webmcp-activity-evidence">
+			{#each cells as cell (cell.label)}
+				<div>
+					<dt>{cell.label}</dt>
+					<dd>{cell.value}</dd>
+				</div>
+			{/each}
+		</dl>
+	</section>
+</div>
 
 <style>
+	.webmcp-activity-inset {
+		box-sizing: border-box;
+		min-width: 0;
+		padding: 12px;
+		width: 100%;
+	}
+
 	.webmcp-activity-strip {
 		background: color-mix(in srgb, var(--worn-selected-bg) 58%, var(--worn-surface));
 		border: 1px solid var(--worn-border-strong);
@@ -130,6 +139,10 @@
 	}
 
 	@media (max-width: 500px) {
+		.webmcp-activity-inset {
+			padding: 8px;
+		}
+
 		.webmcp-activity-strip {
 			padding: 11px 12px;
 		}
