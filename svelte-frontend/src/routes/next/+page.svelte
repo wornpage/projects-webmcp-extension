@@ -36,6 +36,7 @@
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
+	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import {
 		NEXT_EDITOR_PREVIEW_ID,
 		NEXT_PREPARATION_RECEIPT_ID,
@@ -432,6 +433,15 @@ let showingCustom = $state(false);
 		{#if errorText}
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
 		{/if}
+		{#if preparationReceipt}
+			<WebMcpActivityStrip
+				id={NEXT_PREPARATION_RECEIPT_ID}
+				route="next"
+				outcome="Draft prepared — waiting for your approval."
+				toolName={preparationToolName}
+				cells={preparationCells}
+			/>
+		{/if}
 		<div class="next-presenter-result">
 			<div class="demo-command-lines compact demo-focus-surface" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">
 				{#if hasBlocker(preview)}
@@ -439,16 +449,6 @@ let showingCustom = $state(false);
 				{/if}
 				<div class="demo-command-line" data-command-field="button-runs-next"><span>Proposed next action</span><strong>{effectiveChoice || 'Not set'}</strong></div>
 			</div>
-			{#if preparationReceipt}
-				<div data-webmcp-receipt="next" aria-label="Latest Next WebMCP activity">
-					<p class="webmcp-tool-label">WebMCP · {preparationToolName}</p>
-					<WornReceipt
-						id={NEXT_PREPARATION_RECEIPT_ID}
-						summary="Draft prepared — waiting for your approval."
-						cells={preparationCells}
-					/>
-				</div>
-			{/if}
 			{#if savedNextReceipt}
 				<WornReceipt
 					summary={savedNextReceipt.summary}
@@ -578,13 +578,6 @@ let showingCustom = $state(false);
 		display: grid;
 		gap: 8px;
 		min-width: 0;
-	}
-	.webmcp-tool-label {
-		color: var(--worn-text-secondary);
-		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-		font-size: 12px;
-		margin: 0;
-		overflow-wrap: anywhere;
 	}
 	.next-action-editor > .demo-field {
 		grid-column: 1 / -1;

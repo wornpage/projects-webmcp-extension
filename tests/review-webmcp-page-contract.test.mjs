@@ -20,6 +20,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
+const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
 const demoCss = fs.readFileSync(path.join(repoRoot, 'assets/demo.css'), 'utf8');
 
 function queueView() {
@@ -355,9 +356,11 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /let reviewReceiptScopeKey = \$derived\([\s\S]*?currentReviewView\.scope[\s\S]*?currentReviewView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpScopeReceipt\.scopeKey !== reviewReceiptScopeKey[\s\S]*?webMcpScopeReceipt = null/u);
 	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: review\.scope, counts: review\.counts \}\)/u);
-	assert.match(routeSource, /data-webmcp-receipt="review"[\s\S]*?WebMCP · \{webMcpScopeReceipt\.toolName\}[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}/u);
-	assert.match(routeSource, /\.webmcp-tool-label\s*\{[\s\S]*?font-family:[\s\S]*?overflow-wrap:\s*anywhere;/u);
-	assert.match(routeSource, /<article class="review-priority demo-focus-surface"[\s\S]*?<div class="review-presenter-result" data-webmcp-receipt="review"[\s\S]*?<\/article>/u);
+	assert.match(routeSource, /import WebMcpActivityStrip from '\$lib\/WebMcpActivityStrip\.svelte';/u);
+	assert.match(routeSource, /\{#if webMcpScopeReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="review"[\s\S]*?outcome=\{webMcpScopeReceipt\.summary\}[\s\S]*?toolName=\{webMcpScopeReceipt\.toolName\}[\s\S]*?cells=\{webMcpScopeReceipt\.cells\}[\s\S]*?\/>[\s\S]*?\{#if \$demoStateError\}/u);
+	assert.doesNotMatch(routeSource, /ondone=\{\(\) => \(webMcpScopeReceipt = null\)\}/u);
+	assert.doesNotMatch(routeSource, /review-presenter-result|webmcp-tool-label/u);
+	assert.match(activityStripSource, /route: 'work' \| 'review' \| 'next';[\s\S]*?Latest \$\{routeLabel\} agent activity/u);
 	assert.match(routeSource, /\.review-priority-shell,\s*\.review-priority\s*\{[\s\S]*?overflow:\s*visible;[\s\S]*?width:\s*100%;\s*\}/u);
 	assert.doesNotMatch(demoCss, /\.demo-card-facts\s*\{[^}]*grid-template-columns:\s*repeat\(3,/u);
 	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\], \{\s*onInvocationError: clearFailedReviewWebMcpReceipt,\s*onResult: recordReviewWebMcpResult\s*\}\)/u);

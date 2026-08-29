@@ -52,6 +52,7 @@
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { parseRecentWorkIds, prependRecentWorkId } from '$lib/recent-work.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
+	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import WorkDeleteConfirmDialog from '$lib/WorkDeleteConfirmDialog.svelte';
 	import WorkGridCard from '$lib/components/WorkGridCard.svelte';
 	import WorkListCard from '$lib/components/WorkListCard.svelte';
@@ -883,6 +884,15 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		</div>
 	{/snippet}
 
+	{#if webMcpSearchReceipt}
+		<WebMcpActivityStrip
+			route="work"
+			outcome={webMcpSearchReceipt.summary}
+			toolName={webMcpSearchReceipt.toolName}
+			cells={webMcpSearchReceipt.cells}
+		/>
+	{/if}
+
 	<!-- Keep the last good local view below a refresh error and offer Retry. -->
 	{#if $demoStateError}
 		<WornError message="Could not load work items." detail={$demoStateError} onretry={refreshWork} />
@@ -974,16 +984,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	>
 	{#if densityTab.id === density}
 	{#if density === 'grid'}
-		{#if webMcpSearchReceipt}
-			<div class="work-presenter-result" data-webmcp-receipt="work" aria-label="Latest Work WebMCP activity">
-				<p class="webmcp-tool-label">WebMCP · {webMcpSearchReceipt.toolName}</p>
-				<WornReceipt
-					summary={webMcpSearchReceipt.summary}
-					cells={webMcpSearchReceipt.cells}
-					ondone={() => (webMcpSearchReceipt = null)}
-				/>
-			</div>
-		{/if}
 		<form class="quick-create-row" onsubmit={(e) => { e.preventDefault(); quickCreate(); }}>
 			<WornInput class="quick-create-input" bind:value={quickTitle} placeholder="Quick-add a work item…" aria-label="Quick-add a work item" disabled={quickCreating} />
 			<WornButton class="quick-create-submit" data-work-quick-create-submit type="submit" variant="primary" size="sm" disabled={quickCreating || !quickTitle.trim()}>{quickCreating ? 'Adding…' : 'Add'}</WornButton>
@@ -1022,16 +1022,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	     repeatPack, togglePin, selectPack) sat dead. Restored from 4682a52; the
 	     .demo-work-card CSS was never removed. -->
 	<div class="demo-work-list">
-		{#if webMcpSearchReceipt}
-			<div class="work-presenter-result" data-webmcp-receipt="work" aria-label="Latest Work WebMCP activity">
-				<p class="webmcp-tool-label">WebMCP · {webMcpSearchReceipt.toolName}</p>
-				<WornReceipt
-					summary={webMcpSearchReceipt.summary}
-					cells={webMcpSearchReceipt.cells}
-					ondone={() => (webMcpSearchReceipt = null)}
-				/>
-			</div>
-		{/if}
 		{#if recentPacks.length > 0}
 			<nav class="demo-chip-row" aria-label="Recently viewed work">
 				{#each recentPacks as pack (pack.id)}
@@ -1141,18 +1131,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		overflow: visible;
 		padding-block-start: 8px;
 	}
-	.work-presenter-result {
-		margin-block: 8px;
-		min-width: 0;
-	}
-	.webmcp-tool-label {
-		color: var(--worn-text-secondary);
-		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-		font-size: 12px;
-		margin: 0 0 4px;
-		overflow-wrap: anywhere;
-	}
-
 	/* Grid density view */
 	/* minmax(280px, …) means each column is AT LEAST 280px wide — below that the
 	   track stops shrinking and the grid overflows its container. min(280px,100%)

@@ -19,6 +19,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/next-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
+const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
 
 const presetChoices = ['Review', 'Open', 'Focus', 'Set Blocker: None', 'Start', 'Finish with proof'];
 
@@ -345,14 +346,15 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /function captureNextPreparationSnapshot[\s\S]*?choice,[\s\S]*?customValue,[\s\S]*?showingCustom,[\s\S]*?preparationReceipt:[\s\S]*?preparationPreviousEditor:[\s\S]*?savedNextReceipt/u);
 	assert.match(routeSource, /function restoreNextPreparationSnapshot[\s\S]*?choice = snapshot\.choice;[\s\S]*?customValue = snapshot\.customValue;[\s\S]*?showingCustom = snapshot\.showingCustom;[\s\S]*?preparationReceipt = [\s\S]*?preparationPreviousEditor = [\s\S]*?savedNextReceipt = snapshot\.savedNextReceipt/u);
 	assert.match(routeSource, /id=\{NEXT_EDITOR_PREVIEW_ID\}[^>]*data-next-preview/u);
-	assert.match(routeSource, /<WornReceipt[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?cells=\{preparationCells\}/u);
+	assert.match(routeSource, /import WebMcpActivityStrip from '\$lib\/WebMcpActivityStrip\.svelte';/u);
 	assert.match(routeSource, /Evidence note[\s\S]*?Status[\s\S]*?Draft — waiting for your approval[\s\S]*?Save[\s\S]*?Not saved/u);
 	const preparationCellSource = routeSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '';
 	assert.doesNotMatch(preparationCellSource, /Work item|Prepared action|Browser agent changed/u);
 	assert.match(helperSource, /Browser agent prepared an unsaved draft\. No workspace data was saved\./u);
 	assert.match(routeSource, /Proposed next action<\/span><strong>\{effectiveChoice \|\| 'Not set'\}/u);
-	assert.match(routeSource, /<div class="next-presenter-result">[\s\S]*?id=\{NEXT_EDITOR_PREVIEW_ID\}[\s\S]*?data-webmcp-receipt="next"[\s\S]*?WebMCP · \{preparationToolName\}[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?Draft prepared — waiting for your approval\./u);
-	assert.match(routeSource, /\.webmcp-tool-label\s*\{[\s\S]*?font-family:[\s\S]*?overflow-wrap:\s*anywhere;/u);
+	assert.match(routeSource, /\{#if preparationReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?route="next"[\s\S]*?outcome="Draft prepared — waiting for your approval\."[\s\S]*?toolName=\{preparationToolName\}[\s\S]*?cells=\{preparationCells\}/u);
+	assert.doesNotMatch(routeSource, /data-webmcp-receipt="next"|webmcp-tool-label/u);
+	assert.match(activityStripSource, /WebMCP · \{toolName\}[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence/u);
 	assert.match(routeSource, /\.next-authority\s*\{\s*margin-block-start:\s*12px;/u);
 	assert.match(routeSource, /\.next-action-editor\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto;/u);
 	assert.match(routeSource, /\.next-action-editor > \.demo-field\s*\{[\s\S]*?grid-column:\s*1 \/ -1;[\s\S]*?width:\s*100%;/u);

@@ -21,6 +21,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/work-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
+const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 
 function workView({ search = '', items = null, workspace = 4, matching = 3, blocked = 1 } = {}) {
@@ -321,9 +322,13 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /let workReceiptScopeKey = \$derived\([\s\S]*?currentWorkView\.scope[\s\S]*?currentWorkView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpSearchReceipt\.scopeKey !== workReceiptScopeKey[\s\S]*?webMcpSearchReceipt = null/u);
 	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: work\.scope, counts: work\.counts \}\)/u);
-	assert.match(routeSource, /data-webmcp-receipt="work"[\s\S]*?WebMCP · \{webMcpSearchReceipt\.toolName\}[\s\S]*?<WornReceipt[\s\S]*?cells=\{webMcpSearchReceipt\.cells\}/u);
-	assert.match(routeSource, /\.webmcp-tool-label\s*\{[\s\S]*?font-family:[\s\S]*?overflow-wrap:\s*anywhere;/u);
-	assert.match(routeSource, /\{#if density === 'grid'\}[\s\S]*?<div class="work-presenter-result" data-webmcp-receipt="work"[\s\S]*?<form class="quick-create-row"/u);
+	assert.match(routeSource, /import WebMcpActivityStrip from '\$lib\/WebMcpActivityStrip\.svelte';/u);
+	assert.match(routeSource, /\{#if webMcpSearchReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="work"[\s\S]*?outcome=\{webMcpSearchReceipt\.summary\}[\s\S]*?toolName=\{webMcpSearchReceipt\.toolName\}[\s\S]*?cells=\{webMcpSearchReceipt\.cells\}[\s\S]*?\/>[\s\S]*?<!-- Keep the last good local view/u);
+	assert.doesNotMatch(routeSource, /ondone=\{\(\) => \(webMcpSearchReceipt = null\)\}/u);
+	assert.doesNotMatch(routeSource, /work-presenter-result|webmcp-tool-label/u);
+	assert.match(activityStripSource, /data-webmcp-receipt=\{route\}[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/u);
+	assert.match(activityStripSource, /Agent activity[\s\S]*?WebMCP · \{toolName\}[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence/u);
+	assert.match(activityStripSource, /grid-template-columns: repeat\(auto-fit, minmax\(min\(190px, 100%\), 1fr\)\);[\s\S]*?@media \(max-width: 500px\)/u);
 	assert.match(routeSource, /\.demo-work-list\s*\{\s*overflow:\s*visible;\s*padding-block-start:\s*8px;\s*\}/u);
 	assert.match(routeSource, /registerPageTools\(document, \[[\s\S]*?createCurrentWorkTool\(\(\) => currentWorkView\),[\s\S]*?createShowWorkSearchTool\(showWorkSearchFromWebMcp\)[\s\S]*?\], \{[\s\S]*?onInvocationError: clearFailedWorkWebMcpReceipt,[\s\S]*?onResult: recordWorkWebMcpResult[\s\S]*?\}\)/u);
 	assert.match(routeSource, /stopWorkWebMcp\?\.\(\);\s*stopWorkWebMcp = null;/u);
