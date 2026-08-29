@@ -19,6 +19,7 @@ import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
+const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/work-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
@@ -343,4 +344,17 @@ test('Work text search includes the visible work type with every existing search
 	for (const field of ['pack.title', 'pack.type', 'pack.next', 'pack.owner', 'pack.due', 'pack.blocker', 'pack.area', "(pack.sources || []).join(' ')", 'pack.purpose', 'memory']) {
 		assert.match(searchHaystack, new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
 	}
+});
+
+test('compact Work grid cards remain readable and contained for fine and coarse pointers', () => {
+	assert.doesNotMatch(workGridCardSource, /@media \(max-width: 800px\) and \(pointer: coarse\)/u);
+	const compactRules = workGridCardSource.match(/@media \(max-width: 800px\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(compactRules, /\.demo-grid-card \{ box-sizing: border-box; font-size: 14px; gap: 8px; inline-size: 100%; max-inline-size: 100%; padding: 12px; \}/u);
+	assert.match(compactRules, /\.grid-card-title \{ box-sizing: border-box; display: block; font-size: 16px; line-height: 1\.35; min-height: 44px; max-inline-size: 100%; overflow: visible; overflow-wrap: anywhere;[\s\S]*?white-space: normal; word-break: break-word; \}/u);
+	assert.match(compactRules, /\.grid-card-meta > span, \.grid-card-status,[\s\S]*?font-size: 13px; line-height: 1\.6; max-inline-size: 100%;/u);
+	assert.match(compactRules, /\.grid-card-fact \{[\s\S]*?grid-template-columns: auto minmax\(0, 1fr\); max-width: 100%; overflow: visible; overflow-wrap: anywhere;/u);
+	assert.match(compactRules, /\.grid-card-quick \{ gap: 6px; margin-top: 4px; padding-top: 6px; \}/u);
+	assert.match(compactRules, /\[data-work-primary-navigation\][\s\S]*?\[data-work-primary-mutation\][\s\S]*?font-size: 14px; min-height: 40px; min-width: 0; max-inline-size: 100%; overflow-wrap: anywhere;/u);
+	assert.match(workGridCardSource, /<WornButton data-work-primary-navigation href=\{commandHref\} size="sm" variant="primary"[\s\S]*?onclick=\{\(event\) => \{ event\.stopPropagation\(\); \}\}/u);
+	assert.match(workGridCardSource, /<WornButton data-work-primary-mutation type="button" size="sm" variant="primary"[\s\S]*?onclick=\{\(event\) => \{ event\.stopPropagation\(\); onPrimaryMutation\(pack, cmd\.action\); \}\}/u);
 });

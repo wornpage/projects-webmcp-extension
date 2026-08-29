@@ -122,15 +122,17 @@
 	.grid-card-quick{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;padding-top:2px;border-top:1px solid var(--worn-border);min-width:0;max-width:100%}
 	:global(.grid-card-action){width:100%}
 	:global(.grid-card-action){background:var(--worn-surface);border-color:var(--worn-border-strong);color:var(--worn-text)}
-	@media(max-width:800px){.demo-grid-card .grid-card-title{white-space:normal;text-overflow:clip;overflow:visible;word-break:break-word}.grid-card-fact{overflow:visible;text-overflow:clip;white-space:normal;word-break:break-word;max-width:100%}.grid-card-fact strong{overflow:visible;text-overflow:clip;white-space:normal;word-break:break-word}}
-	@media (max-width: 800px) and (pointer: coarse) {
-		.demo-grid-card { font-size: 14px; gap: 6px; padding: 10px 12px; }
-		.demo-grid-card .grid-card-title { box-sizing: border-box; display: block; font-size: 15px; min-height: 44px; overflow: visible; overflow-wrap: anywhere; padding: 12px 0; text-overflow: clip; white-space: normal; }
+	@media (max-width: 800px) {
+		.demo-grid-card { box-sizing: border-box; font-size: 14px; gap: 8px; inline-size: 100%; max-inline-size: 100%; padding: 12px; }
+		.demo-grid-card .grid-card-title { box-sizing: border-box; display: block; font-size: 16px; line-height: 1.35; min-height: 44px; max-inline-size: 100%; overflow: visible; overflow-wrap: anywhere; padding: 10px 0; text-overflow: clip; white-space: normal; word-break: break-word; }
 		.demo-grid-card .grid-card-meta { gap: 6px; }
-		.demo-grid-card .grid-card-meta > span, .grid-card-status, :global(.demo-grid-card .grid-card-meta .worn-badge) { font-size: 12px; }
-		.grid-card-fact { display: grid; font-size: 14px; gap: 6px; grid-template-columns: auto minmax(0, 1fr); }
+		.demo-grid-card .grid-card-meta > span, .grid-card-status, :global(.demo-grid-card .grid-card-meta .worn-badge) { font-size: 13px; line-height: 1.6; max-inline-size: 100%; }
+		.grid-card-facts { gap: 6px; padding: 4px 0; }
+		.grid-card-fact { display: grid; font-size: 14px; gap: 6px; grid-template-columns: auto minmax(0, 1fr); max-width: 100%; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; white-space: normal; word-break: break-word; }
 		.grid-card-fact-label { font-size: 12px; }
-		.grid-card-fact strong { font-size: 14px; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; white-space: normal; }
+		.grid-card-fact strong { font-size: 14px; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; white-space: normal; word-break: break-word; }
+		.grid-card-quick { gap: 6px; margin-top: 4px; padding-top: 6px; }
+		:global(.demo-grid-card [data-work-primary-navigation]), :global(.demo-grid-card [data-work-primary-mutation]) { box-sizing: border-box; flex: 1 1 auto; font-size: 14px; min-height: 40px; min-width: 0; max-inline-size: 100%; overflow-wrap: anywhere; }
 	}
 	:global(.demo-batch-check-slot){position:absolute;z-index:2;inset-block-start:8px;inset-inline-start:8px}
 	.demo-grid-card.batch-active .grid-card-title{display:block;box-sizing:border-box;inline-size:calc(100% - 52px);margin-inline-start:52px;min-block-size:44px}
