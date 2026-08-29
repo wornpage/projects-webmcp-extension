@@ -95,6 +95,7 @@
 	savedNextReceipt: SavedNextReceipt | null;
 	pendingDraft: PendingNextActionDraft | null;
 	invocationWorkId: string;
+	preparationToolName: string;
 	};
 
 	let chosenPackId = $state('');
@@ -169,7 +170,7 @@ let showingCustom = $state(false);
 				blocker: hasBlocker(preview) ? blockerText(preview) : null,
 				nextAction: effectiveChoice || 'Not set'
 			},
-			preparationReceipt,
+			preparationReceipt: preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME ? preparationReceipt : null,
 			canSave: Boolean(effectiveChoice) && !busy && Boolean(pendingDraft) && !pendingDraftStale,
 			staleReason: pendingDraftStale ? 'Draft is stale. Refresh the evidence and prepare it again before approval.' : pendingDraft ? null : 'No pending draft. Choose an action to create one before approval.',
 			busy
@@ -289,7 +290,8 @@ let showingCustom = $state(false);
 		preparationPreviousEditor: preparationPreviousEditor ? { ...preparationPreviousEditor } : null,
 			savedNextReceipt,
 			pendingDraft: pendingDraft ? structuredClone(pendingDraft) : null,
-			invocationWorkId: pack?.id || ''
+			invocationWorkId: pack?.id || '',
+			preparationToolName
 		};
 	}
 
@@ -300,6 +302,7 @@ let showingCustom = $state(false);
 		preparationReceipt = clonePreparationReceipt(snapshot.preparationReceipt);
 		preparationPreviousEditor = snapshot.preparationPreviousEditor ? { ...snapshot.preparationPreviousEditor } : null;
 		savedNextReceipt = snapshot.savedNextReceipt;
+		preparationToolName = snapshot.preparationToolName;
 		if (snapshot.invocationWorkId) await restorePendingNextActionDraft(snapshot.invocationWorkId, snapshot.pendingDraft);
 	}
 
@@ -397,6 +400,7 @@ let showingCustom = $state(false);
 			workspaceChanged: false,
 			requiresHumanSave: true
 		};
+		preparationToolName = PREPARE_NEXT_ACTION_TOOL_NAME;
 		await tick();
 		const target = document.getElementById(NEXT_PREPARATION_RECEIPT_ID);
 		if (!(target instanceof HTMLElement)) throw new Error('Prepare next action could not find its visible preview.');
@@ -551,7 +555,7 @@ let showingCustom = $state(false);
 		{#if errorText}
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
 		{/if}
-		{#if preparationReceipt && pendingDraft?.source === 'webmcp'}
+		{#if preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME}
 			<WebMcpActivityStrip
 				id={NEXT_PREPARATION_RECEIPT_ID}
 				route="next"
