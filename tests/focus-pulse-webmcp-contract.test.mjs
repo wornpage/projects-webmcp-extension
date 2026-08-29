@@ -9,6 +9,11 @@ import { focusAndPulse } from '../svelte-frontend/src/lib/focus-pulse.mjs';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const focusPulseSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/focus-pulse.mjs'), 'utf8');
 const layoutSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.svelte'), 'utf8');
+const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
+const workListCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkListCard.svelte'), 'utf8');
+const reviewSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
+const nextSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
+const demoCssSource = fs.readFileSync(path.join(repoRoot, 'assets/demo.css'), 'utf8');
 
 function focusTarget(rect, { width = 320, height = 180 } = {}) {
 	let focusVisible = false;
@@ -83,6 +88,28 @@ test('the route arrival treatment is calm, perceptible, and clears cleanly', (t)
 	assert.doesNotMatch(layoutSource, /content: 'Focused item'/u);
 	assert.doesNotMatch(layoutSource, /inset 5px 0 0 var\(--worn-accent\)/u);
 	assert.doesNotMatch(layoutSource, /0 10px 24px rgb\(0 0 0 \/ 0\.28\)/u);
+});
+
+test('card-like arrivals use a complete radius-aware ring inside their real boundary', () => {
+	assert.match(layoutSource, /\.demo-focus-surface:focus-visible\),?\s*:global\(\.demo-focus-surface\.demo-focus-pulse/u);
+	assert.match(layoutSource, /\.demo-focus-surface\.demo-focus-pulse\[data-focus-arrival='true'\][\s\S]*?border-radius: var\(--worn-radius\);[\s\S]*?outline: 0 !important;/u);
+	assert.match(layoutSource, /\.demo-focus-surface:focus-visible::after\),?\s*:global\(\.demo-focus-surface\.demo-focus-pulse/u);
+	assert.match(layoutSource, /\.demo-focus-surface:focus-visible::after\),?[\s\S]*?\.demo-focus-surface\.demo-focus-pulse\[data-focus-arrival='true'\]::after[\s\S]*?border-radius: var\(--demo-focus-ring-radius, inherit\);[\s\S]*?inset: var\(--demo-focus-ring-inset, 0\);[\s\S]*?pointer-events: none;/u);
+	assert.match(layoutSource, /\.demo-focus-surface:focus-visible::after\)\s*\{[\s\S]*?border: 2px dashed var\(--worn-focus\);/u);
+	assert.match(layoutSource, /\.demo-focus-surface\.demo-focus-pulse\[data-focus-arrival='true'\]::after\)\s*\{[\s\S]*?border: 2px solid var\(--worn-focus\);/u);
+	assert.match(layoutSource, /\.demo-focus-surface:focus-visible::before\)\s*\{[\s\S]*?border: 2px solid var\(--worn-bg\);[\s\S]*?inset: var\(--demo-focus-ring-inset, 0\);[\s\S]*?z-index: 3;/u);
+	assert.match(workGridCardSource, /class="demo-grid-card demo-focus-surface"/u);
+	assert.match(workListCardSource, /demo-work-card demo-focus-surface/u);
+	assert.match(reviewSource, /review-priority demo-focus-surface/u);
+	assert.match(reviewSource, /demo-review-card demo-focus-surface/u);
+	assert.match(reviewSource, /\.review-priority-shell,\s*\.review-priority\s*\{[\s\S]*?border-radius: var\(--worn-radius\);/u);
+	assert.match(reviewSource, /\.review-priority\s*\{[\s\S]*?--demo-focus-ring-inset: -8px;[\s\S]*?--demo-focus-ring-radius: calc\(var\(--worn-radius\) \+ 8px\);/u);
+	assert.match(nextSource, /demo-command-lines compact demo-focus-surface/u);
+	assert.match(nextSource, /\.demo-command-lines\.demo-focus-surface\s*\{[\s\S]*?--demo-focus-ring-inset: -6px;[\s\S]*?--demo-focus-ring-radius: calc\(var\(--worn-radius\) \+ 6px\);/u);
+	assert.doesNotMatch(workGridCardSource, /\.demo-grid-card:focus-visible\s*\{[^}]*outline:/u);
+	assert.doesNotMatch(workListCardSource, /\.demo-work-card:focus-visible\)\s*\{[^}]*outline:/u);
+	assert.match(demoCssSource, /\.demo-card-title:focus-visible\s*\{[\s\S]*?text-decoration: underline;[\s\S]*?text-decoration-thickness: 2px;/u);
+	assert.doesNotMatch(demoCssSource, /\.demo-card-title:focus-visible\s*\{[^}]*outline:\s*2px dashed/u);
 });
 
 test('required visible focus still rejects fit-sized clipping and wholly off-screen oversized targets', (t) => {

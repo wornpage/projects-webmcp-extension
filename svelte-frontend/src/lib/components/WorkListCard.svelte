@@ -110,7 +110,7 @@
 <WornFoldedSurface
 	as="article"
 	reveal="hover"
-	class={`demo-work-card ${cardCls}${pack.id === selectedId ? ' selected' : ''}${batchMode ? ' batch-active' : ''}`}
+	class={`demo-work-card demo-focus-surface ${cardCls}${pack.id === selectedId ? ' selected' : ''}${batchMode ? ' batch-active' : ''}`}
 	tabindex={focusedIndex === index ? 0 : -1}
 	aria-current={pack.id === selectedId ? 'true' : undefined}
 	data-pack-id={pack.id}
@@ -244,7 +244,6 @@
 	.work-card-actions :global(.worn-select) { box-sizing: border-box; min-width: 0; max-width: 100%; }
 	:global(.demo-work-card.batch-active) .demo-card-head { min-block-size: 44px; padding-inline-start: 52px; }
 	:global(.demo-work-card) { transition: box-shadow .1s ease, background .1s ease; }
-	:global(.demo-work-card:focus-visible) { outline: 2px dashed var(--worn-focus); outline-offset: 2px; }
 	/* Both density cards use these generated urgency classes. Keep the visual
 	   contract with the list-card component rather than the route shell. */
 	:global(.due-overdue) { border-color: var(--worn-danger-border) !important; background: var(--worn-danger-bg) !important; color: var(--worn-danger-text) !important; }

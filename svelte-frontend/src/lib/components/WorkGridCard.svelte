@@ -51,7 +51,7 @@
 <div
 	role="listitem"
 	tabindex={focusedIndex === index ? 0 : -1}
-	class="demo-grid-card"
+	class="demo-grid-card demo-focus-surface"
 	class:selected={pack.id === selectedId}
 	class:is-done={pack.status === 'done'}
 	class:is-blocked={hasBlocker(pack)}
@@ -141,5 +141,4 @@
 	.is-blocked .grid-card-fact-label{color:var(--worn-warning-text,#a85200)}
 	.demo-grid-card.selected{box-shadow:inset 2px 0 0 var(--worn-accent),0 0 0 1px var(--worn-accent-50);background:color-mix(in srgb,var(--worn-accent)4%,var(--worn-surface))}
 	.demo-grid-card.is-batch-checked{box-shadow:inset 2px 0 0 var(--worn-accent),0 0 0 1px var(--worn-accent);background:color-mix(in srgb,var(--worn-accent)6%,var(--worn-surface))}
-	.demo-grid-card:focus-visible{outline:2px dashed var(--worn-focus);outline-offset:2px}
 </style>
