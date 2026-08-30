@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { WornButton, WornDialog } from '$lib/components';
 
 	interface Props {
@@ -6,6 +7,7 @@
 		itemTitle?: string | null;
 		selectedCount?: number;
 		returnFocus?: HTMLElement | null;
+		fallbackFocus?: HTMLElement | null;
 		onconfirm: () => Promise<void>;
 	}
 
@@ -14,6 +16,7 @@
 		itemTitle = null,
 		selectedCount = 0,
 		returnFocus = null,
+		fallbackFocus = null,
 		onconfirm
 	}: Props = $props();
 
@@ -24,20 +27,21 @@
 	let title = $derived(isBatch ? `Delete ${selectedCount.toLocaleString()} ${batchItemNoun}?` : 'Delete work item?');
 	let confirmLabel = $derived(isBatch ? `Delete ${selectedCount.toLocaleString()} ${batchItemNoun}` : 'Delete work item');
 
-	function restoreFocus() {
-		const target = returnFocus;
-		queueMicrotask(() => {
-			if (target?.isConnected && target.getClientRects().length > 0) {
-				target.focus({ preventScroll: true });
-			}
-		});
+	async function restoreFocus() {
+		await tick();
+		const target = [returnFocus, fallbackFocus].find((candidate) =>
+			candidate?.isConnected &&
+			candidate.getClientRects().length > 0 &&
+			!candidate.matches(':disabled, [aria-disabled="true"]')
+		);
+		target?.focus({ preventScroll: true });
 	}
 
 	function dismiss() {
 		if (busy) return;
 		open = false;
 		error = '';
-		restoreFocus();
+		void restoreFocus();
 	}
 
 	async function confirm() {
@@ -47,6 +51,7 @@
 		try {
 			await onconfirm();
 			open = false;
+			await restoreFocus();
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Could not delete the selected work.';
 		} finally {
