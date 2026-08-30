@@ -448,6 +448,10 @@
 	}
 
 	function toggleFocusMode() {
+		if (!focusMode && !$demoState?.selectedId) {
+			displayToast('Select a work item before turning on Focus.', 'info');
+			return;
+		}
 		focusMode = !focusMode;
 		document.documentElement.classList.toggle('focus-mode', focusMode);
 		if (focusMode) displayToast('Focus on. Press F to exit.', 'info');
@@ -532,7 +536,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			showShortcutHelp = true;
 			return;
 		}
-		if ((e.key === 'f' || e.key === 'F') && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat) {
+		if ((e.key === 'f' || e.key === 'F') && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !(e.target as HTMLElement)?.isContentEditable && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat) {
 			e.preventDefault();
 			toggleFocusMode();
 			return;
@@ -919,7 +923,16 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				</WornIconButton>
 			{/if}
 			{#if packs.length > 1 || focusMode}
-				<WornIconButton class={focusMode ? 'work-mode-active' : undefined} size="sm" label="Focus" title="Focus on selected work (F)" data-action="focus-mode" aria-pressed={focusMode} onclick={toggleFocusMode}>
+				<WornIconButton
+					class={focusMode ? 'work-mode-active' : undefined}
+					size="sm"
+					label="Focus"
+					title={focusMode ? 'Exit Focus (F)' : $demoState?.selectedId ? 'Focus on selected work (F)' : 'Select a work item to use Focus'}
+					data-action="focus-mode"
+					aria-pressed={focusMode}
+					disabled={!focusMode && !$demoState?.selectedId}
+					onclick={toggleFocusMode}
+				>
 					<Focus aria-hidden="true" />
 				</WornIconButton>
 			{/if}

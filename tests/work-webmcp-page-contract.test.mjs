@@ -91,12 +91,13 @@ test('Work focus mode implements and documents its advertised F shortcut', () =>
 		routeSource.indexOf('function handleWindowKeys'),
 		routeSource.indexOf('\n\tfunction handleCardClick')
 	);
-	assert.match(routeSource, /title="Focus on selected work \(F\)"/u);
+	assert.match(routeSource, /title=\{focusMode \? 'Exit Focus \(F\)' : \$demoState\?\.selectedId \? 'Focus on selected work \(F\)' : 'Select a work item to use Focus'\}/u);
 	assert.match(routeSource, /displayToast\('Focus on\. Press F to exit\.', 'info'\)/u);
 	assert.match(
 		windowKeys,
-		/if \(\(e\.key === 'f' \|\| e\.key === 'F'\) && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !e\.ctrlKey && !e\.metaKey && !e\.altKey && !e\.repeat\) \{\s*e\.preventDefault\(\);\s*toggleFocusMode\(\);\s*return;\s*\}/u
+		/if \(\(e\.key === 'f' \|\| e\.key === 'F'\) && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !\(e\.target as HTMLElement\)\?\.isContentEditable && !e\.ctrlKey && !e\.metaKey && !e\.altKey && !e\.repeat\) \{\s*e\.preventDefault\(\);\s*toggleFocusMode\(\);\s*return;\s*\}/u
 	);
+	assert.equal(windowKeys.match(/e\.key === 'f'/gu)?.length, 1);
 	assert.match(routeSource, /<WornKbd keys=\{\['F'\]\} \/><\/dt><dd>Toggle focus mode<\/dd>/u);
 });
 
@@ -477,6 +478,15 @@ test('Quick Add stays available through the one createPack path in both Work den
 	assert.match(routeSource, /<summary>Proof target <span>Optional<\/span><\/summary>[\s\S]*?<WornInput[^>]*id="work-quick-proof-target"[^>]*maxlength=\{1000\}[^>]*aria-label="Quick-add proof target"/u);
 	assert.match(routeSource, /@media\(max-width:500px\)\{\s*\.quick-create-row\{margin-inline:4px\}\s*\}/u);
 	assert.doesNotMatch(quickCreateSource, /localStorage|saveBrowserState|fetch\(/u);
+});
+
+test('Work Focus mode requires selected work before claiming an active state', () => {
+	const toggleFocusSource = routeSource.match(/function toggleFocusMode\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	const windowKeysSource = routeSource.match(/function handleWindowKeys\(e: KeyboardEvent\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(toggleFocusSource, /if \(!focusMode && !\$demoState\?\.selectedId\) \{[\s\S]*?displayToast\('Select a work item before turning on Focus\.', 'info'\);[\s\S]*?return;[\s\S]*?\}/u);
+	assert.match(toggleFocusSource, /focusMode = !focusMode;[\s\S]*?document\.documentElement\.classList\.toggle\('focus-mode', focusMode\);[\s\S]*?if \(focusMode\) displayToast\('Focus on\. Press F to exit\.', 'info'\);/u);
+	assert.match(windowKeysSource, /if \(\s*\(e\.key === 'f' \|\| e\.key === 'F'\)[\s\S]*?tag !== 'INPUT'[\s\S]*?tag !== 'TEXTAREA'[\s\S]*?tag !== 'SELECT'[\s\S]*?!\(e\.target as HTMLElement\)\?\.isContentEditable[\s\S]*?!e\.repeat[\s\S]*?e\.preventDefault\(\);[\s\S]*?toggleFocusMode\(\);[\s\S]*?return;/u);
+	assert.match(routeSource, /<WornIconButton[^>]*label="Focus"[^>]*title=\{focusMode \? 'Exit Focus \(F\)' : \$demoState\?\.selectedId \? 'Focus on selected work \(F\)' : 'Select a work item to use Focus'\}[^>]*data-action="focus-mode"[^>]*aria-pressed=\{focusMode\}[^>]*disabled=\{!focusMode && !\$demoState\?\.selectedId\}[^>]*onclick=\{toggleFocusMode\}[^>]*>/u);
 });
 
 test('expanded Recent activity follows the Work page heading hierarchy', () => {
