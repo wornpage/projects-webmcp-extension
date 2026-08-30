@@ -78,6 +78,21 @@ This local checkpoint makes Work's existing Focus-mode keyboard promise executab
 | Wide rendered result | At 1440 × 1000 in light mode with normal motion, the live Work getter projected focus mode as 1 shown / 1 matching / 8 workspace / 0 blocked. Pressing F projected focus mode off and restored 8 shown / 8 matching / 8 workspace / 3 blocked; the 36px control retained visible keyboard focus and the document had no horizontal overflow. |
 | WebMCP boundary | Work still exposed exactly `get_current_work_view` and `show_work_search`. The read-only getter truthfully reflected the local Focus scope before and after F; no tool, schema, annotation, request, or workspace write changed. |
 
+## Work O-shortcut destination truth — August 30, 2026
+
+This local checkpoint corrects one stale Work shortcut label. It changes no navigation handler, workspace field, storage owner, component API, WebMCP registration, commit, deployment, or hosted state.
+
+| Gate | Exact result |
+| --- | --- |
+| Fresh compact audit | Guide, Priority, Work, Review, and Next were inspected at 320 × 568 in dark mode with reduced motion and a coarse pointer. All 5/5 routes had no horizontal overflow, clipped visible control, missing visible control name, or sub-44px visible touch target. |
+| Before baseline | Work's visible shortcut dialog said `O — Open details`. Pressing lowercase O on the first focused card navigated to `/next?pack=garden-study-request-archive`, whose H1 was `Set the next action`; the route has no details destination. |
+| One route owner | The existing O handler still calls the existing `selectPack`, and `selectPack` remains the sole owner of `/next?pack=…` navigation. Only the existing dialog row changes to `O — Open next-action editor`; no alias, wrapper, fallback, second shortcut handler, or alternate navigation path was added. |
+| Red-first and focused contract | The new Work contract fixed the O handler, `selectPack` destination, corrected visible label, and rejected `Open details`. It failed 1/13 on the old label, then passed 13/13 after the one-line copy correction. |
+| Automated gate | `npm run verify` passed: manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed production prerender. |
+| Compact rendered result | At 320 × 568 dark/reduced/coarse, the corrected 201.6px label remained on one 19.5px line; neither the shortcut dialog nor document overflowed. Lowercase O opened the exact first card at `/next?pack=garden-study-request-archive`, rendered `Set the next action`, and retained the requested work title. |
+| Wide rendered result | At 1440 × 1000 light/normal, ArrowDown moved visible keyboard focus from the first Work card to `garage-reset-sort-shelves`; uppercase O then opened `/next?pack=garage-reset-sort-shelves`. The destination rendered the exact title and H1 without horizontal overflow. |
+| WebMCP boundary | Work still exposed exactly `get_current_work_view` and `show_work_search`. Navigation invalidated the prior Work handle as stale and exposed exactly Next's two page-owned tools; no descriptor, schema, annotation, invocation, or workspace write changed. |
+
 ## Priority and Quick Add production release — August 29, 2026
 
 Verified at `2026-08-29T11:54:56-04:00`. Pull request [#39](https://github.com/wornpage/projects-webmcp-extension/pull/39) merged as `dbd0d5f6fc77f4e4f261ee66808b18b41438d55b`. The reviewed branch and squash merge have the identical tree `9a26589d3dcb9f3909b613b9b064215596f77f4f`.

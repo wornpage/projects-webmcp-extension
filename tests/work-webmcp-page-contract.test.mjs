@@ -90,6 +90,21 @@ test('Work focus mode implements and documents its advertised F shortcut', () =>
 	assert.match(routeSource, /<WornKbd keys=\{\['F'\]\} \/><\/dt><dd>Toggle focus mode<\/dd>/u);
 });
 
+test('Work O shortcut names its exact Next editor destination', () => {
+	const cardKeys = routeSource.slice(
+		routeSource.indexOf('function handleCardKeys'),
+		routeSource.indexOf('\n\t// "/" focuses the filter')
+	);
+	const selectionOwner = routeSource.slice(
+		routeSource.indexOf('function selectPack'),
+		routeSource.indexOf('\n\t// Pin and reaction controls')
+	);
+	assert.match(cardKeys, /if \(\(e\.key === 'o' \|\| e\.key === 'O'\)[\s\S]*?selectPack\(pack\);/u);
+	assert.match(selectionOwner, /goto\(`\/next\?pack=\$\{encodeURIComponent\(pack\.id\)\}`\);/u);
+	assert.match(routeSource, /<WornKbd keys=\{\['O'\]\} \/><\/dt><dd>Open next-action editor<\/dd>/u);
+	assert.doesNotMatch(routeSource, /<WornKbd keys=\{\['O'\]\} \/><\/dt><dd>Open details<\/dd>/u);
+});
+
 test('Work projects only its live scope, explicit denominators, and bounded rendered items', () => {
 	const view = workView();
 	assert.deepEqual(view, {
