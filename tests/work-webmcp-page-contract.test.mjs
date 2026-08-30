@@ -413,6 +413,13 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.doesNotMatch(helperSource, /\.\.\.(?:pack|item|work)|purpose:|memory:|sources:|activity:/u);
 });
 
+test('repeated Work and Review action disclosures include their visible work title', () => {
+	assert.match(workListCardSource, /<WornAccordion label="Other actions" description=\{workTitle\(pack\)\}>/u);
+	assert.match(reviewRouteSource, /<WornAccordion label="Other actions" description=\{workTitle\(pack\)\}>/u);
+	assert.equal(workListCardSource.match(/<WornAccordion label="Other actions"/gu)?.length, 1);
+	assert.equal(reviewRouteSource.match(/<WornAccordion label="Other actions"/gu)?.length, 1);
+});
+
 test('Work text search includes the visible work type with every existing search field', () => {
 	const searchHaystack = workflowSource.match(/return \[\s*pack\.title,[\s\S]*?memory\s*\]\s*\.join\(' '\)\.toLowerCase\(\)\.includes\(q\);/u)?.[0] ?? '';
 	for (const field of ['pack.title', 'pack.type', 'pack.next', 'pack.owner', 'pack.due', 'pack.blocker', 'pack.area', "(pack.sources || []).join(' ')", 'pack.purpose', 'memory']) {

@@ -603,7 +603,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 							<span class="demo-summary-label">Memory</span> {latestMemoryPreview(pack)}
 						</div>
 					{/if}
-				<WornAccordion label="Other actions">
+				<WornAccordion label="Other actions" description={workTitle(pack)}>
 					<div class="review-other-actions">
 						<WornButton type="button" size="sm" data-action="open" data-pack={pack.id} disabled={busyId === pack.id && busyAction === 'open'}
 							onclick={() => doAction(pack, 'open')}>Open</WornButton>

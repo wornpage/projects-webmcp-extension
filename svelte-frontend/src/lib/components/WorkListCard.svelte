@@ -191,7 +191,7 @@
 			{/each}
 		</div>
 	{/if}
-	<WornAccordion label="Other actions">
+	<WornAccordion label="Other actions" description={workTitle(pack)}>
 		{#if pack.energy || pack.location || pack.milestone}
 			<dl class="demo-card-extra">
 				{#if pack.energy}<div><dt>Energy</dt><dd>{energyLabel(String(pack.energy))}</dd></div>{/if}
