@@ -556,7 +556,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 				     list's arrow navigation. Buttons inside remain reachable by
 				     Tab; key events aimed at them are ignored by handleCardKeys. -->
 				<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-				<WornFoldedSurface as="article" reveal="hover" draggable="true" tabindex={0} class={`demo-review-card demo-focus-surface ${cardCls}${pack.id === $demoState?.selectedId ? ' selected' : ''}`} data-review-card data-pack-id={pack.id} onkeydown={handleCardKeys}
+				<WornFoldedSurface as="article" reveal="hover" tabindex={0} class={`demo-review-card demo-focus-surface ${cardCls}${pack.id === $demoState?.selectedId ? ' selected' : ''}`} data-review-card data-pack-id={pack.id} onkeydown={handleCardKeys}
 					aria-label="Review {workTitle(pack)}" aria-keyshortcuts="ArrowUp ArrowDown Enter Space">
 					<div class="demo-card-head demo-review-card-head">
 						<a class="demo-card-title" data-action="select" data-pack={pack.id} title="Set the next action for {workTitle(pack)}" aria-label="Set the next action for {workTitle(pack)}" href={`/next?pack=${encodeURIComponent(pack.id || '')}`} onclick={(event) => handoffToNext(pack.id, event)}>{workTitle(pack)}</a>

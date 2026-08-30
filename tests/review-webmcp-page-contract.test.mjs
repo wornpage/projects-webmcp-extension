@@ -368,6 +368,11 @@ test('every visible Review to Next activation uses one canonical focused handoff
 	assert.match(routeSource, /class="demo-card-title"[^\n]*data-pack=\{pack\.id\}[^\n]*onclick=\{\(event\) => handoffToNext\(pack\.id, event\)\}/u);
 });
 
+test('Review cards do not advertise an unowned drag interaction', () => {
+	assert.doesNotMatch(routeSource, /<WornFoldedSurface[^>]*\bdraggable=/u);
+	assert.doesNotMatch(routeSource, /\bon(?:dragstart|dragover|dragend|drop)=/u);
+});
+
 test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /import \{ registerPageTools \} from '\$lib\/webmcp\.mjs';/u);
 	assert.match(routeSource, /import \{[\s\S]*?createCurrentReviewTool,[\s\S]*?createSetReviewScopeTool,[\s\S]*?reviewItemPageView,[\s\S]*?reviewPageView[\s\S]*?\} from '\.\/review-webmcp\.mjs';/u);
