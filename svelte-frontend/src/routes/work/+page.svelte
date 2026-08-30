@@ -1033,7 +1033,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		/>
 	{/if}
 
-	<form class="quick-create-row" onsubmit={(e) => { e.preventDefault(); quickCreate(); }}>
+	<form class="quick-create-row" aria-label="Quick add a work item" onsubmit={(e) => { e.preventDefault(); quickCreate(); }}>
 		<WornInput class="quick-create-input" bind:value={quickTitle} placeholder="Quick-add a work item…" aria-label="Quick-add a work item" disabled={quickCreating} />
 		<WornButton class="quick-create-submit" data-work-quick-create-submit type="submit" variant="primary" size="sm" disabled={quickCreating || !quickTitle.trim()}>{quickCreating ? 'Adding…' : 'Add'}</WornButton>
 		<details class="quick-create-options">
