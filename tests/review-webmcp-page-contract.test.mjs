@@ -15,7 +15,7 @@ import {
 	reviewScopePresentationReceipt,
 	settleReviewScopeFocus
 } from '../svelte-frontend/src/routes/review/review-webmcp.mjs';
-import { decisionWorkspaceReviewFocusId } from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
+import { decisionWorkspaceReviewFocusRequest } from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
@@ -381,10 +381,11 @@ test('Work-to-Review retained scroll settles before strict visible-focus proof',
 test('Review accepts only one exact Decision Workspace focus request and leaves absent targets unfocused', () => {
 	const exactId = '  review / exact id  ';
 	const longExactId = ` ${'r'.repeat(201)} / exact `;
-	assert.equal(decisionWorkspaceReviewFocusId(new URLSearchParams(`focus=${encodeURIComponent(exactId)}`)), exactId);
-	assert.equal(decisionWorkspaceReviewFocusId(new URLSearchParams(`focus=${encodeURIComponent(longExactId)}`)), longExactId);
-	assert.equal(decisionWorkspaceReviewFocusId(new URLSearchParams('focus=one&focus=two')), '');
-	assert.equal(decisionWorkspaceReviewFocusId(new URLSearchParams('focus=')), '');
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams()), { present: false, workId: '' });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams(`focus=${encodeURIComponent(exactId)}`)), { present: true, workId: exactId });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams(`focus=${encodeURIComponent(longExactId)}`)), { present: true, workId: longExactId });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams('focus=one&focus=two')), { present: true, workId: '' });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams('focus=')), { present: true, workId: '' });
 
 	const focusOwner = routeSource.match(/async function focusReviewScopeDestination[\s\S]*?\n\t\}/u)?.[0] ?? '';
 	assert.match(focusOwner, /requestedItemId = ''[\s\S]*?currentReviewView\?\.upNext[\s\S]*?item\?\.id === requestedItemId/u);
@@ -394,8 +395,8 @@ test('Review accepts only one exact Decision Workspace focus request and leaves 
 	assert.doesNotMatch(focusOwner, /setSelectedWork|query\s*=|reviewSubFilter\s*=/u);
 
 	const refreshOwner = routeSource.match(/async function refreshReview[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.match(refreshOwner, /decisionWorkspaceReviewFocusId\(\$page\.url\.searchParams\)\) return;[\s\S]*?setSelectedWork/u);
-	assert.match(routeSource, /const target = decisionWorkspaceReviewFocusId\(\$page\.url\.searchParams\);[\s\S]*?await focusReviewScopeDestination\(false, target\);[\s\S]*?focus\?\.target === 'item' && focus\.itemId === target/u);
+	assert.match(refreshOwner, /reviewFocusRequest\.present\) return;[\s\S]*?setSelectedWork/u);
+	assert.match(routeSource, /let reviewFocusRequest = \$derived\([\s\S]*?decisionWorkspaceReviewFocusRequest\(\$page\.url\.searchParams\)[\s\S]*?const target = reviewFocusRequest\.workId;[\s\S]*?await focusReviewScopeDestination\(true, target\);[\s\S]*?focus\?\.target === 'item' && focus\.itemId === target/u);
 	assert.doesNotMatch(routeSource, /\$page\.url\.searchParams\.get\('focus'\)/u);
 });
 

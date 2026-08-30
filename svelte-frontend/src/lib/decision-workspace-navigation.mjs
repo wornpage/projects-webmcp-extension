@@ -23,13 +23,19 @@ export function decisionWorkspaceReviewHref(workId) {
  * requested id is in its currently rendered review queue before focusing it.
  *
  * @param {unknown} searchParams
- * @returns {string}
+ * @returns {{ present: boolean, workId: string }}
  */
-export function decisionWorkspaceReviewFocusId(searchParams) {
-	if (!searchParams || typeof /** @type {{ getAll?: unknown }} */ (searchParams).getAll !== 'function') return '';
+export function decisionWorkspaceReviewFocusRequest(searchParams) {
+	if (!searchParams || typeof /** @type {{ getAll?: unknown }} */ (searchParams).getAll !== 'function') {
+		return { present: false, workId: '' };
+	}
 	const params = /** @type {{ getAll: (name: string) => string[] }} */ (searchParams);
 	const workIds = params.getAll('focus');
-	return workIds.length === 1 ? exactWorkId(workIds[0]) || '' : '';
+	if (workIds.length === 0) return { present: false, workId: '' };
+	return {
+		present: true,
+		workId: workIds.length === 1 ? exactWorkId(workIds[0]) || '' : ''
+	};
 }
 
 /**

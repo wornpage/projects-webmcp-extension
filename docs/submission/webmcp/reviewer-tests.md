@@ -14,14 +14,21 @@ Expected: zero Svelte errors and warnings, all focused contracts pass, and `dist
 
 ## Decision Workspace handoff to Review — August 30, 2026
 
-This route keeps Decision Workspace's review action navigation-only. Work's visible action and read-only current-view recommendation use the same encoded Review destination; Review owns the arrival focus and does not change workspace data or select a substitute item.
+This route keeps Decision Workspace's review action navigation-only. Work's visible action and read-only current-view recommendation use the same encoded Review destination; Review owns the arrival focus and does not change workspace data or select a substitute item. The existing `href` remains the canonical contextual Next destination, while the distinct `reviewHref` names the Review action without repointing that live contract.
+
+Source baseline: merged `main` at `ffefa875cfac7a8ea98500c2dea50b2230b33c16` in the isolated PR-machine worktree.
 
 | Contract | Reviewer check |
 | --- | --- |
-| One destination | Work's **Review in queue** action and `get_current_work_view.recommendation.href` both use `decisionWorkspaceReviewHref`, yielding `/review?focus=<exact percent-encoded canonical id>`. Surrounding whitespace and canonical IDs longer than 200 characters remain encoded exactly when accepted by canonical state. |
+| One Review destination | Work's **Review in queue** action and `get_current_work_view.recommendation.reviewHref` both use `decisionWorkspaceReviewHref`, yielding `/review?focus=<exact percent-encoded canonical id>`. Surrounding whitespace and canonical IDs longer than 200 characters remain encoded exactly when accepted by canonical state. The existing recommendation `href` continues to use `decisionWorkspaceNextHref`. |
 | Exact arrival | Review accepts exactly one `focus` value, matches that exact decoded ID only against its current rendered `ReviewView` queue, then passes the visible card through its existing `focusReviewScopeDestination` and `focusAndPulse` owner. |
 | Fail closed | Missing, duplicate, non-review-eligible, filtered-out, or non-rendered IDs produce no focus, scope change, fallback selection, receipt, or workspace write. A focus request also bypasses Review's ordinary preferred-item selection during refresh. |
 | Page and WebMCP boundary | Review retains its page-owned `get_current_review_queue` and `set_review_scope` registration and annotations. The Work reader is still read-only; the route handoff is an ordinary encoded href, not a tool call or workspace action. |
+| Automated gate | `npm run verify` passed: public manifest 89/89, Svelte 0 errors and 0 warnings, WebMCP 95/95, completed production prerender, and static artifacts 6/6. Focused Work and Review contracts passed 40/40. |
+| Rendered 499px result | Work's visible Review and Next actions matched `recommendation.reviewHref` and the existing `recommendation.href` respectively. Review focused and pulsed `garage-reset-choose-bike-rack` through the existing owner after route scroll settlement; the title was `:focus-visible`, fully in the viewport, and document client/scroll widths were 484/484px. |
+| Rendered 320px result | The same exact requested title remained focus-visible, pulsed, and fully in view. Document client/scroll widths were 305/305px with no horizontal overflow. |
+| Malformed request | `/review?focus=one&focus=two` left `BODY` active, selected no work item, rendered no arrival pulse, stayed at scroll position 0, and kept 484/484px client/scroll widths. The request parser retained `present: true` with no valid work ID so ordinary preferred-item selection could not run as a fallback. |
+| Browser diagnostics | A clean stable-server replay of Work → Review, malformed duplicate focus, 499px, and 320px produced zero browser warnings or errors. |
 
 ## Decision Workspace context in Next — August 30, 2026
 

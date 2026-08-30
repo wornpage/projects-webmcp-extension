@@ -21,7 +21,7 @@
 	import { workItemIssues } from '$lib/work-item-issues';
 	import { activityTextWithoutActor } from '$lib/activity';
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
-	import { decisionWorkspaceReviewFocusId } from '$lib/decision-workspace-navigation.mjs';
+	import { decisionWorkspaceReviewFocusRequest } from '$lib/decision-workspace-navigation.mjs';
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
@@ -123,6 +123,9 @@
 	// The route store updates on client-side query navigation. The browser guard
 	// keeps prerendering from reading URL search params.
 	let landingTourRequested = $derived(browser && isExactLandingReviewTour($page.url.search));
+	let reviewFocusRequest = $derived(browser
+		? decisionWorkspaceReviewFocusRequest($page.url.searchParams)
+		: { present: false, workId: '' });
 	let reviewQueue = $derived(summarizeReviewQueue(packs, query, reviewSubFilter));
 	let reviewTotal = $derived(reviewQueue.reviewTotal);
 	let visible = $derived(reviewQueue.visible);
@@ -366,7 +369,7 @@
 		const state = await refreshDemoState({ reuseRecent });
 		if (!state || signal?.aborted) return;
 		const list = livePacks(state.packs as DemoPack[]);
-		if (decisionWorkspaceReviewFocusId($page.url.searchParams)) return;
+		if (reviewFocusRequest.present) return;
 		const tourPack = landingTourRequested
 			? summarizeReviewQueue(list, query, reviewSubFilter).filteredVisible.find(
 				(pack) => pack.id === LANDING_TOUR_PACK_ID
@@ -392,7 +395,7 @@
 
 	$effect(() => {
 		if (!browser) return;
-		const target = decisionWorkspaceReviewFocusId($page.url.searchParams);
+		const target = reviewFocusRequest.workId;
 		currentReviewView;
 		if (target !== lastReviewFocusRequest) {
 			lastReviewFocusRequest = target;
@@ -400,7 +403,7 @@
 		}
 		if (!target || target === focusedReviewId) return;
 		void tick().then(async () => {
-			const focus = await focusReviewScopeDestination(false, target);
+			const focus = await focusReviewScopeDestination(true, target);
 			if (focus?.target === 'item' && focus.itemId === target) focusedReviewId = target;
 		});
 	});
