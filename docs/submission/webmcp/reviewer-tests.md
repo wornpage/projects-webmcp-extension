@@ -12,6 +12,24 @@ npm run verify
 
 Expected: zero Svelte errors and warnings, all focused contracts pass, and `dist/static-publish` contains the prerendered challenge.
 
+## Next approval notification ownership — August 30, 2026
+
+Source baseline: clean `origin/main` at `6dc0cb70f56776108810ab31a2780857d69044c6` in the isolated `newwork/fresh-observable-audit-43` worktree.
+
+| Gate | Exact result |
+| --- | --- |
+| Untouched baseline | `npm run verify` passed before edits: public manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 69/69, static artifacts 6/6, and a completed production prerender. |
+| Ordinary human path | At 320 × 568 in dark/reduced-motion/coarse-pointer mode, choosing `Focus` created one human-owned pending draft, exposed the visible pending-approval authority copy, and enabled `Approve and save`; no tool invocation was required. |
+| Before | One approval rendered two simultaneous success notifications: generic `Next action saved.` from `setPackNextAction` and receipt-derived `Next action set to "Focus".` from the Next page. The saved receipt and workspace state were otherwise correct. |
+| Owning-path change | Removed the generic toast side effect from the storage mutation. Next remains the sole presentation owner and emits the exact canonical receipt summary; pending-draft approval, storage, receipt, focus, WebMCP preparation, and toast dismissal paths were unchanged. No fallback or second notification path was added. |
+| Focused contract | After excluding one malformed-regex harness run, the corrected contract failed 12/13 before the source change solely on the lower-layer toast and passed 13/13 after the change. It requires zero toast calls in `setPackNextAction` and exactly one receipt-derived success call in `saveChoice`. |
+| Final automated gate | `npm run verify` passed after the fix: public manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed production prerender. |
+| Compact rendered result | The patched `Focus` approval produced exactly one dismissible toast, `Next action set to "Focus".`; document and scroll widths both measured 305px. Focus moved to `next-action-preview`, remained `:focus-visible`, and the receipt showed the same saved action and proof target. |
+| Reload persistence | Reload preserved `Focus`, showed no pending-approval link, left Save disabled until a new draft, and restored with zero stale toasts. |
+| Desktop rendered result | At 1440 × 1000 in light/normal-motion/fine-pointer mode, a human `Start` approval produced exactly one receipt-derived toast, document and scroll widths both measured 1440px, and the focused preview remained fully in the viewport. The human path rendered zero WebMCP activity receipts. |
+| WebMCP and fallback boundary | Next still exposed exactly `get_current_next_editor` and `prepare_next_action` with unchanged descriptors. The ordinary choice/draft/Save chain contains no model-context dependency, while the existing unsupported-browser contract continues to reject registration reads when the API is absent. |
+| Browser cleanup | The visible Guide `Reset live sample` action restored the bundled sample after each mutation; emulated media/touch/viewport state was reset, the audit tab was closed, and the local preview was stopped. |
+
 ## Priority and Quick Add production release — August 29, 2026
 
 Verified at `2026-08-29T11:54:56-04:00`. Pull request [#39](https://github.com/wornpage/projects-webmcp-extension/pull/39) merged as `dbd0d5f6fc77f4e4f261ee66808b18b41438d55b`. The reviewed branch and squash merge have the identical tree `9a26589d3dcb9f3909b613b9b064215596f77f4f`.
