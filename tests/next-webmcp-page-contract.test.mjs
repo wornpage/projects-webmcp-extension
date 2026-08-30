@@ -480,6 +480,16 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.doesNotMatch(helperSource, /modelContext|registerTool|fetch\(|jsonrpc|setPackNextAction|update_pack/u);
 });
 
+test('Next approval emits one canonical success notification from the page receipt', () => {
+	const mutation = demoClientSource.match(/export async function setPackNextAction\(workId: string\)[\s\S]*?\n\}\n\nfunction cloneState/u)?.[0] ?? '';
+	const presentation = routeSource.match(/async function saveChoice\(\)[\s\S]*?\n\t\}\n\n\tasync function focusCandidate/u)?.[0] ?? '';
+	assert.ok(mutation);
+	assert.ok(presentation);
+	assert.doesNotMatch(mutation, /displayToast\(/u);
+	assert.equal(presentation.match(/displayToast\(/gu)?.length, 1);
+	assert.match(presentation, /const summary = result\?\.receipt\?\.summary[\s\S]*?displayToast\(summary, 'success'\);/u);
+});
+
 test('pending next-action approvals use one durable state owner and fail closed when stale', () => {
 	assert.match(demoClientSource, /export type PendingNextActionDraft = \{[\s\S]*?workId: string;[\s\S]*?evidence: Array<[\s\S]*?originFingerprint: string;[\s\S]*?source: 'human' \| 'webmcp';/u);
 	assert.match(demoClientSource, /export async function savePendingNextActionDraft[\s\S]*?saveBrowserState[\s\S]*?upsertPendingDraft\(state, draft\);/u);

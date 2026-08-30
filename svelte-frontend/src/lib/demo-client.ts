@@ -161,7 +161,6 @@ export async function setPackNextAction(workId: string): Promise<{ saved: true; 
 		state.actionReceipt = receipt;
 	});
 	if (!written?.actionReceipt?.pack) throw new ChallengeStateError('Pending next action was not saved.');
-	displayToast('Next action saved.', 'success');
 	return { saved: true, pack: written.actionReceipt.pack, receipt: written.actionReceipt, state: written };
 }
 
