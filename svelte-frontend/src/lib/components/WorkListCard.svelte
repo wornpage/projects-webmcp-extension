@@ -112,6 +112,7 @@
 	reveal="hover"
 	class={`demo-work-card demo-focus-surface ${cardCls}${pack.id === selectedId ? ' selected' : ''}${batchMode ? ' batch-active' : ''}`}
 	tabindex={focusedIndex === index ? 0 : -1}
+	aria-label={`Work ${workTitle(pack)}`}
 	aria-current={pack.id === selectedId ? 'true' : undefined}
 	data-pack-id={pack.id}
 	data-work-item
