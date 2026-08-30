@@ -517,6 +517,11 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			showShortcutHelp = true;
 			return;
 		}
+		if ((e.key === 'f' || e.key === 'F') && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat) {
+			e.preventDefault();
+			toggleFocusMode();
+			return;
+		}
 		if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
 			e.preventDefault();
 			filterInput()?.focus();
@@ -964,6 +969,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			<dt><WornKbd keys={['B']} /></dt><dd>Mark blocked</dd>
 			<dt><WornKbd keys={['O']} /></dt><dd>Open details</dd>
 			<dt><WornKbd keys={['Space']} /></dt><dd>Run action</dd>
+			<dt><WornKbd keys={['F']} /></dt><dd>Toggle focus mode</dd>
 			<dt><WornKbd keys={['/']} /></dt><dd>Search</dd>
 			<dt><WornKbd keys={['C / N']} /></dt><dd>Focus quick-add when available</dd>
 			<dt><WornKbd keys={['Esc']} /></dt><dd>Close / blur search</dd>

@@ -63,6 +63,21 @@ Source baseline: clean `origin/main` at `6dc0cb70f56776108810ab31a2780857d69044c
 | WebMCP lifecycle | Review exposed exactly `get_current_review_queue` and `set_review_scope`. After the keyboard navigation, the old Review handle failed as stale and Next exposed exactly `get_current_next_editor` and `prepare_next_action`; the descriptors and side-effect metadata were unchanged. |
 | Browser cleanup | The visible Guide `Reset live sample` action restored the bundled sample, emulated media/touch/viewport state was reset, the audit tab was closed, and the local preview was stopped. |
 
+## Work Focus-mode F shortcut — August 30, 2026
+
+This local checkpoint makes Work's existing Focus-mode keyboard promise executable. It changes no workspace field, storage owner, route, WebMCP registration, component API, commit, deployment, or hosted state.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | The Focus control advertised `Focus on selected work (F)`, and activation announced `Focus on. Press F to exit.` The route's only window-key owner had no F branch: after a real `f` keypress, the control remained `aria-pressed="true"` and the document retained `focus-mode`. |
+| One route owner | Work's existing `handleWindowKeys` now handles lowercase or uppercase F once, prevents the default, and calls the existing `toggleFocusMode`. It ignores inputs, textareas, selects, Ctrl/Meta/Alt combinations, and repeated keydown events; no parallel shortcut helper or focus-mode path was added. |
+| Visible shortcut truth | The existing Keyboard shortcuts dialog now includes `F — Toggle focus mode`, aligning its visible help, button title, toast instruction, and executable behavior. |
+| Red-first and focused contract | The new Work contract failed 1/13 on the missing F branch, then passed 13/13 after the route and visible help used the same shortcut. |
+| Automated gate | `npm run verify` passed: manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed production prerender. |
+| Compact rendered result | At 390 × 844 in dark mode with reduced motion and a coarse pointer, Focus changed to pressed and the visible work count became 1. A real F keypress changed it back to unpressed, removed `focus-mode`, retained keyboard-visible focus on the 44px control, and produced no horizontal overflow. With Focus active, typing `f` in Quick Add inserted the character and left Focus active, proving the editable-field guard. |
+| Wide rendered result | At 1440 × 1000 in light mode with normal motion, the live Work getter projected focus mode as 1 shown / 1 matching / 8 workspace / 0 blocked. Pressing F projected focus mode off and restored 8 shown / 8 matching / 8 workspace / 3 blocked; the 36px control retained visible keyboard focus and the document had no horizontal overflow. |
+| WebMCP boundary | Work still exposed exactly `get_current_work_view` and `show_work_search`. The read-only getter truthfully reflected the local Focus scope before and after F; no tool, schema, annotation, request, or workspace write changed. |
+
 ## Priority and Quick Add production release — August 29, 2026
 
 Verified at `2026-08-29T11:54:56-04:00`. Pull request [#39](https://github.com/wornpage/projects-webmcp-extension/pull/39) merged as `dbd0d5f6fc77f4e4f261ee66808b18b41438d55b`. The reviewed branch and squash merge have the identical tree `9a26589d3dcb9f3909b613b9b064215596f77f4f`.
