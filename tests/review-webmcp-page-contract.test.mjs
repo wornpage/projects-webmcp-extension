@@ -289,6 +289,7 @@ test('the Review scope descriptor declares and verifies one reversible page-stat
 test('Review presentation receipts freeze normalized filters, counts, and visible evidence', () => {
 	assert.equal(normalizeReviewSearch('  Garage reset  '), 'Garage reset');
 	assert.equal(normalizeReviewSearch('line\nbreak'), null);
+	assert.equal(normalizeReviewSearch('x'.repeat(120)), 'x'.repeat(120));
 	assert.equal(normalizeReviewSearch('x'.repeat(121)), null);
 	const review = queueView();
 	const receipt = reviewScopePresentationReceipt({
@@ -304,6 +305,23 @@ test('Review presentation receipts freeze normalized filters, counts, and visibl
 		{ label: 'Status', value: 'Visible queue updated · Not saved' }
 	]);
 	assert.equal(receipt.scopeKey, JSON.stringify({ scope: review.scope, counts: review.counts }));
+});
+
+test('Review human and WebMCP search share one explicit query-length boundary', () => {
+	assert.match(helperSource, /export const REVIEW_SEARCH_MAX_LENGTH = 120;/u);
+	assert.match(
+		helperSource,
+		/query: \{ type: 'string', maxLength: REVIEW_SEARCH_MAX_LENGTH,[\s\S]*?query\.length <= REVIEW_SEARCH_MAX_LENGTH \? query : null;/u
+	);
+	assert.match(routeSource, /REVIEW_SEARCH_MAX_LENGTH,[\s\S]*?\} from '\.\/review-webmcp\.mjs';/u);
+	assert.match(
+		routeSource,
+		/function setHumanReviewQuery\(event: Event\) \{[\s\S]*?const input = event\.currentTarget as HTMLInputElement;[\s\S]*?const nextQuery = input\.value\.slice\(0, REVIEW_SEARCH_MAX_LENGTH\);[\s\S]*?input\.value = nextQuery;[\s\S]*?query = nextQuery;[\s\S]*?\}/u
+	);
+	assert.match(
+		routeSource,
+		/id="review-filter-query"[\s\S]*?maxlength=\{REVIEW_SEARCH_MAX_LENGTH\}[\s\S]*?bind:value=\{query\}[\s\S]*?oninput=\{setHumanReviewQuery\}/u
+	);
 });
 
 test('Work-to-Review retained scroll settles before strict visible-focus proof', async () => {
@@ -401,7 +419,7 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\], \{\s*onInvocationError: clearFailedReviewWebMcpReceipt,\s*onResult: recordReviewWebMcpResult\s*\}\)/u);
 	assert.match(routeSource, /stopReviewWebMcp\?\.\(\);\s*stopReviewWebMcp = null;/u);
 	assert.match(routeSource, /stopReviewWebMcp = null;\s*webMcpScopeReceipt = null;/u);
-	assert.match(routeSource, /id="review-filter-query"[\s\S]*?maxlength="120"/u);
+	assert.match(routeSource, /id="review-filter-query"[\s\S]*?maxlength=\{REVIEW_SEARCH_MAX_LENGTH\}/u);
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);
 	assert.doesNotMatch(`${routeSource}\n${helperSource}\n${registrationSource}`, /\/api\/mcp-proxy|jsonrpc|tools\/call|unregisterTool/u);
 	assert.doesNotMatch(helperSource, /\.\.\.(?:pack|item|review)|runPackAction|togglePackPinned|setSelectedWork/u);

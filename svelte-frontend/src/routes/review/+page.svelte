@@ -26,6 +26,7 @@
 	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import {
+		REVIEW_SEARCH_MAX_LENGTH,
 		REVIEW_SCOPE_TOOL_NAME,
 		createCurrentReviewTool,
 		createSetReviewScopeTool,
@@ -57,6 +58,13 @@
 	let query = $state('');
 	let busyId = $state('');
 	let busyAction = $state('');
+
+	function setHumanReviewQuery(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const nextQuery = input.value.slice(0, REVIEW_SEARCH_MAX_LENGTH);
+		input.value = nextQuery;
+		query = nextQuery;
+	}
 
 	function livePacks(source: DemoPack[]): DemoPack[] {
 		return source.filter((pack) => pack.archived !== true);
@@ -526,10 +534,11 @@ async function handleCardKeys(e: KeyboardEvent) {
 				<WornInput
 					id="review-filter-query"
 					type="search"
-					maxlength="120"
+					maxlength={REVIEW_SEARCH_MAX_LENGTH}
 					placeholder="Search review…"
 					aria-label="Filter review items by text"
 					bind:value={query}
+					oninput={setHumanReviewQuery}
 				/>
 			</div>
 		</WornToolbar>
