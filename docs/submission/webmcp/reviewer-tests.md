@@ -403,6 +403,21 @@ This local checkpoint makes the human Next editor and its page-owned WebMCP meta
 | Page-tool truthfulness | Next exposed exactly `get_current_next_editor` and `prepare_next_action`. After cleanup, the getter returned the visible 22-character custom action and no preparation receipt. A 201-character preparation failed with `choice must be 200 characters or fewer`; it created no pending link, receipt, storage snapshot, or workspace write. |
 | Wide and cleanup | At 1280 × 900 in light mode, the 1121.7 × 44px input remained fully in the viewport with `maxlength=200` and 0px horizontal overflow. The visible Guide reset removed the temporary pending draft; the final Next state had no pending navigation, retained the original saved action, and produced 0 browser warnings or errors. |
 
+## Work search length parity — August 29, 2026
+
+This local checkpoint keeps the visible Work search inside the same existing 120-character contract as its page-owned WebMCP operation and exact current-view projection. It changes no workspace field, search algorithm, URL route, registration owner, storage owner, or Wornpage package.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | The visible search had no `maxlength` and accepted 121 characters, rendering `0 shown · 0 matching · 8 workspace`. Work still exposed exactly two page tools, but `get_current_work_view` returned `null` because the canonical projection already rejects search values over 120. |
+| One explicit boundary | The existing constant is now exported as `WORK_SEARCH_MAX_LENGTH = 120` and continues to own tool metadata, caller validation, route normalization, and exact projection validation. Route-specific `WorkFilterControls` imports that constant for WornInput `maxlength` and bounds the existing human `query` binding in its input handler. No second query, filter, receipt, registration, or persistence path was added. |
+| Red-first and focused contract | The new source contract first failed with 12/13 passing because the human control did not share the canonical limit, then passed 13/13 after the hard cutover. |
+| Automated gate | `npm run verify` passed: manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed 358-SSR / 329-client-module production build. |
+| Compact rendered parity | At a requested 390 × 844 viewport (375px document width) with dark color scheme, reduced motion, and a coarse pointer, a 121-character browser-automation input event produced a 120-character visible value. The input exposed `maxlength=120`, measured 346.2 × 44px, stayed fully in the viewport, and had 0px document overflow. The getter returned search and applied-search lengths of 120 with exact 0 shown / 0 matching / 8 workspace / 0 items. Browser diagnostics were empty. |
+| Page-tool truthfulness | Work exposed exactly `get_current_work_view` and `show_work_search`; the setter schema retained `maxLength: 120`. A 121-character tool input failed with `Work search query must be 120 characters or fewer.`, retained the existing human 120-character scope, rendered 0 agent receipts, and created no workspace storage snapshot. |
+| Wide and cleanup | At 1280 × 900 in light mode, the same bound produced a 120-character getter-visible scope; the 926.9 × 44px input stayed fully visible with 0px overflow and no workspace storage. Visible Clear search restored 8 shown / 8 matching / 8 workspace / 3 blocked, returned focus to `Filter work items by text`, and left browser diagnostics empty. |
+| Bundle boundary | The build stayed at 358 SSR / 329 client modules. Work moved from 78.80 / 16.31 to 78.96 / 16.38 kB gzip; its client node moved from 48.41 / 15.28 to 48.49 / 15.32. The shared `work-webmcp` server chunk moved from 12.81 / 3.69 to 12.73 / 3.67. No other route or shared component source changed. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.

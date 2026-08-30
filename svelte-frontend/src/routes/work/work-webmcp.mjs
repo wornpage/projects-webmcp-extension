@@ -1,11 +1,11 @@
 export const WORK_CURRENT_TOOL_NAME = 'get_current_work_view';
 export const WORK_SEARCH_TOOL_NAME = 'show_work_search';
+export const WORK_SEARCH_MAX_LENGTH = 120;
 
 const WORK_STATUSES = new Set(['all', 'active', 'blocked', 'draft', 'done', 'review', 'archived']);
 const WORK_SORTS = new Set(['urgency', 'due', 'title', 'status', 'energy', 'recent']);
 const WORK_DENSITIES = new Set(['grid', 'card']);
 const WORK_DUE_SCOPES = new Set(['all', 'overdue']);
-const MAX_SEARCH_LENGTH = 120;
 
 /** @typedef {'grid' | 'card'} WorkDensity */
 /** @typedef {{ search: string, appliedSearch: string, status: string, energy: string, area: string, recurrence: string, owner: string, dueUrgency: string, sort: string, hideDone: boolean, focusMode: boolean, density: WorkDensity }} WorkScopeView */
@@ -107,7 +107,7 @@ export function createShowWorkSearchTool(showSearch) {
 			properties: {
 				query: {
 					type: 'string',
-					maxLength: MAX_SEARCH_LENGTH,
+					maxLength: WORK_SEARCH_MAX_LENGTH,
 					description: 'Text to show in Work search. Use an empty string to clear it.'
 				}
 			},
@@ -203,7 +203,7 @@ function workSearchInput(input) {
 	if (typeof candidate.query !== 'string') throw new TypeError('Work search query must be a string.');
 	if (/\p{Cc}/u.test(candidate.query)) throw new TypeError('Work search query cannot contain control characters.');
 	const query = normalizeWorkSearch(candidate.query);
-	if (query === null) throw new TypeError(`Work search query must be ${MAX_SEARCH_LENGTH} characters or fewer.`);
+	if (query === null) throw new TypeError(`Work search query must be ${WORK_SEARCH_MAX_LENGTH} characters or fewer.`);
 	return query;
 }
 
@@ -218,7 +218,7 @@ function workSearchInput(input) {
 export function normalizeWorkSearch(value) {
 	if (typeof value !== 'string' || /\p{Cc}/u.test(value)) return null;
 	const query = value.trim();
-	return query.length <= MAX_SEARCH_LENGTH ? query : null;
+	return query.length <= WORK_SEARCH_MAX_LENGTH ? query : null;
 }
 
 /**
@@ -310,7 +310,7 @@ function cloneWorkView(view) {
 
 /** @param {unknown} value @returns {string | null} */
 function exactSearch(value) {
-	if (typeof value !== 'string' || value.length > MAX_SEARCH_LENGTH || /\p{Cc}/u.test(value)) return null;
+	if (typeof value !== 'string' || value.length > WORK_SEARCH_MAX_LENGTH || /\p{Cc}/u.test(value)) return null;
 	return value;
 }
 
