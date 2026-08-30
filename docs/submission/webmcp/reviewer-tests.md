@@ -12,6 +12,25 @@ npm run verify
 
 Expected: zero Svelte errors and warnings, all focused contracts pass, and `dist/static-publish` contains the prerendered challenge.
 
+## Decision Workspace context in Next — August 30, 2026
+
+Source baseline: clean `origin/main` at `e8e28fbb85d00609e187fab0b5f95962b04f1384` in the isolated `newwork/decision-next-handoff` worktree.
+
+| Gate | Exact result |
+| --- | --- |
+| One navigation contract | Work and its reader use the single `decisionWorkspaceNextHref` owner. The URL carries only the exact encoded canonical work id and bounded `context=decision-workspace` presentation marker; it carries no reason, title, decider, counts, purpose, proof target, source text, memory, or activity. Exact ids keep surrounding whitespace and ids longer than 200 characters instead of trimming or rejecting a valid saved-state identity. |
+| Truthful context | The public marker is not treated as provenance. Next renders context only when the marker's exact requested id is still the visible pack and `isOpenDecision` still accepts that canonical loaded pack. Its fixed explanation states only the current open-decision fact and Decision Workspace's selection rule; it never claims that a person arrived from, or left, a prior Work view. |
+| Visible human authority | The existing Next context now shows why Work selected the item and the current decision owner above the unchanged choice editor. Arrival created no pending draft: the reader returned `preparationReceipt: null`, `canSave: false`, and the no-pending-draft reason; the visible Save button remained disabled and workspace state remained unchanged. |
+| WebMCP boundary | Work still owns exactly `get_current_work_view` and `show_work_search`; its rendered action and recommendation href matched exactly. Next still owns `get_current_next_editor` and `prepare_next_action`. The read-only getter adds only nullable `decisionContext` fields `mode`, fixed page-owned `reason`, and visible `decider`; the preparer remains truthfully non-read-only because it may persist a pending browser-local draft but cannot save workspace fields. |
+| One draft and save path | No route, session, storage, fallback, or automatic draft path was added. Human choices and browser-agent preparations still converge on `savePendingNextActionDraft`; only the existing human Save action calls `setPackNextAction`, which atomically approves the exact non-stale draft through `approvePendingDraft` and the existing browser-state owner. |
+| Focused contracts | `node --test tests/work-webmcp-page-contract.test.mjs tests/next-webmcp-page-contract.test.mjs` passed 42/42. Coverage includes bounded navigation, exact canonical-id preservation, allowlisted context cloning/redaction, duplicate/legacy marker rejection, current-state-only wording, UI/reader href parity, explicit no-fallback selection, unchanged canonical approval ownership, and exact blocked-denominator parity. |
+| Full automated gate | `npm run verify` passed: public manifest 89/89, Svelte 0 errors and 0 warnings, WebMCP 93/93, static artifacts 6/6, and a completed production prerender. |
+| Rendered 499px result | Work rendered `Garage reset: choose the bike rack`; its visible and WebMCP hrefs both ended in `&context=decision-workspace`. The Next getter returned the same work id plus mode `decision-workspace`, owner `Household`, the visible current-state-only reason, no preparation receipt, and disabled saving. At both routes the relevant panels and actions were contained; document client/scroll widths were 484/484px. |
+| Rendered 320px result | At a requested 320 × 568 viewport, document client/scroll widths were 305/305px. The Decision Workspace context, full current-work surface, and choice/save editor all stayed inside the viewport; Save remained disabled and horizontal overflow was 0px. |
+| Filtered-out decision | `show_work_search({ query: "request archive" })` produced one matching blocked item, no visible open decision, and `recommendation: null`. The read-only getter returned the same null recommendation, the panel was absent, and document client/scroll widths remained 484/484px. |
+| Negative routes | Direct `/next?pack=garage-reset-sort-shelves` rendered no Decision Workspace context and returned `decisionContext: null`. `/next?pack=missing-decision&context=decision-workspace` rendered `Work item not found`, exposed no current-work or context surface, returned a null current-editor result, and did not fall back to persisted selection. Both remained free of horizontal overflow. |
+| Browser diagnostics and cleanup | The final Work → Next, direct-route, invalid-route, 499px, and 320px replay produced zero browser warnings or errors. The temporary tab was closed, the viewport override was reset, and the local server was stopped. |
+
 ## Decision Workspace on Work — August 30, 2026
 
 Source baseline: clean `origin/main` at `7c40b6e1b2912e172eb4a0d2c9b6aa209e1c043e` in the isolated `newwork/extension-decision-workspace` worktree.

@@ -1,3 +1,5 @@
+import { decisionWorkspaceNextHref, exactWorkId } from '../../lib/decision-workspace-navigation.mjs';
+
 export const WORK_CURRENT_TOOL_NAME = 'get_current_work_view';
 export const WORK_SEARCH_TOOL_NAME = 'show_work_search';
 export const WORK_SEARCH_MAX_LENGTH = 120;
@@ -45,7 +47,7 @@ export function workPageView(input) {
 		(recommendation !== null && (
 			recommendation.decisionCount < 1 ||
 			recommendation.decisionCount > counts.matching ||
-			recommendation.blockedCount > counts.matching ||
+			recommendation.blockedCount !== counts.blocked ||
 			recommendation.overdueCount > counts.matching
 		))
 	) {
@@ -59,7 +61,7 @@ export function workPageView(input) {
 export function workItemPageView(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
-	const id = normalizedText(candidate.id);
+	const id = exactWorkId(candidate.id);
 	const title = normalizedText(candidate.title);
 	const workflow = normalizedText(candidate.workflow);
 	const owner = nullableText(candidate.owner);
@@ -197,7 +199,7 @@ function workDecisionRecommendationView(input) {
 	if (input === null) return null;
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return undefined;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
-	const id = normalizedText(candidate.id);
+	const id = exactWorkId(candidate.id);
 	const title = normalizedText(candidate.title);
 	const reason = normalizedText(candidate.reason);
 	const decider = nullableText(candidate.decider);
@@ -206,7 +208,7 @@ function workDecisionRecommendationView(input) {
 	const overdueCount = nonNegativeSafeInteger(candidate.overdueCount);
 	const sourceCount = nonNegativeSafeInteger(candidate.sourceCount);
 	if (!id || !title || !reason || decider === undefined || decisionCount === null || blockedCount === null || overdueCount === null || sourceCount === null) return undefined;
-	return { id, title, href: `/next?pack=${encodeURIComponent(id)}`, reason, decider, decisionCount, blockedCount, overdueCount, sourceCount };
+	return { id, title, href: decisionWorkspaceNextHref(id), reason, decider, decisionCount, blockedCount, overdueCount, sourceCount };
 }
 
 /** @param {unknown} value @returns {number | null} */

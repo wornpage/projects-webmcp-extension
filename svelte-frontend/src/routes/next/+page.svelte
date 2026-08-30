@@ -24,6 +24,7 @@
 		blockerText,
 		isReview,
 		hasBlocker,
+		isOpenDecision,
 		workflowLabel,
 		workTitle,
 		type DemoPack
@@ -41,6 +42,12 @@
 	} from '$lib/components';
 	import { workItemIssues } from '$lib/work-item-issues';
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
+	import {
+		DECISION_WORKSPACE_CONTEXT,
+		DECISION_WORKSPACE_CONTEXT_REASON,
+		decisionWorkspaceContextDecider,
+		decisionWorkspaceContextPackId
+	} from '$lib/decision-workspace-navigation.mjs';
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
@@ -88,6 +95,11 @@
 	};
 	type EditorSnapshot = { mode: NextEditorMode; choice: string };
 	type SavedNextReceipt = { summary: string; pack: DemoPack };
+	type DecisionWorkspaceContext = {
+		mode: 'decision-workspace';
+		reason: string;
+		decider: string | null;
+	};
 	type NextPreparationSnapshot = {
 		choice: string;
 		customValue: string;
@@ -125,11 +137,15 @@ let showingCustom = $state(false);
 	let packs = $derived(
 		(($demoState?.packs ?? []) as DemoPack[]).filter((candidate) => candidate.archived !== true)
 	);
+	let requestedPackId = $derived(browser ? ($page.url.searchParams.get('pack') || '') : '');
+	let decisionWorkspaceContextId = $derived(
+		browser ? decisionWorkspaceContextPackId($page.url.searchParams) : ''
+	);
 	// Work and Review link here with an explicit ?pack= selection.
 	let selectedId = $derived(
 		chosenPackId ||
 			// The prerender has no browser URL; hydration resolves the real query.
-			(browser ? $page.url.searchParams.get('pack') : '') ||
+			requestedPackId ||
 			$demoState?.selectedId ||
 			''
 	);
@@ -147,6 +163,15 @@ let showingCustom = $state(false);
 	// requested pack may simply not have arrived yet.
 	let notFound = $derived(Boolean(selectedId) && demoLoaded && !pack);
 	let loadingSelected = $derived(Boolean(selectedId) && !demoLoaded && !pack);
+	let decisionWorkspaceContext = $derived.by((): DecisionWorkspaceContext | null => {
+		if (!pack?.id || pack.id !== requestedPackId || pack.id !== decisionWorkspaceContextId || !isOpenDecision(pack)) return null;
+		const decider = decisionWorkspaceContextDecider(pack.decider);
+		return {
+			mode: DECISION_WORKSPACE_CONTEXT,
+			reason: DECISION_WORKSPACE_CONTEXT_REASON,
+			decider
+		};
+	});
 	let candidates = $derived(packs.filter(isReview));
 	let otherCandidates = $derived(candidates.filter((candidate) => candidate.id !== pack?.id));
 	let renderedOtherCandidates = $derived(otherCandidates.slice(0, candidateRenderLimit));
@@ -168,6 +193,7 @@ let showingCustom = $state(false);
 		if (!pack?.id || !preview) return null;
 		return nextEditorPageView({
 			work: { id: pack.id, title: workTitle(pack) },
+			decisionContext: decisionWorkspaceContext,
 			presetChoices: NEXT_ACTION_CHOICES,
 			editor: { mode: effectiveMode, choice: effectiveChoice },
 			preview: {
@@ -559,6 +585,18 @@ let showingCustom = $state(false);
 				<dt>Current work</dt>
 				<dd>{workTitle(pack)}</dd>
 			</div>
+			{#if decisionWorkspaceContext}
+				<div class="next-decision-context" data-next-decision-context data-next-decision-mode={decisionWorkspaceContext.mode}>
+					<dt>Decision workspace context</dt>
+					<dd data-next-decision-reason>{decisionWorkspaceContext.reason}</dd>
+				</div>
+				{#if decisionWorkspaceContext.decider}
+					<div data-next-decision-decider>
+						<dt>Decision owner</dt>
+						<dd>{decisionWorkspaceContext.decider}</dd>
+					</div>
+				{/if}
+			{/if}
 		</dl>
 		{#if $demoStateError}
 			<WornError message="Could not load next actions" detail={$demoStateError} onretry={refreshNext} />
@@ -728,6 +766,10 @@ let showingCustom = $state(false);
 		display: grid;
 		gap: 4px;
 		min-inline-size: 0;
+	}
+	.next-work-context > div + div {
+		border-top: 1px solid var(--worn-border);
+		padding-top: 10px;
 	}
 	.next-work-context dt,
 	.next-work-context dd {

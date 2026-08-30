@@ -18,6 +18,13 @@ import {
 	shouldHydratePendingDraft
 } from '../svelte-frontend/src/routes/next/next-webmcp.mjs';
 import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, hydrateSerializedState, pendingDraftFingerprint, pendingDraftNavigation, resetPersistedState, restorePendingDraft, upsertPendingDraft } from '../svelte-frontend/src/lib/pending-next-action.mjs';
+import {
+	DECISION_WORKSPACE_CONTEXT,
+	DECISION_WORKSPACE_CONTEXT_REASON,
+	decisionWorkspaceContextDecider,
+	decisionWorkspaceContextPackId,
+	decisionWorkspaceNextHref
+} from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
@@ -28,6 +35,7 @@ const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmc
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/next-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
+const decisionNavigationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/decision-workspace-navigation.mjs'), 'utf8');
 
 const presetChoices = ['Review', 'Open', 'Focus', 'Set Blocker: None', 'Start', 'Finish with proof'];
 const currentEvidenceReference = Object.freeze({
@@ -66,6 +74,7 @@ function verifiedFromReferences(references) {
 function editor(overrides = {}) {
 	return nextEditorPageView({
 		work: { id: 'next-current', title: 'Prepare the garage inventory' },
+		decisionContext: null,
 		presetChoices,
 		editor: { mode: 'preset', choice: 'Open' },
 		preview: { blocker: null, nextAction: 'Open' },
@@ -82,6 +91,7 @@ test('Next projects only its exact current editor, choices, and visible preview'
 	const view = editor({ preview: { blocker: 'Waiting for labels', nextAction: 'Unblock' } });
 	assert.deepEqual(view, {
 		work: { id: 'next-current', title: 'Prepare the garage inventory' },
+		decisionContext: null,
 		presetChoices,
 		editor: { mode: 'preset', choice: 'Open' },
 		preview: { blocker: 'Waiting for labels', nextAction: 'Unblock' },
@@ -100,6 +110,25 @@ test('Next projects only its exact current editor, choices, and visible preview'
 	assert.equal(prepared.preview.nextAction, 'Clear the garage floor');
 	assert.equal(prepared.preparationReceipt.workspaceChanged, false);
 	assert.equal(prepared.preparationReceipt.requiresHumanSave, true);
+	const decisionContext = {
+		mode: DECISION_WORKSPACE_CONTEXT,
+		reason: DECISION_WORKSPACE_CONTEXT_REASON,
+		decider: 'Household',
+		privatePurpose: 'not exposed'
+	};
+	const recommended = editor({ decisionContext });
+	assert.deepEqual(recommended.decisionContext, {
+		mode: 'decision-workspace',
+		reason: DECISION_WORKSPACE_CONTEXT_REASON,
+		decider: 'Household'
+	});
+	assert.doesNotMatch(JSON.stringify(recommended), /privatePurpose/u);
+	assert.notEqual(recommended.decisionContext, decisionContext);
+	const exactCanonicalId = ` ${'x'.repeat(201)} `;
+	assert.deepEqual(editor({ work: { id: exactCanonicalId, title: 'Exact identity' } })?.work, {
+		id: exactCanonicalId,
+		title: 'Exact identity'
+	});
 
 	for (const malformed of [
 		null,
@@ -115,6 +144,10 @@ test('Next projects only its exact current editor, choices, and visible preview'
 		{ ...prepared, preparationReceipt: { ...prepared.preparationReceipt, evidenceNote: 'Unverified prose.' } },
 		{ ...prepared, preparationReceipt: { ...prepared.preparationReceipt, evidence: [] } },
 		{ ...prepared, preparationReceipt: { ...prepared.preparationReceipt, evidence: [{ ...currentVerifiedEvidence, label: 'Status' }] } },
+		{ ...view, decisionContext: {} },
+		{ ...view, decisionContext: { ...recommended.decisionContext, mode: 'query-string' } },
+		{ ...view, decisionContext: { ...recommended.decisionContext, reason: 'Unverified reason.' } },
+		{ ...view, decisionContext: { ...recommended.decisionContext, decider: '' } },
 		{ ...view, canSave: 'yes' },
 		{ ...view, staleReason: 'stale', canSave: true },
 		{ ...view, busy: 'no' }
@@ -125,6 +158,11 @@ test('Next projects only its exact current editor, choices, and visible preview'
 
 test('the current-editor descriptor is closed, read-only, untrusted-content aware, and live', async () => {
 	let current = editor({
+		decisionContext: {
+			mode: DECISION_WORKSPACE_CONTEXT,
+			reason: DECISION_WORKSPACE_CONTEXT_REASON,
+			decider: 'Household'
+		},
 		editor: { mode: 'custom', choice: 'Clear the garage floor' },
 		preview: { blocker: 'Waiting on storage bins', nextAction: 'Clear the garage floor' },
 		preparationReceipt: preparationReceipt('Clear the garage floor')
@@ -137,7 +175,7 @@ test('the current-editor descriptor is closed, read-only, untrusted-content awar
 	assert.equal(tool.name, CURRENT_NEXT_EDITOR_TOOL_NAME);
 	assert.equal(tool.name, 'get_current_next_editor');
 	assert.equal(tool.title, 'Get current Next editor');
-	assert.match(tool.description, /exact current work item, visible choices, unsaved editor, and preview/u);
+	assert.match(tool.description, /exact current work item, visible Decision Workspace context when present, choices, unsaved editor, and preview/u);
 	assert.match(tool.description, /does not change or save/u);
 	assert.deepEqual(tool.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
 	assert.deepEqual(tool.annotations, { readOnlyHint: true, openWorldHint: false, untrustedContentHint: true });
@@ -158,12 +196,14 @@ test('the current-editor descriptor is closed, read-only, untrusted-content awar
 	assert.deepEqual(first, current);
 	assert.notEqual(first, current);
 	assert.notEqual(first.work, current.work);
+	assert.notEqual(first.decisionContext, current.decisionContext);
 	assert.notEqual(first.presetChoices, current.presetChoices);
 	assert.notEqual(first.editor, current.editor);
 	assert.notEqual(first.preview, current.preview);
 	assert.notEqual(first.preparationReceipt, current.preparationReceipt);
 	assert.notEqual(first.preparationReceipt.work, current.preparationReceipt.work);
 	first.work.title = 'Mutated work title';
+	first.decisionContext.decider = 'Mutated decision owner';
 	first.presetChoices.push('Result-only choice');
 	first.editor.choice = 'Mutated editor choice';
 	first.preview.nextAction = 'Mutated preview';
@@ -176,6 +216,41 @@ test('the current-editor descriptor is closed, read-only, untrusted-content awar
 	assert.equal(await tool.execute({}), null);
 	assert.equal(reads, 2);
 	assert.throws(() => createCurrentNextEditorTool(null), /current editor getter/u);
+});
+
+test('Decision Workspace navigation requests only bounded current context for an exact encoded work id', () => {
+	assert.equal(
+		decisionWorkspaceNextHref('bike rack / choice'),
+		'/next?pack=bike%20rack%20%2F%20choice&context=decision-workspace'
+	);
+	assert.equal(
+		decisionWorkspaceContextPackId(new URLSearchParams('pack=bike%20rack%20%2F%20choice&context=decision-workspace')),
+		'bike rack / choice'
+	);
+	for (const params of [
+		new URLSearchParams('pack=bike-rack'),
+		new URLSearchParams('pack=bike-rack&context=work'),
+		new URLSearchParams('pack=bike-rack&from=decision-workspace'),
+		new URLSearchParams('context=decision-workspace'),
+		new URLSearchParams('pack=bike-rack&pack=other&context=decision-workspace'),
+		new URLSearchParams('pack=bike-rack&context=decision-workspace&context=decision-workspace')
+	]) {
+		assert.equal(decisionWorkspaceContextPackId(params), '');
+	}
+	const longCanonicalId = 'x'.repeat(201);
+	assert.equal(
+		decisionWorkspaceContextPackId(new URLSearchParams(`pack=${longCanonicalId}&context=decision-workspace`)),
+		longCanonicalId
+	);
+	assert.throws(() => decisionWorkspaceNextHref(''), /exact work item id/u);
+	assert.throws(() => decisionWorkspaceNextHref('   '), /exact work item id/u);
+	assert.equal(decisionWorkspaceContextDecider(' Household '), 'Household');
+	assert.equal(decisionWorkspaceContextDecider('x'.repeat(201)), null);
+	assert.equal(decisionWorkspaceContextDecider('Household\nowner'), null);
+	assert.match(DECISION_WORKSPACE_CONTEXT_REASON, /remains an explicit open decision/u);
+	assert.doesNotMatch(DECISION_WORKSPACE_CONTEXT_REASON, /surfaced|arrived|you left|came from/u);
+	assert.match(routeSource, /pack\.id !== requestedPackId \|\| pack\.id !== decisionWorkspaceContextId \|\| !isOpenDecision\(pack\)/u);
+	assert.doesNotMatch(decisionNavigationSource, /reason=|decider=|title=|purpose=|memory=|sourceCount=|localStorage|sessionStorage/u);
 });
 
 test('the prepare descriptor validates a stale-safe reversible page operation and receipt', async () => {
@@ -215,7 +290,7 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 				items: {
 					type: 'object',
 					properties: {
-						workId: { type: 'string', minLength: 1, maxLength: 200, description: 'Exact work item id returned by Work or Review.' },
+						workId: { type: 'string', minLength: 1, description: 'Exact work item id returned by Work or Review.' },
 						field: { type: 'string', enum: ['workflow', 'blocker'], description: 'Exact projected field being cited.' },
 						expectedValue: { type: 'string', minLength: 1, maxLength: 200, description: 'Exact field value returned by Work or Review.' }
 					},
@@ -239,7 +314,7 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 		choice: '  Call the supplier  ',
 		expectedMode: 'preset',
 		expectedChoice: ' Open ',
-		evidence: [{ workId: ' next-current ', field: 'blocker', expectedValue: ' Waiting for labels ' }]
+		evidence: [{ workId: 'next-current', field: 'blocker', expectedValue: ' Waiting for labels ' }]
 	}, { signal: new AbortController().signal });
 	assert.deepEqual(calls, [{
 		choice: 'Call the supplier',
@@ -253,6 +328,36 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 	assert.equal(result.next.editor.choice, 'Call the supplier');
 	assert.equal(result.next.preparationReceipt.evidenceNote, 'Prepare the garage inventory — Blocker: Waiting for labels.');
 	assert.deepEqual(result.next.preparationReceipt.evidence, [currentVerifiedEvidence]);
+	const exactId = ` ${'x'.repeat(201)} `;
+	const exactWork = { id: exactId, title: 'Exact identity' };
+	const exactEvidence = { work: exactWork, field: 'workflow', label: 'Workflow', value: 'Active' };
+	const exactIdTool = createPrepareNextActionTool(async (input) => ({
+		changed: true,
+		focus: { id: NEXT_PREPARATION_RECEIPT_ID, ...focusProof },
+		next: editor({
+			work: exactWork,
+			editor: { mode: 'preset', choice: input.choice },
+			preview: { blocker: null, nextAction: input.choice },
+			preparationReceipt: {
+				summary: NEXT_PREPARATION_SUMMARY,
+				work: exactWork,
+				evidenceNote: verifiedNextEvidenceNote([exactEvidence]),
+				evidence: [exactEvidence],
+				preparedAction: input.choice,
+				workspaceChanged: false,
+				requiresHumanSave: true
+			}
+		})
+	}));
+	const exactIdResult = await exactIdTool.execute({
+		choice: 'Start',
+		expectedMode: 'preset',
+		expectedChoice: 'Open',
+		evidence: [{ workId: exactId, field: 'workflow', expectedValue: 'Active' }]
+	});
+	assert.equal(exactIdResult.next.work.id, exactId);
+	assert.equal(exactIdResult.next.preparationReceipt.work.id, exactId);
+	assert.equal(exactIdResult.next.preparationReceipt.evidence[0].work.id, exactId);
 	for (const field of Object.keys(focusProof)) {
 		const unverified = createPrepareNextActionTool(async () => ({
 			...structuredClone(result),
@@ -353,6 +458,15 @@ test('Next verifies exact live workspace facts and generates the evidence note i
 	assert.equal(
 		verifiedNextEvidenceNote(verified),
 		'Garage reset: sort shelves — Blocker: Waiting on storage bins. Garage reset: clear the floor — Workflow: Done.'
+	);
+	const exactId = ` ${'x'.repeat(201)} `;
+	assert.deepEqual(
+		verifyNextPreparationEvidence(
+			[{ workId: exactId, field: 'workflow', expectedValue: 'Active' }],
+			[{ id: exactId, title: 'Exact identity', workflow: 'Active', blocker: 'None' }],
+			exactId
+		),
+		[{ work: { id: exactId, title: 'Exact identity' }, field: 'workflow', label: 'Workflow', value: 'Active' }]
 	);
 	assert.throws(
 		() => verifyNextPreparationEvidence([references[1]], workspace, 'next-current'),
