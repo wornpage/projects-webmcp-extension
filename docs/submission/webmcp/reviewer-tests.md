@@ -45,6 +45,24 @@ This local checkpoint changes the one shared Review classifier. It does not add 
 | Wide rendered result | At 1440 × 1000 in forced light mode with normal motion, the same exact queue rendered with no horizontal overflow and no terminal item text. A direct Next load after Review projected `garage-reset-sort-shelves`, custom action `Clear the garage floor`, and blocker `Waiting on storage bins`. |
 | WebMCP boundary | Review still exposed exactly `get_current_review_queue` and `set_review_scope`; Next still exposed exactly `get_current_next_editor` and `prepare_next_action`. Getter metadata remained read-only and action metadata remained mutation-truthful. Browser verification changed no workspace field, and the visible Guide reset cleared the browser-local sample state afterward. |
 
+## Review card drag boundary — August 30, 2026
+
+Source baseline: clean `origin/main` at `6dc0cb70f56776108810ab31a2780857d69044c6` in the isolated `newwork/fresh-observable-audit-42` worktree.
+
+| Gate | Exact result |
+| --- | --- |
+| Untouched baseline | `npm run verify` passed before edits: public manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 69/69, static artifacts 6/6, and a completed production prerender. |
+| Fresh rendered audit | Guide, Review, and Next were inspected at 320 × 568 in dark/reduced-motion/coarse-pointer mode and at 1440 × 1000 in light/normal-motion/fine-pointer mode. All three routes kept document width equal to scroll width and exposed no horizontally clipped control. |
+| Before | Every one of Review's four follow-on cards rendered `draggable="true"` even though Review had no drag-start, drag-over, drag-end, drop, reorder, or persistence handler. Repository search confirmed that Work remains the only route with an owned drag interaction. |
+| Owning-path change | Removed only Review's false `draggable` attribute. The existing focusable-card keyboard path, links, mutations, Work drag implementation, shared Wornpage API, and page-owned WebMCP registration were unchanged; no compatibility path was added. |
+| Focused contract | The new contract failed 7/8 before the source change solely on the advertised drag attribute, then passed 8/8 after the change. It also rejects future Review drag handlers unless a real interaction is deliberately introduced. |
+| Final automated gate | `npm run verify` passed after the fix: public manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed production prerender. |
+| Compact rendered result | At 320 × 568, all four Review cards had no `draggable` attribute, the DOM `draggable` property was `false`, and every drag-event property was `null`. The 305px document and scroll widths matched; card bounds stayed between 8px and 297px. |
+| Desktop rendered result | At 1440 × 1000, all four cards again had no drag attribute and `draggable === false`; every card remained within the 1425px document width and scroll width. |
+| Keyboard regression check | Arrow Down moved visible focus from `garage-reset-sort-shelves` to `garage-reset-haul-donations`; Enter opened `/next?pack=garage-reset-haul-donations`, whose settled title was `Next — Wornpage Projects™` and current-work label matched the requested item. |
+| WebMCP lifecycle | Review exposed exactly `get_current_review_queue` and `set_review_scope`. After the keyboard navigation, the old Review handle failed as stale and Next exposed exactly `get_current_next_editor` and `prepare_next_action`; the descriptors and side-effect metadata were unchanged. |
+| Browser cleanup | The visible Guide `Reset live sample` action restored the bundled sample, emulated media/touch/viewport state was reset, the audit tab was closed, and the local preview was stopped. |
+
 ## Priority and Quick Add production release — August 29, 2026
 
 Verified at `2026-08-29T11:54:56-04:00`. Pull request [#39](https://github.com/wornpage/projects-webmcp-extension/pull/39) merged as `dbd0d5f6fc77f4e4f261ee66808b18b41438d55b`. The reviewed branch and squash merge have the identical tree `9a26589d3dcb9f3909b613b9b064215596f77f4f`.
