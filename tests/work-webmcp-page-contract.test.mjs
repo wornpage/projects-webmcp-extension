@@ -21,6 +21,7 @@ import { summarizeWorkMetadata } from '../svelte-frontend/src/lib/work-metadata.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
 const workDeleteDialogSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WorkDeleteConfirmDialog.svelte'), 'utf8');
+const workFilterControlsSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkFilterControls.svelte'), 'utf8');
 const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
 const workListCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkListCard.svelte'), 'utf8');
 const reviewRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
@@ -406,6 +407,14 @@ test('Work text search includes the visible work type with every existing search
 	for (const field of ['pack.title', 'pack.type', 'pack.next', 'pack.owner', 'pack.due', 'pack.blocker', 'pack.area', "(pack.sources || []).join(' ')", 'pack.purpose', 'memory']) {
 		assert.match(searchHaystack, new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
 	}
+});
+
+test('Work active-filter count excludes the separately persisted display density', () => {
+	const activeFilterCount = workFilterControlsSource.match(/let activeSecondaryFilterCount = \$derived\([\s\S]*?\n\t\);/u)?.[0] ?? '';
+	assert.match(activeFilterCount, /Number\(sortBy !== 'urgency'\)/u);
+	assert.doesNotMatch(activeFilterCount, /density/u);
+	const clearCondition = workFilterControlsSource.match(/\{#if filter !== 'all'[\s\S]*?<WornChip size="sm" label="Clear"/u)?.[0] ?? '';
+	assert.doesNotMatch(clearCondition, /density/u);
 });
 
 test('compact Work grid cards remain readable and contained for fine and coarse pointers', () => {

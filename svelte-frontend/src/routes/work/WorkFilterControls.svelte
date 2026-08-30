@@ -87,8 +87,7 @@
 		Number(ownerFilter !== 'all') +
 		Number(dueUrgencyFilter !== 'all') +
 		Number(hideDoneApplies) +
-		Number(sortBy !== 'urgency') +
-		Number(density !== 'grid')
+		Number(sortBy !== 'urgency')
 	);
 	let secondaryFilterSummary = $derived(
 		activeSecondaryFilterCount > 0
