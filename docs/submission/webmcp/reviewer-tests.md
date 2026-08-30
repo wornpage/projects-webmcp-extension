@@ -12,6 +12,17 @@ npm run verify
 
 Expected: zero Svelte errors and warnings, all focused contracts pass, and `dist/static-publish` contains the prerendered challenge.
 
+## Decision Workspace handoff to Review — August 30, 2026
+
+This route keeps Decision Workspace's review action navigation-only. Work's visible action and read-only current-view recommendation use the same encoded Review destination; Review owns the arrival focus and does not change workspace data or select a substitute item.
+
+| Contract | Reviewer check |
+| --- | --- |
+| One destination | Work's **Review in queue** action and `get_current_work_view.recommendation.href` both use `decisionWorkspaceReviewHref`, yielding `/review?focus=<exact percent-encoded canonical id>`. Surrounding whitespace and canonical IDs longer than 200 characters remain encoded exactly when accepted by canonical state. |
+| Exact arrival | Review accepts exactly one `focus` value, matches that exact decoded ID only against its current rendered `ReviewView` queue, then passes the visible card through its existing `focusReviewScopeDestination` and `focusAndPulse` owner. |
+| Fail closed | Missing, duplicate, non-review-eligible, filtered-out, or non-rendered IDs produce no focus, scope change, fallback selection, receipt, or workspace write. A focus request also bypasses Review's ordinary preferred-item selection during refresh. |
+| Page and WebMCP boundary | Review retains its page-owned `get_current_review_queue` and `set_review_scope` registration and annotations. The Work reader is still read-only; the route handoff is an ordinary encoded href, not a tool call or workspace action. |
+
 ## Decision Workspace context in Next — August 30, 2026
 
 Source baseline: clean `origin/main` at `e8e28fbb85d00609e187fab0b5f95962b04f1384` in the isolated `newwork/decision-next-handoff` worktree.

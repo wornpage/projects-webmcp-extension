@@ -1,4 +1,4 @@
-import { decisionWorkspaceNextHref, exactWorkId } from '../../lib/decision-workspace-navigation.mjs';
+import { decisionWorkspaceReviewHref, exactWorkId } from '../../lib/decision-workspace-navigation.mjs';
 
 export const WORK_CURRENT_TOOL_NAME = 'get_current_work_view';
 export const WORK_SEARCH_TOOL_NAME = 'show_work_search';
@@ -208,7 +208,7 @@ function workDecisionRecommendationView(input) {
 	const overdueCount = nonNegativeSafeInteger(candidate.overdueCount);
 	const sourceCount = nonNegativeSafeInteger(candidate.sourceCount);
 	if (!id || !title || !reason || decider === undefined || decisionCount === null || blockedCount === null || overdueCount === null || sourceCount === null) return undefined;
-	return { id, title, href: decisionWorkspaceNextHref(id), reason, decider, decisionCount, blockedCount, overdueCount, sourceCount };
+	return { id, title, href: decisionWorkspaceReviewHref(id), reason, decider, decisionCount, blockedCount, overdueCount, sourceCount };
 }
 
 /** @param {unknown} value @returns {number | null} */

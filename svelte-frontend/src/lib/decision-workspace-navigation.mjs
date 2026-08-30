@@ -11,6 +11,27 @@ export function decisionWorkspaceNextHref(workId) {
 	return `/next?pack=${encodeURIComponent(normalizedId)}&context=${DECISION_WORKSPACE_CONTEXT}`;
 }
 
+/** @param {unknown} workId @returns {string} */
+export function decisionWorkspaceReviewHref(workId) {
+	const normalizedId = exactWorkId(workId);
+	if (!normalizedId) throw new TypeError('Decision Workspace navigation requires an exact work item id.');
+	return `/review?focus=${encodeURIComponent(normalizedId)}`;
+}
+
+/**
+ * Accept one exact focus request only. The Review route still has to prove the
+ * requested id is in its currently rendered review queue before focusing it.
+ *
+ * @param {unknown} searchParams
+ * @returns {string}
+ */
+export function decisionWorkspaceReviewFocusId(searchParams) {
+	if (!searchParams || typeof /** @type {{ getAll?: unknown }} */ (searchParams).getAll !== 'function') return '';
+	const params = /** @type {{ getAll: (name: string) => string[] }} */ (searchParams);
+	const workIds = params.getAll('focus');
+	return workIds.length === 1 ? exactWorkId(workIds[0]) || '' : '';
+}
+
 /**
  * Treat the route marker only as a bounded presentation request. The caller
  * must still verify that the exact loaded pack remains an open decision.

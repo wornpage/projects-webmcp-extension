@@ -21,6 +21,7 @@
 	import { workItemIssues } from '$lib/work-item-issues';
 	import { activityTextWithoutActor } from '$lib/activity';
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
+	import { decisionWorkspaceReviewFocusId } from '$lib/decision-workspace-navigation.mjs';
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
@@ -203,7 +204,7 @@
 		webMcpScopeReceipt = { ...reviewScopePresentationReceipt(outcome), toolName };
 		await tick();
 		const finalFocus = await focusReviewScopeDestination(true);
-		if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
+		if (!outcome.focus || !finalFocus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
 			throw new Error('Review receipt focus did not match the rendered scope destination.');
 		}
 	}
@@ -283,14 +284,25 @@
 		return { changed, focus };
 	}
 
-	async function focusReviewScopeDestination(requireVisibleFocus: boolean) {
-		const firstTitle = document.querySelector<HTMLElement>('.review-priority[data-pack-id] .demo-card-title');
+	async function focusReviewScopeDestination(requireVisibleFocus: boolean, requestedItemId = '') {
+		const requestedItem = requestedItemId
+			? [currentReviewView?.upNext, ...(currentReviewView?.items || [])].find((item) => item?.id === requestedItemId) || null
+			: null;
+		const requestedCard = requestedItem
+			? document.querySelector<HTMLElement>(`[data-review-card][data-pack-id="${CSS.escape(requestedItem.id)}"], .review-priority[data-pack-id="${CSS.escape(requestedItem.id)}"]`)
+			: null;
+		// A URL only requests the exact visible review item. It never changes
+		// Review scope, selects a substitute, or turns an absent id into a fallback.
+		if (requestedItemId && (!requestedItem || !requestedCard || requestedCard.dataset.packId !== requestedItemId)) return null;
+		const firstTitle = requestedCard?.querySelector<HTMLElement>('.demo-card-title')
+			|| (!requestedItemId ? document.querySelector<HTMLElement>('.review-priority[data-pack-id] .demo-card-title') : null);
 		const filterInput = document.getElementById('review-filter-query');
 		const reviewList = document.querySelector<HTMLElement>('[data-review-list]');
-		const focusTarget = firstTitle || filterInput || reviewList;
+		const focusTarget = firstTitle || (!requestedItemId ? filterInput || reviewList : null);
 		if (!focusTarget) throw new Error('Review scope destination did not render.');
 		const itemId = firstTitle?.closest<HTMLElement>('[data-pack-id]')?.dataset.packId || null;
 		if (firstTitle && !itemId) throw new Error('Review scope destination is missing its work-item identity.');
+		if (requestedItemId && itemId !== requestedItemId) return null;
 		const pulseTarget = firstTitle?.closest<HTMLElement>('.review-priority') || focusTarget;
 		const runFocus = (verify: boolean) => focusAndPulse(focusTarget, {
 			pulseTarget,
@@ -354,6 +366,7 @@
 		const state = await refreshDemoState({ reuseRecent });
 		if (!state || signal?.aborted) return;
 		const list = livePacks(state.packs as DemoPack[]);
+		if (decisionWorkspaceReviewFocusId($page.url.searchParams)) return;
 		const tourPack = landingTourRequested
 			? summarizeReviewQueue(list, query, reviewSubFilter).filteredVisible.find(
 				(pack) => pack.id === LANDING_TOUR_PACK_ID
@@ -367,6 +380,7 @@
 
 	let lastReviewSearch: string | null = null;
 	let focusedReviewId = '';
+	let lastReviewFocusRequest = '';
 	$effect(() => {
 		if (!browser) return;
 		const currentReviewSearch = $page.url.search;
@@ -378,13 +392,16 @@
 
 	$effect(() => {
 		if (!browser) return;
-		const target = $page.url.searchParams.get('focus') || '';
+		const target = decisionWorkspaceReviewFocusId($page.url.searchParams);
+		currentReviewView;
+		if (target !== lastReviewFocusRequest) {
+			lastReviewFocusRequest = target;
+			focusedReviewId = '';
+		}
 		if (!target || target === focusedReviewId) return;
-		focusedReviewId = target;
-		void tick().then(() => {
-			const card = document.querySelector<HTMLElement>(`[data-review-card][data-pack-id="${CSS.escape(target)}"], .review-priority[data-pack-id="${CSS.escape(target)}"]`);
-			const destination = card?.querySelector<HTMLElement>('.demo-card-title') || card;
-			if (destination) focusAndPulse(destination, { block: 'center', pulseTarget: card || destination });
+		void tick().then(async () => {
+			const focus = await focusReviewScopeDestination(false, target);
+			if (focus?.target === 'item' && focus.itemId === target) focusedReviewId = target;
 		});
 	});
 
