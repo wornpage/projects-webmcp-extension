@@ -11,7 +11,8 @@ const WORK_DUE_SCOPES = new Set(['all', 'overdue']);
 /** @typedef {{ search: string, appliedSearch: string, status: string, energy: string, area: string, recurrence: string, owner: string, dueUrgency: string, sort: string, hideDone: boolean, focusMode: boolean, density: WorkDensity }} WorkScopeView */
 /** @typedef {{ workspace: number, matching: number, shown: number, remaining: number, blocked: number }} WorkCountsView */
 /** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string | null, due: string | null, blocker: string | null }} WorkItemView */
-/** @typedef {{ scope: WorkScopeView, counts: WorkCountsView, items: WorkItemView[] }} WorkView */
+/** @typedef {{ id: string, title: string, href: string, reason: string, decider: string | null, decisionCount: number, blockedCount: number, overdueCount: number, sourceCount: number }} WorkDecisionRecommendationView */
+/** @typedef {{ scope: WorkScopeView, counts: WorkCountsView, recommendation: WorkDecisionRecommendationView | null, items: WorkItemView[] }} WorkView */
 /** @typedef {{ target: 'item', itemId: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean } | { target: 'search', itemId: null, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }} WorkSearchFocus */
 /** @typedef {{ changed: boolean, query: string, focus: WorkSearchFocus, work: WorkView }} WorkSearchReceipt */
 /** @typedef {{ summary: string, cells: Array<{ label: string, value: string }>, scopeKey: string }} WorkPresentationReceipt */
@@ -29,7 +30,8 @@ export function workPageView(input) {
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	const scope = workScopeView(candidate.scope);
 	const counts = workCountsView(candidate.counts);
-	if (!scope || !counts || !Array.isArray(candidate.items)) return null;
+	const recommendation = workDecisionRecommendationView(candidate.recommendation);
+	if (!scope || !counts || recommendation === undefined || !Array.isArray(candidate.items)) return null;
 
 	const items = candidate.items.map(workItemPageView);
 	if (items.some((item) => item === null)) return null;
@@ -39,12 +41,18 @@ export function workPageView(input) {
 		counts.shown !== projectedItems.length ||
 		counts.matching !== counts.shown + counts.remaining ||
 		counts.workspace < counts.matching ||
-		counts.blocked > counts.matching
+		counts.blocked > counts.matching ||
+		(recommendation !== null && (
+			recommendation.decisionCount < 1 ||
+			recommendation.decisionCount > counts.matching ||
+			recommendation.blockedCount > counts.matching ||
+			recommendation.overdueCount > counts.matching
+		))
 	) {
 		return null;
 	}
 
-	return { scope, counts, items: projectedItems };
+	return { scope, counts, recommendation, items: projectedItems };
 }
 
 /** @param {unknown} input @returns {WorkItemView | null} */
@@ -75,7 +83,7 @@ export function createCurrentWorkTool(getWork) {
 	return {
 		name: WORK_CURRENT_TOOL_NAME,
 		title: 'Get current Work view',
-		description: 'Read the exact filtered, sorted, density-aware, and bounded work-item view currently rendered on Work, including explicit workspace, matching, shown, and remaining counts.',
+		description: 'Read the exact filtered, sorted, density-aware, and bounded work-item view currently rendered on Work, including explicit workspace, matching, shown, and remaining counts plus the rendered decision recommendation when one is visible.',
 		inputSchema: {
 			type: 'object',
 			properties: {},
@@ -182,6 +190,28 @@ function workCountsView(input) {
 		remaining: /** @type {number} */ (candidate.remaining),
 		blocked: /** @type {number} */ (candidate.blocked)
 	};
+}
+
+/** @param {unknown} input @returns {WorkDecisionRecommendationView | null | undefined} */
+function workDecisionRecommendationView(input) {
+	if (input === null) return null;
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return undefined;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const id = normalizedText(candidate.id);
+	const title = normalizedText(candidate.title);
+	const reason = normalizedText(candidate.reason);
+	const decider = nullableText(candidate.decider);
+	const decisionCount = nonNegativeSafeInteger(candidate.decisionCount);
+	const blockedCount = nonNegativeSafeInteger(candidate.blockedCount);
+	const overdueCount = nonNegativeSafeInteger(candidate.overdueCount);
+	const sourceCount = nonNegativeSafeInteger(candidate.sourceCount);
+	if (!id || !title || !reason || decider === undefined || decisionCount === null || blockedCount === null || overdueCount === null || sourceCount === null) return undefined;
+	return { id, title, href: `/next?pack=${encodeURIComponent(id)}`, reason, decider, decisionCount, blockedCount, overdueCount, sourceCount };
+}
+
+/** @param {unknown} value @returns {number | null} */
+function nonNegativeSafeInteger(value) {
+	return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 /** @param {unknown} input */

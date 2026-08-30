@@ -32,7 +32,7 @@ const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 
-function workView({ search = '', items = null, workspace = 4, matching = 3, blocked = 1 } = {}) {
+function workView({ search = '', items = null, workspace = 4, matching = 3, blocked = 1, recommendation = null } = {}) {
 	const projectedItems = items ?? [
 		{ id: 'alpha / one', title: 'Alpha', workflow: 'Active', owner: 'Avery', due: null, blocker: null, purpose: 'not exposed' },
 		{ id: 'beta', title: 'Beta', workflow: 'Blocked', owner: 'Blake', due: 'Aug 25', blocker: 'Waiting for proof', memory: ['not exposed'] }
@@ -54,6 +54,7 @@ function workView({ search = '', items = null, workspace = 4, matching = 3, bloc
 			notExposed: true
 		},
 		counts: { workspace, matching, shown: projectedItems.length, remaining: matching - projectedItems.length, blocked },
+		recommendation,
 		items: projectedItems,
 		rawPacks: [{ secret: 'not exposed' }]
 	});
@@ -125,12 +126,13 @@ test('Work projects only its live scope, explicit denominators, and bounded rend
 			dueUrgency: 'all', sort: 'urgency', hideDone: false, focusMode: false, density: 'grid'
 		},
 		counts: { workspace: 4, matching: 3, shown: 2, remaining: 1, blocked: 1 },
+		recommendation: null,
 		items: [
 			{ id: 'alpha / one', title: 'Alpha', href: '/next?pack=alpha%20%2F%20one', workflow: 'Active', owner: 'Avery', due: null, blocker: null },
 			{ id: 'beta', title: 'Beta', href: '/next?pack=beta', workflow: 'Blocked', owner: 'Blake', due: 'Aug 25', blocker: 'Waiting for proof' }
 		]
 	});
-	assert.deepEqual(Object.keys(view).sort(), ['counts', 'items', 'scope']);
+	assert.deepEqual(Object.keys(view).sort(), ['counts', 'items', 'recommendation', 'scope']);
 	assert.doesNotMatch(JSON.stringify(view), /not exposed|secret/u);
 	const pendingSearch = workPageView({ ...view, scope: { ...view.scope, search: 'nee', appliedSearch: '' } });
 	assert.equal(pendingSearch.scope.search, 'nee');
@@ -149,10 +151,46 @@ test('Work projects only its live scope, explicit denominators, and bounded rend
 		{ ...view, counts: { ...view.counts, workspace: 2 } },
 		{ ...view, counts: { ...view.counts, matching: 4 } },
 		{ ...view, counts: { ...view.counts, blocked: 4 } },
+		{ ...view, recommendation: {} },
 		{ ...view, items: [view.items[0], view.items[0]], counts: { ...view.counts, shown: 2 } },
 		{ ...view, items: [{ id: '', title: 'Missing ID', workflow: 'Active', owner: null, due: null, blocker: null }], counts: { ...view.counts, shown: 1, remaining: 2 } }
 	]) {
 		assert.equal(workPageView(malformed), null);
+	}
+});
+
+test('Work projects only the rendered decision recommendation and rejects impossible signal counts', () => {
+	const recommendation = {
+		id: 'bike rack / choice',
+		title: 'Choose bike rack',
+		reason: 'First open decision in this filtered and sorted view.',
+		decider: 'Household',
+		decisionCount: 1,
+		blockedCount: 1,
+		overdueCount: 1,
+		sourceCount: 2,
+		memory: ['not exposed']
+	};
+	const view = workView({ recommendation });
+	assert.deepEqual(view?.recommendation, {
+		id: 'bike rack / choice',
+		title: 'Choose bike rack',
+		href: '/next?pack=bike%20rack%20%2F%20choice',
+		reason: 'First open decision in this filtered and sorted view.',
+		decider: 'Household',
+		decisionCount: 1,
+		blockedCount: 1,
+		overdueCount: 1,
+		sourceCount: 2
+	});
+	assert.doesNotMatch(JSON.stringify(view), /not exposed/u);
+	for (const invalidRecommendation of [
+		{ ...recommendation, decisionCount: 0 },
+		{ ...recommendation, decisionCount: 4 },
+		{ ...recommendation, blockedCount: 4 },
+		{ ...recommendation, overdueCount: 4 }
+	]) {
+		assert.equal(workPageView({ ...view, recommendation: invalidRecommendation }), null);
 	}
 });
 
@@ -168,6 +206,7 @@ test('the current-Work descriptor is closed, read-only, untrusted-content aware,
 	assert.equal(tool.title, 'Get current Work view');
 	assert.match(tool.description, /filtered, sorted, density-aware, and bounded/u);
 	assert.match(tool.description, /workspace, matching, shown, and remaining/u);
+	assert.match(tool.description, /rendered decision recommendation/u);
 	assert.deepEqual(tool.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
 	assert.deepEqual(tool.annotations, { readOnlyHint: true, openWorldHint: false, untrustedContentHint: true });
 
@@ -386,6 +425,12 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /import \{ registerPageTools \} from '\$lib\/webmcp\.mjs';/u);
 	assert.match(routeSource, /import \{[\s\S]*?createCurrentWorkTool,[\s\S]*?createShowWorkSearchTool,[\s\S]*?workItemPageView,[\s\S]*?workPageView[\s\S]*?\} from '\.\/work-webmcp\.mjs';/u);
 	assert.match(routeSource, /let currentWorkView = \$derived\.by\(\(\) => workPageView\(\{[\s\S]*?search: query,[\s\S]*?appliedSearch: debouncedQuery,[\s\S]*?matching: visible\.length,[\s\S]*?shown: renderedVisible\.length,[\s\S]*?items: renderedVisible\.map\(\(pack\) => workItemPageView\(/u);
+	assert.match(workflowSource, /export function recommendedDecisionWork\(visiblePacks: DemoPack\[\]\)[\s\S]*?const decisions = visiblePacks\.filter\([\s\S]*?const pack = decisions\[0\];/u);
+	assert.match(routeSource, /let decisionWorkspace = \$derived\(recommendedDecisionWork\(visible\)\);[\s\S]*?recommendation: decisionWorkspace[\s\S]*?reason: decisionWorkspaceReason/u);
+	assert.match(routeSource, /data-decision-workspace[\s\S]*?Decision workspace[\s\S]*?Needs a decision[\s\S]*?data-decision-workspace-review[\s\S]*?data-decision-workspace-next/u);
+	const decisionWorkspaceMarkup = routeSource.match(/\{#if decisionWorkspace\}[\s\S]*?<\/section>/u)?.[0] ?? '';
+	assert.doesNotMatch(decisionWorkspaceMarkup, /onclick|doAction|runPrimary|savePack|createPack/u);
+	assert.doesNotMatch(routeSource, /decision-workspace\{[^}]*margin-inline:/u);
 	assert.match(routeSource, /let hideDone = \$state\(false\);/u);
 	assert.doesNotMatch(routeSource, /demo-hide-done/u);
 	assert.match(routeSource, /\{#each renderedVisible as pack, i \(pack\.id\)\}/u);

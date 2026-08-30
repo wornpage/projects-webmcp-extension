@@ -38,6 +38,7 @@
 		dueUrgency,
 		parseDateOnly,
 		PACK_ENERGIES,
+		recommendedDecisionWork,
 		receiptCells,
 		workTitle,
 		workflowLabel,
@@ -154,6 +155,12 @@
 
 	let filter = $derived($demoState?.filter || 'all');
 	let visible = $derived((()=>{let v=orderPacks(filterPacks(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone), sortBy);if(dueUrgencyFilter!=='all'){v=v.filter(p=>dueUrgency(p)===dueUrgencyFilter)}const sel=$demoState?.selectedId;if(focusMode&&sel){return v.filter(p=>p.id===sel)}return v})());
+	let decisionWorkspace = $derived(recommendedDecisionWork(visible));
+	let decisionWorkspaceReason = $derived(
+		decisionWorkspace
+			? `First open decision in this filtered and sorted view. ${decisionWorkspace.sameAreaBlockedCount} blocked ${decisionWorkspace.pack.area || 'related'} ${decisionWorkspace.sameAreaBlockedCount === 1 ? 'item is' : 'items are'} in view. One of ${decisionWorkspace.visibleDecisionCount} open ${decisionWorkspace.visibleDecisionCount === 1 ? 'decision is' : 'decisions are'} shown.`
+			: ''
+	);
 	let renderedVisible = $derived(visible.slice(0, renderLimit));
 	let hasMoreVisible = $derived(renderedVisible.length < visible.length);
 	let filterScope = $derived([filter, debouncedQuery, energyFilter, areaFilter, recurrenceFilter, ownerFilter, dueUrgencyFilter, sortBy, hideDone, focusMode].join('\u0000'));
@@ -216,6 +223,18 @@
 			remaining: Math.max(0, visible.length - renderedVisible.length),
 			blocked: blockedCount
 		},
+		recommendation: decisionWorkspace
+			? {
+				id: decisionWorkspace.pack.id,
+				title: workTitle(decisionWorkspace.pack),
+				reason: decisionWorkspaceReason,
+				decider: decisionWorkspace.pack.decider || null,
+				decisionCount: decisionWorkspace.visibleDecisionCount,
+				blockedCount: decisionWorkspace.visibleBlockedCount,
+				overdueCount: decisionWorkspace.visibleOverdueCount,
+				sourceCount: decisionWorkspace.pack.sources?.length || 0
+			}
+			: null,
 		items: renderedVisible.map((pack) => workItemPageView({
 			id: pack.id,
 			title: workTitle(pack),
@@ -952,6 +971,41 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		<WornError message="Could not load work items." detail={$demoStateError} onretry={refreshWork} />
 	{/if}
 
+	{#if decisionWorkspace}
+		<section class="decision-workspace" data-decision-workspace data-decision-pack-id={decisionWorkspace.pack.id} aria-labelledby="decision-workspace-title">
+			<div class="decision-workspace-heading">
+				<h2 id="decision-workspace-title">Decision workspace</h2>
+				<p class="decision-workspace-kicker">Needs a decision</p>
+				<h3 class="decision-workspace-item-title" data-decision-workspace-title>{workTitle(decisionWorkspace.pack)}</h3>
+				<div class="decision-workspace-meta" aria-label="Decision context">
+					{#if decisionWorkspace.pack.due}<span class="due-{dueUrgency(decisionWorkspace.pack)}">{dueDateLabel(decisionWorkspace.pack)}</span>{/if}
+					{#if decisionWorkspace.pack.area}<WornBadge variant="muted" label={decisionWorkspace.pack.area} />{/if}
+					{#if decisionWorkspace.pack.decider}<span data-decision-workspace-decider>{decisionWorkspace.pack.decider}</span>{/if}
+				</div>
+			</div>
+			<div class="decision-workspace-detail">
+				<div>
+					<h3>Why this is surfaced</h3>
+					<p data-decision-workspace-reason>{decisionWorkspaceReason}</p>
+					<ul class="decision-workspace-signals" aria-label="Current Work view signals">
+						<li data-decision-workspace-signal="decisions" data-decision-workspace-signal-count={decisionWorkspace.visibleDecisionCount}><strong>{decisionWorkspace.visibleDecisionCount}</strong> open {decisionWorkspace.visibleDecisionCount === 1 ? 'decision' : 'decisions'}</li>
+						<li data-decision-workspace-signal="blocked" data-decision-workspace-signal-count={decisionWorkspace.visibleBlockedCount}><strong>{decisionWorkspace.visibleBlockedCount}</strong> blocked {decisionWorkspace.visibleBlockedCount === 1 ? 'item' : 'items'} in view</li>
+						<li data-decision-workspace-signal="overdue" data-decision-workspace-signal-count={decisionWorkspace.visibleOverdueCount}><strong>{decisionWorkspace.visibleOverdueCount}</strong> overdue {decisionWorkspace.visibleOverdueCount === 1 ? 'item' : 'items'} in view</li>
+						<li data-decision-workspace-signal="sources" data-decision-workspace-signal-count={decisionWorkspace.pack.sources?.length || 0}><strong>{decisionWorkspace.pack.sources?.length || 0}</strong> linked {decisionWorkspace.pack.sources?.length === 1 ? 'source' : 'sources'}</li>
+					</ul>
+				</div>
+				<div class="decision-workspace-authority">
+					<h3>You control</h3>
+					<p>Review the decision in the existing queue, choose the next action, and save only the choice you approve.</p>
+					<div class="decision-workspace-actions">
+						<WornButton data-decision-workspace-review variant="primary" size="sm" href="/review">Review in queue</WornButton>
+						<WornButton data-decision-workspace-next size="sm" href={`/next?pack=${encodeURIComponent(decisionWorkspace.pack.id || '')}`}>Set next action</WornButton>
+					</div>
+				</div>
+			</div>
+		</section>
+	{/if}
+
 	{#if showWorkControls}
 		<WorkFilterControls
 			{filter}
@@ -1189,6 +1243,22 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		border-color: var(--worn-accent) !important;
 		color: var(--worn-accent-text) !important;
 	}
+	.decision-workspace{background:color-mix(in srgb,var(--worn-accent) 10%,var(--worn-surface));border:1px solid color-mix(in srgb,var(--worn-accent) 58%,var(--worn-border));border-inline-start:4px solid var(--worn-accent);border-radius:var(--worn-radius-md,10px);box-shadow:var(--worn-shadow-sm,0 1px 2px rgb(0 0 0 / 10%));box-sizing:border-box;margin-block:0 14px;max-width:100%;min-width:0;padding:16px;width:100%}
+	.decision-workspace-heading{display:grid;gap:5px}
+	.decision-workspace-kicker{color:var(--worn-accent);font-size:12px;font-weight:800;letter-spacing:.08em;margin:0;text-transform:uppercase}
+	.decision-workspace h2,.decision-workspace h3{margin:0}
+	.decision-workspace h2{font-size:16px;line-height:1.15;overflow-wrap:anywhere}
+	.decision-workspace h3{font-size:14px}
+	.decision-workspace .decision-workspace-item-title{font-size:clamp(20px,3vw,28px);line-height:1.15;overflow-wrap:anywhere}
+	.decision-workspace-meta{align-items:center;color:var(--worn-text-muted);display:flex;flex-wrap:wrap;gap:8px;font-size:13px;min-width:0}
+	.decision-workspace-meta span{min-width:0;overflow-wrap:anywhere}
+	.decision-workspace-detail{display:grid;gap:14px;grid-template-columns:minmax(0,1.35fr) minmax(220px,1fr);margin-top:14px}
+	.decision-workspace-detail p{color:var(--worn-text-muted);font-size:14px;line-height:1.45;margin:5px 0 0}
+	.decision-workspace-signals{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:10px 0 0;padding:0}
+	.decision-workspace-signals li{background:var(--worn-surface);border:1px solid var(--worn-border);border-radius:999px;font-size:12px;padding:4px 8px}
+	.decision-workspace-signals strong{color:var(--worn-text);font-size:13px}
+	.decision-workspace-authority{border-inline-start:1px solid var(--worn-border);padding-inline-start:14px}
+	.decision-workspace-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 	.quick-create-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-block:8px 6px}
 	:global(.quick-create-input){flex:1;min-width:0}
 	.quick-create-row :global(.quick-create-submit){flex:0 0 auto;min-inline-size:max-content;white-space:nowrap}
@@ -1215,11 +1285,17 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		.quick-create-row{align-items:stretch}
 		.quick-create-row :global(.quick-create-submit){min-block-size:44px}
 		.quick-create-options summary{min-block-size:44px}
+		.decision-workspace{padding:13px}
+		.decision-workspace-detail{grid-template-columns:1fr}
+		.decision-workspace-authority{border-inline-start:0;border-top:1px solid var(--worn-border);padding-inline-start:0;padding-top:12px}
+		.decision-workspace-actions :global(.worn-btn){flex:1 1 100%;justify-content:center}
 	}
 	@media(max-width:500px){
 		.quick-create-row{margin-inline:4px}
 	}
 	@media(max-width:700px){
+		.decision-workspace-detail{grid-template-columns:1fr}
+		.decision-workspace-authority{border-inline-start:0;border-top:1px solid var(--worn-border);padding-inline-start:0;padding-top:12px}
 		:global(.demo-panel-head:has(.work-head-actions)){gap:8px;padding-block:7px}
 		:global(.demo-panel-head:has(.work-head-actions) .demo-panel-title){margin-block:0}
 	}

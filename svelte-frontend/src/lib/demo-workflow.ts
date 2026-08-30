@@ -305,6 +305,34 @@ export function dueDateLabel(pack: DemoPack): string {
 	return `Due ${date}`;
 }
 
+export interface DecisionWorkspaceRecommendation {
+	pack: DemoPack;
+	visibleDecisionCount: number;
+	visibleBlockedCount: number;
+	visibleOverdueCount: number;
+	sameAreaBlockedCount: number;
+}
+
+// Work supplies its already filtered, sorted, pinned, and focus-scoped list.
+// Selecting the first explicit open decision from that list keeps the panel on
+// the same human-visible path as the cards instead of introducing a competing
+// global scorer or hidden recommendation model.
+export function recommendedDecisionWork(visiblePacks: DemoPack[]): DecisionWorkspaceRecommendation | null {
+	const decisions = visiblePacks.filter((pack) => pack.decision === true && pack.status !== 'done' && !pack.archived);
+	if (decisions.length === 0) return null;
+	const live = visiblePacks.filter((pack) => pack.status !== 'done' && !pack.archived);
+	const pack = decisions[0];
+	return {
+		pack,
+		visibleDecisionCount: decisions.length,
+		visibleBlockedCount: live.filter(hasBlocker).length,
+		visibleOverdueCount: live.filter((candidate) => dueUrgency(candidate) === 'overdue').length,
+		sameAreaBlockedCount: pack.area
+			? live.filter((candidate) => candidate.area === pack.area && hasBlocker(candidate)).length
+			: 0
+	};
+}
+
 function activityDate(entry: string | undefined): Date | null {
 	const timestamp = /^\[([\d-]+\s[\d:]+)\]/u.exec(entry || '')?.[1];
 	if (!timestamp) return null;
