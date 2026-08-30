@@ -12,6 +12,17 @@ npm run verify
 
 Expected: zero Svelte errors and warnings, all focused contracts pass, and `dist/static-publish` contains the prerendered challenge.
 
+## Work generic type cleanup — August 30, 2026
+
+Source baseline: clean `origin/main` at `a0ff0b60874c0339533ae2dccef297c8ce00b3d9` in the isolated `newwork/fresh-observable-audit-44` worktree.
+
+| Gate | Exact result |
+| --- | --- |
+| Before | All eight bundled records used the generic type `task`, so every compact Cards header rendered an unhelpful `task N days ago` fragment beside its title. |
+| Owning-path change | WorkListCard now recognizes `task` and `general` as non-distinct types. Distinct future type labels still render through the existing card owner; no workflow data, action, storage, navigation, or WebMCP path changed. |
+| Focused contract | `node --test tests/work-webmcp-page-contract.test.mjs` passed 26/26, including the new guard against restoring generic task headers. |
+| Compact rendered result | At 390 × 844 in dark/reduced-motion/coarse-pointer mode, the local production build removed generic type-and-age clutter from every visible Work card while retaining card titles, workflow, blockers, due facts, owners, and primary actions. |
+
 ## Next approval notification ownership — August 30, 2026
 
 Source baseline: clean `origin/main` at `6dc0cb70f56776108810ab31a2780857d69044c6` in the isolated `newwork/fresh-observable-audit-43` worktree.

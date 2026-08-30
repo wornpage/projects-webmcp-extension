@@ -488,6 +488,13 @@ test('both Work densities expose complete work-item collection semantics', () =>
 	assert.match(workListCardSource, /<WornFoldedSurface[\s\S]*?as="article"[\s\S]*?aria-label=\{`Work \$\{workTitle\(pack\)\}`\}[\s\S]*?data-work-item/u);
 });
 
+test('Work card headers omit the generic task label', () => {
+	assert.match(workListCardSource, /function hasDistinctType\(value: unknown\): boolean \{[\s\S]*?type !== 'general' && type !== 'task';[\s\S]*?\}/u);
+	assert.match(workListCardSource, /function typeAndAreaMatch[\s\S]*?if \(!hasDistinctType\(type\) \|\| !area\) return false;/u);
+	assert.match(workListCardSource, /\{#if hasDistinctType\(pack\.type\)\}[\s\S]*?demo-type-badge[\s\S]*?demo-age[\s\S]*?\{\/if\}/u);
+	assert.doesNotMatch(workListCardSource, /\{#if pack\.type && pack\.type !== 'general'\}/u);
+});
+
 test('Work primary actions keep their visible command and add work-item context', () => {
 	assert.match(workGridCardSource, /<WornButton data-work-primary-navigation[^>]*aria-label=\{`\$\{cmd\.label\} for \$\{workTitle\(pack\)\}`\}/u);
 	assert.match(workGridCardSource, /<WornButton data-work-primary-mutation[^>]*aria-label=\{`\$\{cmd\.label\} for \$\{workTitle\(pack\)\}`\}/u);
