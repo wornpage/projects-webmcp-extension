@@ -373,6 +373,22 @@ This local checkpoint starts from `6dc0cb70f56776108810ab31a2780857d69044c6` and
 | Automated gate and bundle | `npm run verify` passed: manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 69/69, static artifacts 6/6, and the production build at 358 SSR / 329 client modules. The Work server entry changed from 78.80 / 16.31 to 78.84 / 16.33 kB gzip. |
 | Cleanup | Validation restored default Grid, unfiltered 8/8 work, default Guide state, normal media emulation, zero temporary tabs, and a closed preview port. The slice remains local, uncommitted, and unpushed. |
 
+## Work primary-action names — August 29, 2026
+
+This local checkpoint gives Work's repeated primary commands exact work-item context without changing their visible labels, destinations, mutations, card interactions, data projection, or page tools.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | The default Grid rendered eight primary actions with no `aria-label`. Its accessibility tree exposed `Review blocker` three times, `Review work` twice, and `Set next action` twice under unnamed list items; only `Start` was unique. The five-route compact and wide audits otherwise found no new overflow, clipped controls, empty interactive names, duplicate IDs, heading jumps, or broken references beyond the separately recorded immutable disclosure-pin boundary. |
+| Expected observable improvement | Each primary action keeps its complete visible command as the accessible-name prefix and adds `for <work title>`, making all eight names unique in both Work densities. Visible copy, navigation URLs, mutation selection, focus behavior, counts, and workspace state must remain unchanged. |
+| One active path | The existing `WorkGridCard` and `WorkListCard` owners add one contextual `aria-label` to each of their existing navigation and mutation branches. No wrapper, alternate action, shared Wornpage change, route helper, fallback, compatibility path, or second data owner was added. |
+| Red-first and focused gates | The new contract first failed with 12/13 passing because all four action branches lacked contextual names. After the owner fix, `node --test tests/work-webmcp-page-contract.test.mjs` passed 13/13 and Svelte diagnostics passed with 0 errors and 0 warnings. |
+| Complete gate | `npm run verify` passed: manifest 88/88, Svelte 0/0, WebMCP 70/70, production build 358 SSR / 329 client modules, and static artifact 6/6. `git diff --check` passed. |
+| Compact rendered result | At 390 × 844 in dark mode with reduced motion and a coarse pointer, Grid and Cards each exposed 8/8 nonempty and 8/8 unique contextual names while retaining the exact visible strings `Review blocker` ×3, `Review work` ×2, `Start` ×1, and `Set next action` ×2. Every focused Grid action was `:focus-visible`, fully in viewport, and 44px tall. Both densities retained `8 shown · 8 matching · 8 workspace · 3 blocked` and 0px horizontal overflow. |
+| Wide rendered result | At 1280 × 900 in light mode with normal motion and a fine pointer, Cards and Grid each retained the same 8/8 unique accessibility-tree names, visible strings, and exact counts with 0px horizontal overflow. All eight focused Card actions were visible, `:focus-visible`, and 35.99px tall, above the 32px desktop threshold. |
+| Page-tool and data boundary | Work still exposed exactly `get_current_work_view` and `show_work_search`; the read-only getter returned 8 shown / 8 matching / 8 workspace / 0 remaining / 3 blocked. Navigating to Review made the old Work handle reject as stale and exposed only `get_current_review_queue` and `set_review_scope`. No setter, form submission, navigation action, storage write, workspace mutation, or network mutation was invoked; browser diagnostics contained 0 entries. |
+| Bundle delta | The Work server route moved from 78.80 / 16.31 to 79.05 / 16.35 kB raw/gzip, and its client node from 48.41 / 15.28 to 48.72 / 15.31 kB. Shared chunks and every other route stayed unchanged. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.

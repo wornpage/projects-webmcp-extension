@@ -149,11 +149,12 @@
 	{/if}
 	<div class="work-command-row">
 		{#if commandHref}
-			<WornButton data-work-primary-navigation variant="primary" href={commandHref} data-action="run-next" data-pack={pack.id}>
+			<WornButton data-work-primary-navigation variant="primary" href={commandHref} aria-label={`${command.label} for ${workTitle(pack)}`} data-action="run-next" data-pack={pack.id}>
 				{command.label}
 			</WornButton>
 		{:else}
 			<WornButton data-work-primary-mutation type="button" variant="primary" data-action="run-next" data-pack={pack.id}
+				aria-label={`${command.label} for ${workTitle(pack)}`}
 				disabled={busyId === pack.id}
 				onclick={() => onPrimaryMutation(pack, command.action)}
 			>

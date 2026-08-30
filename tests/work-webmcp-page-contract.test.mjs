@@ -471,6 +471,13 @@ test('both Work densities expose complete work-item collection semantics', () =>
 	assert.match(workListCardSource, /<WornFoldedSurface[\s\S]*?as="article"[\s\S]*?aria-label=\{`Work \$\{workTitle\(pack\)\}`\}[\s\S]*?data-work-item/u);
 });
 
+test('Work primary actions keep their visible command and add work-item context', () => {
+	assert.match(workGridCardSource, /<WornButton data-work-primary-navigation[^>]*aria-label=\{`\$\{cmd\.label\} for \$\{workTitle\(pack\)\}`\}/u);
+	assert.match(workGridCardSource, /<WornButton data-work-primary-mutation[^>]*aria-label=\{`\$\{cmd\.label\} for \$\{workTitle\(pack\)\}`\}/u);
+	assert.match(workListCardSource, /<WornButton data-work-primary-navigation[^>]*aria-label=\{`\$\{command\.label\} for \$\{workTitle\(pack\)\}`\}/u);
+	assert.match(workListCardSource, /<WornButton data-work-primary-mutation[^>]*aria-label=\{`\$\{command\.label\} for \$\{workTitle\(pack\)\}`\}/u);
+});
+
 test('Quick Add stays available through the one createPack path in both Work densities', () => {
 	const formPattern = /<form class="quick-create-row"/gu;
 	assert.equal([...routeSource.matchAll(formPattern)].length, 1, 'Work renders one Quick Add form');

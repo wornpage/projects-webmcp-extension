@@ -86,14 +86,16 @@
 		</div>
 	{/if}
 	<div class="grid-card-quick">
-		{#if commandHref}
+	{#if commandHref}
 			<WornButton data-work-primary-navigation href={commandHref} size="sm" variant="primary"
+				aria-label={`${cmd.label} for ${workTitle(pack)}`}
 				title={cmd.label}
 				data-action={cmd.action}
 				onclick={(event) => { event.stopPropagation(); }}
 			>{cmd.label}</WornButton>
 		{:else}
 			<WornButton data-work-primary-mutation type="button" size="sm" variant="primary"
+				aria-label={`${cmd.label} for ${workTitle(pack)}`}
 				title={cmd.label}
 				data-action={cmd.action}
 				onclick={(event) => { event.stopPropagation(); onPrimaryMutation(pack, cmd.action); }}
