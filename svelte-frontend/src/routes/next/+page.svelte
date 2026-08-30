@@ -14,7 +14,7 @@
 		pendingNextActionDraftFor,
 		pendingDraftFingerprint,
 		setSelectedWork,
-		toasts,
+		displayToast,
 		ChallengeStateError,
 		type PendingNextActionDraft
 	} from '$lib/demo-client';
@@ -456,7 +456,7 @@ let showingCustom = $state(false);
 		errorText = '';
 		// Keep the browser-local selection in step with the visible editor.
 		setSelectedWork(candidate.id).catch((e) => console.warn('Failed to sync selected work:', e));
-		toasts.update((t) => [...t, { id: `pick-${Date.now()}`, message: `Editing next action for ${workTitle(candidate)}`, kind: 'success' }]);
+		displayToast(`Editing next action for ${workTitle(candidate)}`, 'success');
 		// A new work item always starts at the bounded choice group.
 		scheduleEditorFocus('choices');
 	}
@@ -479,7 +479,7 @@ let showingCustom = $state(false);
 			const summary = result?.receipt?.summary || `Next action saved: ${effectiveChoice}.`;
 			savedNextReceipt = { summary, pack: result.pack };
 			clearPreparation();
-			toasts.update((t) => [...t, { id: `next-${Date.now()}`, message: summary, kind: 'success' }]);
+			displayToast(summary, 'success');
 			// Land focus on the preview so keyboard users land on the updated
 			// state — the /next analogue of the pack page's afterSave receipt
 			// focus. The save button itself would keep focus with no move.

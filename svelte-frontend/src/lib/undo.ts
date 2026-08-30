@@ -1,7 +1,7 @@
 // Receipt-scoped undo for visible, browser-local Projects workflow actions.
 
 import { get, writable } from 'svelte/store';
-import { demoState, savePackPath, toasts } from '$lib/demo-client';
+import { demoState, displayToast, savePackPath } from '$lib/demo-client';
 import { workTitle, type DemoPack } from '$lib/demo-workflow';
 
 interface ForwardPathFields {
@@ -77,10 +77,10 @@ export async function undoReceipt(): Promise<void> {
 			if (target.packId) await savePackPath(target.packId, target.fields);
 		}
 		const pack = get(demoState)?.packs?.find((item) => item.id === undo.packId);
-		notify(`Undo complete. ${pack ? workTitle(pack) : 'The work'} is back to its previous state.`);
+		displayToast(`Undo complete. ${pack ? workTitle(pack) : 'The work'} is back to its previous state.`, 'success');
 		receiptUndo.set(null);
 	} catch (error) {
-		notify(
+		displayToast(
 			error instanceof Error && error.message
 				? `Undo failed: ${error.message}`
 				: 'Undo failed — the local state is unchanged.',
@@ -89,10 +89,4 @@ export async function undoReceipt(): Promise<void> {
 	} finally {
 		restoring = false;
 	}
-}
-
-function notify(message: string, kind: 'info' | 'error' | 'success' = 'success'): void {
-	const id = `undo-${Date.now()}`;
-	toasts.update((items) => [...items.slice(-4), { id, message, kind }]);
-	setTimeout(() => toasts.update((items) => items.filter((item) => item.id !== id)), 5000);
 }

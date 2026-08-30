@@ -14,7 +14,7 @@
 		setSelectedWork,
 		actionBusy,
 		ChallengeStateError,
-		toasts
+		displayToast
 	} from '$lib/demo-client';
 	import { buildActionUndoSnapshot, commitActionUndo, receiptUndo, undoReceipt } from '$lib/undo';
 	import { WornButton, WornIconButton, WornContainer, WornAccordion, WornError, WornEmpty, WornBadge, WornInput, WornPage, WornSegmentedControl, WornToolbar, WornReceipt, WornFoldedSurface } from '$lib/components';
@@ -418,11 +418,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 			await runPackAction(pack.id, action);
 			commitActionUndo(snapshot);
 		} catch (e) {
-			toasts.update((t) => [...t, {
-				id: `err-${Date.now()}`,
-				message: e instanceof ChallengeStateError ? e.message : 'Action failed.',
-				kind: 'error'
-			}]);
+			displayToast(e instanceof ChallengeStateError ? e.message : 'Action failed.', 'error');
 		} finally {
 			busyId = '';
 			busyAction = '';
@@ -433,17 +429,9 @@ async function handleCardKeys(e: KeyboardEvent) {
 		const text = reviewSummaryText;
 		try {
 			await navigator.clipboard.writeText(text);
-			toasts.update((t) => [...t, {
-				id: `copy-${Date.now()}`,
-				message: 'Review summary copied.',
-				kind: 'success'
-			}]);
+			displayToast('Review summary copied.', 'success');
 		} catch {
-			toasts.update((t) => [...t, {
-				id: `copy-${Date.now()}`,
-				message: 'Copy blocked by browser.',
-				kind: 'error'
-			}]);
+			displayToast('Copy blocked by browser.', 'error');
 		}
 	}
 
@@ -454,11 +442,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 		try {
 			await togglePackPinned(pack.id);
 		} catch (e) {
-			toasts.update((t) => [...t, {
-				id: `pin-${Date.now()}`,
-				message: e instanceof ChallengeStateError ? e.message : 'Could not toggle pin.',
-				kind: 'error'
-			}]);
+			displayToast(e instanceof ChallengeStateError ? e.message : 'Could not toggle pin.', 'error');
 		} finally {
 			busyId = '';
 			busyAction = '';
