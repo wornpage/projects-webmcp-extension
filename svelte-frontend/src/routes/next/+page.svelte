@@ -45,6 +45,7 @@
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import {
+		NEXT_ACTION_MAX_LENGTH,
 		NEXT_EDITOR_PREVIEW_ID,
 		NEXT_PREPARATION_RECEIPT_ID,
 		NEXT_PREPARATION_SUMMARY,
@@ -320,16 +321,18 @@ let showingCustom = $state(false);
 	}
 
 	function setHumanNextEditorChoice(nextChoice: string, mode: NextEditorMode) {
-		setNextEditorChoice(nextChoice, mode);
+		const boundedChoice = nextChoice.slice(0, NEXT_ACTION_MAX_LENGTH);
+		const pendingChoice = boundedChoice.trim();
+		setNextEditorChoice(boundedChoice, mode);
 		preparationPreviousEditor = savedEditorBaseline(pack);
-		if (!pack?.id || !nextChoice.trim()) return;
+		if (!pack?.id || !pendingChoice) return;
 		void savePendingNextActionDraft({
 			workId: pack.id,
-			choice: nextChoice.trim(),
+			choice: pendingChoice,
 			mode,
 			evidenceNote: 'Human-created draft; approval remains human-owned.',
 			evidence: [],
-			originFingerprint: pendingDraftFingerprint($demoState!, { workId: pack.id, choice: nextChoice.trim(), mode, evidenceNote: '', evidence: [], originFingerprint: 'pending', source: 'human' }),
+			originFingerprint: pendingDraftFingerprint($demoState!, { workId: pack.id, choice: pendingChoice, mode, evidenceNote: '', evidence: [], originFingerprint: 'pending', source: 'human' }),
 			source: 'human'
 		});
 	}
@@ -606,7 +609,13 @@ let showingCustom = $state(false);
 						onclick={() => { setHumanNextEditorChoice(customValue, 'custom'); scheduleEditorFocus('custom'); }} />
 				</div>
 				{#if effectiveMode === 'custom'}
-					<WornInput id="custom-next-input" aria-label="Custom next action" placeholder="Type a custom next action…" bind:value={choice} oninput={() => { customValue = choice; setHumanNextEditorChoice(choice, 'custom'); savedNextReceipt = null; }} />
+					<WornInput
+						id="custom-next-input"
+						aria-label="Custom next action"
+						placeholder="Type a custom next action…"
+						maxlength={NEXT_ACTION_MAX_LENGTH}
+						bind:value={choice}
+						oninput={() => { customValue = choice; setHumanNextEditorChoice(choice, 'custom'); savedNextReceipt = null; }} />
 				{/if}
 			</div>
 			<span id="apply-next-action-help" class="next-save-help">{saveNextHelp}</span>

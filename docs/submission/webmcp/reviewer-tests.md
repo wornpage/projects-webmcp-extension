@@ -389,6 +389,20 @@ This local checkpoint gives Work's repeated primary commands exact work-item con
 | Page-tool and data boundary | Work still exposed exactly `get_current_work_view` and `show_work_search`; the read-only getter returned 8 shown / 8 matching / 8 workspace / 0 remaining / 3 blocked. Navigating to Review made the old Work handle reject as stale and exposed only `get_current_review_queue` and `set_review_scope`. No setter, form submission, navigation action, storage write, workspace mutation, or network mutation was invoked; browser diagnostics contained 0 entries. |
 | Bundle delta | The Work server route moved from 78.80 / 16.31 to 79.05 / 16.35 kB raw/gzip, and its client node from 48.41 / 15.28 to 48.72 / 15.31 kB. Shared chunks and every other route stayed unchanged. |
 
+## Next custom-action length parity — August 29, 2026
+
+This local checkpoint makes the human Next editor and its page-owned WebMCP metadata enforce the same existing 200-character action boundary. It adds no route, draft owner, storage owner, save path, or Wornpage component change.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | `prepare_next_action` declared and rejected choices over 200 characters, and the canonical workspace write normalized the saved action to 200, but the human custom input had no `maxlength`. Its existing input handler could therefore persist an over-limit browser-local pending draft before approval. |
+| One explicit boundary | `NEXT_ACTION_MAX_LENGTH` is exported once by Next's page helper and now owns the choice and expected-choice schemas, runtime validation, action projection bounds, the rendered WornInput `maxlength`, and the existing human input handler's bound. The handler still calls the same `savePendingNextActionDraft`; approval still calls the same `setPackNextAction`; no compatibility or fallback path was added. |
+| Red-first and focused contract | The new boundary contract observed 12/13 passing while the shared constant and rendered bound were absent, then again while the human handler still accepted a programmatic over-limit value. After the hard cutover, `node --test --test-reporter=spec tests/next-webmcp-page-contract.test.mjs` passed 13/13. |
+| Automated gate | `npm run verify` passed: manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed 358-SSR / 329-client-module production build. |
+| Compact rendered bound | At a requested 390 × 844 viewport (375px document width) with dark color scheme, reduced motion, and a coarse pointer, the custom input exposed `maxlength=200`. A 225-character browser-automation input event left both the rendered value and its single human pending draft at exactly 200; the saved workspace action remained `Clear the garage floor`, document overflow was 0px, and browser diagnostics were empty. |
+| Page-tool truthfulness | Next exposed exactly `get_current_next_editor` and `prepare_next_action`. After cleanup, the getter returned the visible 22-character custom action and no preparation receipt. A 201-character preparation failed with `choice must be 200 characters or fewer`; it created no pending link, receipt, storage snapshot, or workspace write. |
+| Wide and cleanup | At 1280 × 900 in light mode, the 1121.7 × 44px input remained fully in the viewport with `maxlength=200` and 0px horizontal overflow. The visible Guide reset removed the temporary pending draft; the final Next state had no pending navigation, retained the original saved action, and produced 0 browser warnings or errors. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.

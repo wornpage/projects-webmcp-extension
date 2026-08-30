@@ -505,7 +505,7 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(routeSource, /disabled=\{busy \|\| !effectiveChoice \|\| !pendingDraft \|\| pendingDraftStale\}/u);
 	assert.match(routeSource, /next-authority[\s\S]*?savedNextReceipt \? 'none · completed'[\s\S]*?savedNextReceipt \? 'updated'[\s\S]*?saved and approved by the person/u);
 	assert.match(routeSource, /function savedEditorBaseline\(target: DemoPack \| null\): EditorSnapshot[\s\S]*?defaultChoiceFor\(target\)[\s\S]*?NEXT_ACTION_CHOICES/u);
-	assert.match(routeSource, /function setHumanNextEditorChoice[\s\S]*?setNextEditorChoice\(nextChoice, mode\);[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);/u);
+	assert.match(routeSource, /function setHumanNextEditorChoice[\s\S]*?setNextEditorChoice\(boundedChoice, mode\);[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);/u);
 	assert.match(routeSource, /const draft = pendingDraft;[\s\S]*?if \(!draft \|\| !shouldHydratePendingDraft\(\{ preparationInFlight, pendingDraft: draft, visibleWorkId: pack\?\.id \|\| '', preparationReceipt \}\)\) return;[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);[\s\S]*?preparationFromPending/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);[\s\S]*?clearPreparation\(\);[\s\S]*?setNextEditorChoice\(previous\.choice, previous\.mode, false\)/u);
 	assert.match(routeSource, /let visiblePackId = \$derived\(pack\?\.id \|\| ''\);[\s\S]*?pendingNextActionDraftFor\(\$demoState, visiblePackId\)/u);
@@ -522,6 +522,16 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(layoutSource, /pendingNextActionDrafts\(\$demoState\)[\s\S]*?pendingDraftNavigation[\s\S]*?pendingResumeHref[\s\S]*?Pending \{pendingNavigation\.count\}/u);
 	assert.doesNotMatch(routeSource, /localStorage|sessionStorage/u);
 	assert.doesNotMatch(reviewerTests, /reload discarded the proposal|reload removed 1\/1 draft/u);
+});
+
+test('human and WebMCP next-action editors share one explicit choice-length boundary', () => {
+	assert.match(helperSource, /export const NEXT_ACTION_MAX_LENGTH = 200;/u);
+	assert.match(helperSource, /choice: \{ type: 'string', minLength: 1, maxLength: NEXT_ACTION_MAX_LENGTH,/u);
+	assert.match(helperSource, /expectedChoice: \{ type: 'string', maxLength: NEXT_ACTION_MAX_LENGTH,/u);
+	assert.match(helperSource, /if \(choice\.length > NEXT_ACTION_MAX_LENGTH\) throw new TypeError/u);
+	assert.match(helperSource, /if \(expectedChoice\.length > NEXT_ACTION_MAX_LENGTH\) throw new TypeError/u);
+	assert.match(routeSource, /<WornInput[\s\S]*?id="custom-next-input"[\s\S]*?maxlength=\{NEXT_ACTION_MAX_LENGTH\}[\s\S]*?bind:value=\{choice\}/u);
+	assert.match(routeSource, /function setHumanNextEditorChoice\(nextChoice: string, mode: NextEditorMode\) \{[\s\S]*?const boundedChoice = nextChoice\.slice\(0, NEXT_ACTION_MAX_LENGTH\);[\s\S]*?const pendingChoice = boundedChoice\.trim\(\);[\s\S]*?setNextEditorChoice\(boundedChoice, mode\);[\s\S]*?choice: pendingChoice,/u);
 });
 
 test('pending draft state operation atomically approves, rejects stale drafts, and discards by exact work id', () => {

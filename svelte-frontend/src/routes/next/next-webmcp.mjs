@@ -3,6 +3,7 @@ export const PREPARE_NEXT_ACTION_TOOL_NAME = 'prepare_next_action';
 export const NEXT_EDITOR_PREVIEW_ID = 'next-action-preview';
 export const NEXT_PREPARATION_RECEIPT_ID = 'next-preparation-receipt';
 export const NEXT_PREPARATION_SUMMARY = 'Browser agent prepared an unsaved draft. No workspace data was saved.';
+export const NEXT_ACTION_MAX_LENGTH = 200;
 
 /** @param {{ preparationInFlight: boolean, pendingDraft: { workId: string, choice: string } | null, visibleWorkId: string, preparationReceipt: { preparedAction: string } | null }} input @returns {boolean} */
 export function shouldHydratePendingDraft({ preparationInFlight, pendingDraft, visibleWorkId, preparationReceipt }) {
@@ -115,9 +116,9 @@ export function createPrepareNextActionTool(prepareNextAction, transaction) {
 		inputSchema: {
 			type: 'object',
 			properties: {
-				choice: { type: 'string', minLength: 1, maxLength: 200, description: 'Preset label or custom next action to preview.' },
+				choice: { type: 'string', minLength: 1, maxLength: NEXT_ACTION_MAX_LENGTH, description: 'Preset label or custom next action to preview.' },
 				expectedMode: { type: 'string', enum: ['preset', 'custom'], description: 'Editor mode returned by the latest current-editor read.' },
-				expectedChoice: { type: 'string', maxLength: 200, description: 'Editor choice returned by the latest current-editor read.' },
+				expectedChoice: { type: 'string', maxLength: NEXT_ACTION_MAX_LENGTH, description: 'Editor choice returned by the latest current-editor read.' },
 				evidence: {
 					type: 'array',
 					minItems: 1,
@@ -179,7 +180,7 @@ function nextEditorWork(input) {
 /** @param {unknown} input @returns {string[] | null} */
 function nextEditorPresetChoices(input) {
 	if (!Array.isArray(input) || input.length === 0) return null;
-	const choices = input.map((value) => pageText(value, 200));
+	const choices = input.map((value) => pageText(value, NEXT_ACTION_MAX_LENGTH));
 	if (choices.some((value) => !value)) return null;
 	const normalized = /** @type {string[]} */ (choices);
 	return new Set(normalized).size === normalized.length ? normalized : null;
@@ -190,7 +191,7 @@ function nextEditorChoice(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	if (candidate.mode !== 'preset' && candidate.mode !== 'custom') return null;
-	const choice = pageText(candidate.choice, 200, true);
+	const choice = pageText(candidate.choice, NEXT_ACTION_MAX_LENGTH, true);
 	return choice === null ? null : { mode: candidate.mode, choice };
 }
 
@@ -199,7 +200,7 @@ function nextEditorPreview(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	const blocker = candidate.blocker === null ? null : pageText(candidate.blocker, 200);
-	const nextAction = pageText(candidate.nextAction, 200);
+	const nextAction = pageText(candidate.nextAction, NEXT_ACTION_MAX_LENGTH);
 	if ((candidate.blocker !== null && !blocker) || !nextAction) return null;
 	return { blocker, nextAction };
 }
@@ -211,7 +212,7 @@ function nextPreparationReceipt(input) {
 	const work = nextEditorWork(candidate.work);
 	const evidence = nextVerifiedEvidenceList(candidate.evidence);
 	const evidenceNote = evidence ? verifiedNextEvidenceNote(evidence) : '';
-	const preparedAction = pageText(candidate.preparedAction, 200);
+	const preparedAction = pageText(candidate.preparedAction, NEXT_ACTION_MAX_LENGTH);
 	if (
 		candidate.summary !== NEXT_PREPARATION_SUMMARY || !work || !evidence ||
 		candidate.evidenceNote !== evidenceNote || !preparedAction ||
@@ -258,8 +259,8 @@ function prepareNextActionInput(input) {
 	const choice = candidate.choice.trim();
 	const expectedChoice = candidate.expectedChoice.trim();
 	if (!choice) throw new TypeError('choice cannot be empty.');
-	if (choice.length > 200) throw new TypeError('choice must be 200 characters or fewer.');
-	if (expectedChoice.length > 200) throw new TypeError('expectedChoice must be 200 characters or fewer.');
+	if (choice.length > NEXT_ACTION_MAX_LENGTH) throw new TypeError(`choice must be ${NEXT_ACTION_MAX_LENGTH} characters or fewer.`);
+	if (expectedChoice.length > NEXT_ACTION_MAX_LENGTH) throw new TypeError(`expectedChoice must be ${NEXT_ACTION_MAX_LENGTH} characters or fewer.`);
 	const evidence = nextEvidenceReferenceList(candidate.evidence);
 	if (!evidence) {
 		throw new TypeError(`evidence must contain one to ${MAX_EVIDENCE_REFERENCES} unique exact work facts.`);
