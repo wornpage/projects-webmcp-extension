@@ -20,8 +20,9 @@
 	let busy = $state(false);
 	let error = $state('');
 	let isBatch = $derived(selectedCount > 0);
-	let title = $derived(isBatch ? `Delete ${selectedCount.toLocaleString()} work items?` : 'Delete work item?');
-	let confirmLabel = $derived(isBatch ? `Delete ${selectedCount.toLocaleString()} work items` : 'Delete work item');
+	let batchItemNoun = $derived(selectedCount === 1 ? 'work item' : 'work items');
+	let title = $derived(isBatch ? `Delete ${selectedCount.toLocaleString()} ${batchItemNoun}?` : 'Delete work item?');
+	let confirmLabel = $derived(isBatch ? `Delete ${selectedCount.toLocaleString()} ${batchItemNoun}` : 'Delete work item');
 
 	function restoreFocus() {
 		const target = returnFocus;
@@ -56,7 +57,7 @@
 
 <WornDialog bind:open title={title} size="sm" dismissible={!busy} onclose={dismiss}>
 	{#if isBatch}
-		<p class="work-delete-copy"><strong>{selectedCount.toLocaleString()}</strong> selected work item{selectedCount === 1 ? '' : 's'} will be permanently deleted.</p>
+		<p class="work-delete-copy"><strong>{selectedCount.toLocaleString()}</strong> selected {batchItemNoun} will be permanently deleted.</p>
 	{:else}
 		<p class="work-delete-copy"><strong>{itemTitle || 'Untitled work item'}</strong> will be permanently deleted.</p>
 	{/if}
