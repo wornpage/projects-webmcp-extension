@@ -148,9 +148,11 @@
 	let filteredVisible = $derived(reviewQueue.filteredVisible);
 	let reviewTitle = $derived(
 		reviewTotal > 0
-			? filteredVisible.length === reviewTotal
-				? `${reviewTotal} to review · ${blockedCount} blocked`
-				: `${filteredVisible.length} of ${reviewTotal} scoped · ${blockedCount} blocked`
+			? reviewSubFilter === 'all'
+				? visible.length === reviewTotal
+					? `${reviewTotal} to review · ${blockedCount} blocked`
+					: `${visible.length} search matches · ${reviewTotal} total review`
+				: `${filteredVisible.length} scoped · ${visible.length} search matches · ${reviewTotal} total review`
 			: undefined
 	);
 	let landingTourReview = $derived(landingTourItem(filteredVisible, landingTourRequested));

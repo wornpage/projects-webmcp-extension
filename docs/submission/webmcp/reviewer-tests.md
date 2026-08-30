@@ -450,6 +450,22 @@ This local checkpoint keeps Review's visible human search inside the same page-l
 | Bundle observation | Module cardinality stayed at 358 SSR / 329 client. Review SSR moved from 37.37 / 9.09 to 37.58 / 9.15 kB gzip and its client node from 24.85 / 8.55 to 24.96 / 8.57 kB gzip; the bounded handler added no module, request, or active state path. |
 | WebMCP, data, and cleanup boundary | Review discovery remained exactly `get_current_review_queue` and `set_review_scope`, with `query.maxLength = 120`; no tool was invoked. Reloading cleared the unsaved query, restored `5 to review · 3 blocked`, kept client/scroll widths equal, and left workspace storage byte-for-byte unchanged. |
 
+## Review header denominator truthfulness — August 29, 2026
+
+This local checkpoint makes Review's compact page status name the denominator behind every scoped count. It changes only route-owned status copy; queue selection, cards, filters, receipts, storage, page-tool projections, and Wornpage remain unchanged.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | Selecting `No next 2` rendered exactly 2 Review articles but announced `2 of 5 scoped · 3 blocked`. The 3 blocked items belonged to the broader 5-item search-match set, not the 2-item filtered scope, so the unlabeled denominator made the compact status internally impossible to interpret. Client and scroll widths were both 305px. |
+| Expected observable improvement | Preserve the concise default `5 to review · 3 blocked`; make search-only states name search matches and total review; and make subfiltered states name filtered scope, search matches, and total review without changing any underlying count. |
+| Route ownership | Review's existing derived `reviewTitle` remains the only status owner. Its All branch distinguishes default and search-only states; its subfilter branch uses the already-derived `filteredVisible`, `visible`, and `reviewTotal` counts. No shared component, helper alias, compatibility path, or second denominator calculation was added. |
+| Red-first and focused contract | The new source contract first failed with 7/8 Review checks passing on the old mixed status. After the narrow copy change, `node --test tests/review-webmcp-page-contract.test.mjs` passed 8/8 and rejects restoration of the unnamed blocked count. |
+| Automated gate | `npm run verify` passed on the implementation tree: public manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed production build with 358 SSR and 329 client modules. |
+| Compact dark result | At a requested 320 × 844 viewport with reduced motion and a coarse pointer, `No next 2` rendered exactly 2 articles and `2 scoped · 5 search matches · 5 total review`. Client/scroll widths remained 305/305px, and workspace storage was byte-for-byte unchanged. Returning to All and entering `Garage reset` rendered exactly 3 articles and `3 search matches · 5 total review`. |
+| Wide light result | At a requested 1280 × 900 viewport with normal motion and a fine pointer, `Blocked 3` rendered exactly 3 articles and `3 scoped · 5 search matches · 5 total review`. The 234.9px status stayed inside x = 977.8–1212.7px, client/scroll widths remained 1265/1265px, and workspace storage was byte-for-byte unchanged. |
+| Bundle observation | Module cardinality stayed at 358 SSR / 329 client. Review SSR moved from 37.37 / 9.09 to 37.48 / 9.12 kB gzip and its client node from 24.85 / 8.55 to 24.95 / 8.56 kB gzip; the copy-only branch added no module, request, or state path. |
+| WebMCP, data, and cleanup boundary | Review discovery remained exactly `get_current_review_queue` and `set_review_scope`; no tool was invoked and their explicit returned denominators were unchanged. Reloading restored 5 visible articles, empty search, `5 to review · 3 blocked`, equal client/scroll widths, and byte-identical workspace storage. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.

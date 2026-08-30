@@ -163,6 +163,18 @@ test('Review projects only its explicit rendered queue and denominators', () => 
 	}
 });
 
+test('Review header names filtered, search-match, and total-review denominators', () => {
+	const titleSource = routeSource.match(/let reviewTitle = \$derived\([\s\S]*?\n\t\);/u)?.[0] ?? '';
+	assert.match(titleSource, /reviewSubFilter === 'all'/u);
+	assert.match(titleSource, /`\$\{reviewTotal\} to review · \$\{blockedCount\} blocked`/u);
+	assert.match(titleSource, /`\$\{visible\.length\} search matches · \$\{reviewTotal\} total review`/u);
+	assert.match(
+		titleSource,
+		/`\$\{filteredVisible\.length\} scoped · \$\{visible\.length\} search matches · \$\{reviewTotal\} total review`/u
+	);
+	assert.doesNotMatch(titleSource, /`\$\{filteredVisible\.length\} of \$\{reviewTotal\} scoped · \$\{blockedCount\} blocked`/u);
+});
+
 test('the current-review descriptor is closed, read-only, live, and clone-safe', async () => {
 	let current = queueView();
 	let reads = 0;
