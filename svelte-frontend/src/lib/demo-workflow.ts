@@ -131,9 +131,12 @@ export function hasBlocker(pack: DemoPack): boolean {
 }
 
 export function isReview(pack: DemoPack): boolean {
+	if (pack.status === 'done' || pack.archived) return false;
+	const action = commandActionForLabel(pack.next || '').action;
 	return hasBlocker(pack)
 		|| isMissingNextAction(pack)
-		|| commandActionForLabel(pack.next || '').action === 'review';
+		|| action === 'review'
+		|| action === 'review-work';
 }
 
 export function preferredReviewPack(packs: DemoPack[]): DemoPack | null {
