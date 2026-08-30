@@ -465,6 +465,12 @@ test('compact Work grid cards remain readable and contained for fine and coarse 
 	assert.match(workGridCardSource, /<WornButton data-work-primary-mutation type="button" size="sm" variant="primary"[\s\S]*?onclick=\{\(event\) => \{ event\.stopPropagation\(\); onPrimaryMutation\(pack, cmd\.action\); \}\}/u);
 });
 
+test('both Work densities expose complete work-item collection semantics', () => {
+	assert.match(routeSource, /class="demo-work-grid"[^\n]*role="list" aria-label="Work items grid"/u);
+	assert.match(workGridCardSource, /<div\s+role="listitem"/u);
+	assert.match(workListCardSource, /<WornFoldedSurface[\s\S]*?as="article"[\s\S]*?aria-label=\{`Work \$\{workTitle\(pack\)\}`\}[\s\S]*?data-work-item/u);
+});
+
 test('Quick Add stays available through the one createPack path in both Work densities', () => {
 	const formPattern = /<form class="quick-create-row"/gu;
 	assert.equal([...routeSource.matchAll(formPattern)].length, 1, 'Work renders one Quick Add form');
