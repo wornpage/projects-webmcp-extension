@@ -434,6 +434,22 @@ This local checkpoint makes Quick Add's visible unsaved title agree with the can
 | Bundle observation | Module cardinality stayed at 358 SSR / 329 client. Work SSR moved from 78.80 / 16.31 to 79.05 / 16.38 kB gzip and its client node from 48.41 / 15.28 to 48.53 / 15.33 kB gzip; no new module, request, or active path accounts for the bounded handler cost. |
 | WebMCP and data boundary | Work discovery remained exactly `get_current_work_view` and `show_work_search`; no create tool was registered or invoked. Rendered checks did not submit Quick Add. A final reload cleared the unsaved field, disabled Add, retained 8/8 workspace state, and confirmed canonical workspace storage was still absent. |
 
+## Review search human/WebMCP parity — August 29, 2026
+
+This local checkpoint keeps Review's visible human search inside the same page-local boundary already declared and enforced by `set_review_scope`. It changes no queue data, filter semantics, storage path, receipt, registration, or Wornpage API.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | Review exposed native `maxlength="120"`, but a 121-character automation fill remained visibly 121 and rendered `0 of 5 scoped · 0 blocked`. The WebMCP setter rejected 121, and `reviewPageView` could not project that over-limit human scope, so the visible page and its current-view getter owner could disagree. |
+| Expected observable improvement | Human typing and programmatic input must settle to the same explicit 120-character query accepted by the Review projector and advertised by the page tool, while exact queue denominators, page-local authority, and workspace data remain unchanged. |
+| One active boundary | `REVIEW_SEARCH_MAX_LENGTH = 120` is exported by the existing Review WebMCP helper. The tool schema, validator, error, normalizer, route input, and route-owned human handler consume that one constant. The handler clamps the live DOM value before WornInput's binding reads it; no alias, fallback, second scope setter, or compatibility path was added. |
+| Red-first and focused contract | The new invariant first failed with 7/8 Review checks passing. The implementation then exposed one obsolete literal-max assertion; migrating that assertion completed the hard cutover. `node --test tests/review-webmcp-page-contract.test.mjs` passed 8/8, including exact acceptance at 120 and rejection at 121. |
+| Automated gate | `npm run verify` passed on the implementation tree: public manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed production build with 358 SSR and 329 client modules. |
+| Compact rendered result | At a requested 320 × 844 viewport in dark mode with reduced motion and a coarse pointer, 121 characters settled to exactly 120. The input remained focused and `:focus-visible`, reported native and DOM maxima of 120, occupied x = 14.6–305.5px, and rendered the exact `0 of 5 scoped · 0 blocked` denominator. Document client/scroll widths both remained 320px, and the 5,630-character workspace snapshot was byte-for-byte unchanged. |
+| Wide rendered result | At a requested 1280 × 900 viewport in light mode with normal motion and a fine pointer, 121 again settled to exactly 120. The focused 472.2px input stayed contained at x = 745.4–1217.7px, document client/scroll widths both remained 1280px, and workspace storage was byte-for-byte unchanged. |
+| Bundle observation | Module cardinality stayed at 358 SSR / 329 client. Review SSR moved from 37.37 / 9.09 to 37.58 / 9.15 kB gzip and its client node from 24.85 / 8.55 to 24.96 / 8.57 kB gzip; the bounded handler added no module, request, or active state path. |
+| WebMCP, data, and cleanup boundary | Review discovery remained exactly `get_current_review_queue` and `set_review_scope`, with `query.maxLength = 120`; no tool was invoked. Reloading cleared the unsaved query, restored `5 to review · 3 blocked`, kept client/scroll widths equal, and left workspace storage byte-for-byte unchanged. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.

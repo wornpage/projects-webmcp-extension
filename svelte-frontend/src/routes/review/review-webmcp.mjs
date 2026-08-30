@@ -4,7 +4,7 @@ export const REVIEW_SCOPE_TOOL_NAME = 'set_review_scope';
 const REVIEW_FILTERS = new Set(['all', 'blocked', 'missing-next', 'owner-gap']);
 const MAX_ATTENTION_REASONS = 4;
 const MAX_REASON_LENGTH = 240;
-const MAX_REVIEW_QUERY_LENGTH = 120;
+export const REVIEW_SEARCH_MAX_LENGTH = 120;
 
 /** @typedef {'all' | 'blocked' | 'missing-next' | 'owner-gap'} ReviewFilter */
 /** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string, due: string | null, blocker: string | null, attentionReasons: string[] }} ReviewItemView */
@@ -166,7 +166,7 @@ export function createSetReviewScopeTool(setScope) {
 		inputSchema: {
 			type: 'object',
 			properties: {
-				query: { type: 'string', maxLength: MAX_REVIEW_QUERY_LENGTH, description: 'Search text. Use an empty string to clear the search.' },
+				query: { type: 'string', maxLength: REVIEW_SEARCH_MAX_LENGTH, description: 'Search text. Use an empty string to clear the search.' },
 				filter: {
 					type: 'string',
 					enum: ['all', 'blocked', 'missing-next', 'owner-gap'],
@@ -212,7 +212,7 @@ function reviewScopeInput(input) {
 		throw new TypeError('Review scope accepts only query and filter.');
 	}
 	const query = normalizeReviewSearch(candidate.query);
-	if (query === null) throw new TypeError(`Review query must be ${MAX_REVIEW_QUERY_LENGTH} characters or fewer and contain no control characters.`);
+	if (query === null) throw new TypeError(`Review query must be ${REVIEW_SEARCH_MAX_LENGTH} characters or fewer and contain no control characters.`);
 	const filter = reviewFilter(candidate.filter);
 	if (!filter) throw new TypeError('Review filter must be all, blocked, missing-next, or owner-gap.');
 	return { query, filter };
@@ -228,7 +228,7 @@ function reviewScopeInput(input) {
 export function normalizeReviewSearch(value) {
 	if (typeof value !== 'string' || /\p{Cc}/u.test(value)) return null;
 	const query = value.trim();
-	return query.length <= MAX_REVIEW_QUERY_LENGTH ? query : null;
+	return query.length <= REVIEW_SEARCH_MAX_LENGTH ? query : null;
 }
 
 /**
