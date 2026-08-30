@@ -76,6 +76,20 @@ test('Work overdue scope and due labels exclude terminal work', () => {
 	}
 });
 
+test('Work focus mode implements and documents its advertised F shortcut', () => {
+	const windowKeys = routeSource.slice(
+		routeSource.indexOf('function handleWindowKeys'),
+		routeSource.indexOf('\n\tfunction handleCardClick')
+	);
+	assert.match(routeSource, /title="Focus on selected work \(F\)"/u);
+	assert.match(routeSource, /displayToast\('Focus on\. Press F to exit\.', 'info'\)/u);
+	assert.match(
+		windowKeys,
+		/if \(\(e\.key === 'f' \|\| e\.key === 'F'\) && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !e\.ctrlKey && !e\.metaKey && !e\.altKey && !e\.repeat\) \{\s*e\.preventDefault\(\);\s*toggleFocusMode\(\);\s*return;\s*\}/u
+	);
+	assert.match(routeSource, /<WornKbd keys=\{\['F'\]\} \/><\/dt><dd>Toggle focus mode<\/dd>/u);
+});
+
 test('Work projects only its live scope, explicit denominators, and bounded rendered items', () => {
 	const view = workView();
 	assert.deepEqual(view, {
