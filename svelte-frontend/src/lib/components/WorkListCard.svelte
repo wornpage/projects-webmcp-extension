@@ -36,8 +36,12 @@
 	function displayedTypeLabel(value: unknown): string {
 		return String(value ?? '');
 	}
+	function hasDistinctType(value: unknown): boolean {
+		const type = displayedTypeLabel(value).trim().toLowerCase();
+		return Boolean(type) && type !== 'general' && type !== 'task';
+	}
 	function typeAndAreaMatch(type: unknown, area: unknown): boolean {
-		if (!type || type === 'general' || !area) return false;
+		if (!hasDistinctType(type) || !area) return false;
 		return displayedTypeLabel(type).trim().toLowerCase() === String(area).trim().toLowerCase();
 	}
 
@@ -133,7 +137,7 @@
 			{#if pack.pinned}<span class="demo-pin-flag" role="img" title="Pinned to the top of the list" aria-label="Pinned"></span>{/if}
 			{workTitle(pack)}
 		</a>
-		{#if pack.type && pack.type !== 'general'}
+		{#if hasDistinctType(pack.type)}
 			<span class="demo-type-badge" data-type={pack.type}>{displayedTypeLabel(pack.type)}</span>
 			<span class="demo-age">{packAge(pack)}</span>
 		{/if}
