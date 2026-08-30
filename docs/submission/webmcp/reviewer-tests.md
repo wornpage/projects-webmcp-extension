@@ -12,6 +12,21 @@ npm run verify
 
 Expected: zero Svelte errors and warnings, all focused contracts pass, and `dist/static-publish` contains the prerendered challenge.
 
+## Decision Workspace on Work — August 30, 2026
+
+Source baseline: clean `origin/main` at `7c40b6e1b2912e172eb4a0d2c9b6aa209e1c043e` in the isolated `newwork/extension-decision-workspace` worktree.
+
+| Gate | Exact result |
+| --- | --- |
+| One visible path | Work selects the first explicit open decision only from its already filtered, sorted, pinned, and Focus-scoped `visible` list. It does not introduce a global priority scorer, hidden recommendation model, draft, storage path, or automatic write. |
+| Human authority | The compact Decision workspace panel names the selected work, explains current-view signals, and exposes only `Review in queue` and the existing Next editor. Neither control saves workspace state. |
+| WebMCP boundary | Work still exposes exactly `get_current_work_view` and `show_work_search`. The existing read-only getter now allowlists the rendered recommendation's id, title, canonical Next href, reason, visible decider, and displayed counts. It rejects malformed or impossible denominator values and exposes no raw pack, activity, memory, proof target, or source text. |
+| Focused contract | `node --test tests/work-webmcp-page-contract.test.mjs` passed 27/27, including visible recommendation projection, redaction, impossible-count rejection, navigation-only controls, and the current-`visible` derivation owner. |
+| Full automated gate | `npm run verify` passed: public manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 92/92, static artifacts 6/6, and a completed production prerender. |
+| Rendered 499px result | The panel showed `Garage reset: choose the bike rack`, 2 decisions, 3 blocked items, 1 overdue item, and 2 linked sources. Its border remained inside the parent, both actions remained inside the panel, and the document had no horizontal overflow. |
+| Rendered scope transition | `show_work_search({ query: "request archive" })` returned one focused result with `recommendation: null`; the visible panel disappeared, the current Work reader returned the same null recommendation, and the document remained free of horizontal overflow. |
+| Rendered 320px result | The panel stayed contained with no horizontal overflow. Both navigation-only actions stacked to full usable compact widths. |
+
 ## Work generic type cleanup — August 30, 2026
 
 Source baseline: clean `origin/main` at `a0ff0b60874c0339533ae2dccef297c8ce00b3d9` in the isolated `newwork/fresh-observable-audit-44` worktree.
