@@ -474,6 +474,7 @@ test('both Work densities expose complete work-item collection semantics', () =>
 test('Quick Add stays available through the one createPack path in both Work densities', () => {
 	const formPattern = /<form class="quick-create-row"/gu;
 	assert.equal([...routeSource.matchAll(formPattern)].length, 1, 'Work renders one Quick Add form');
+	assert.match(routeSource, /<form\s+class="quick-create-row"[^>]*aria-label="Quick add a work item"/u);
 	const quickAddIndex = routeSource.indexOf('<form class="quick-create-row"');
 	const densityPanelsIndex = routeSource.indexOf('{#each densityPanelTabs');
 	assert.ok(quickAddIndex >= 0 && quickAddIndex < densityPanelsIndex, 'Quick Add is owned once outside the density panels');

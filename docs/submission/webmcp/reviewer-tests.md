@@ -357,6 +357,22 @@ This local checkpoint starts from `6dc0cb70f56776108810ab31a2780857d69044c6` and
 | Automated gate and bundle | `npm run verify` passed: manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and the production build at 358 SSR / 329 client modules. The Work server entry changed from 78.80 / 16.31 to 78.85 / 16.32 kB gzip. |
 | Fresh preview and cleanup | A fresh production preview repeated the compact 390px result with all 8 exact article names, 375/375px document widths, visible in-viewport article focus, truthful `card` density, and unchanged 8/8/8/0/3 counts. Cleanup restored Grid, collapsed secondary filters, default Guide state, normal media emulation, zero temporary tabs, and a closed preview port. |
 
+## Work Quick Add form landmark — August 29, 2026
+
+This local checkpoint starts from `6dc0cb70f56776108810ab31a2780857d69044c6` and gives Work's existing Quick Add form a stable accessible name. It changes no field, submission, work data, storage path, draft path, navigation, or page-tool registration.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | At compact 390px dark/reduced/coarse and wide 1280px light, the full accessibility tree exposed exactly one form landmark on Work and its name was empty. The title textbox itself was already named `Quick-add a work item`; the failure belonged to the containing form landmark. A five-route compact audit found no other new unnamed primary surface outside Review's already-isolated featured-article candidate. |
+| Expected observable improvement | Work must expose exactly one form named `Quick add a work item` at compact and wide widths while retaining the independently named textbox, one density-independent form, the canonical `createPack` transaction, optional proof target, existing focus treatment, and zero horizontal overflow. |
+| One active path | The route-owned native `.quick-create-row` form now carries `aria-label="Quick add a work item"`. The existing input, button, submit handler, `quickCreate`, and canonical `createPack` call remain the only active path. No component, wrapper, alias, fallback, compatibility layer, or Wornpage change was added. |
+| Red-first and focused contract | The strengthened existing Quick Add assertion first failed with 11/12 passing because the form had no label, then `node --test --test-reporter=spec tests/work-webmcp-page-contract.test.mjs` passed 12/12 after the direct owner fix. Svelte diagnostics passed with 0 errors and 0 warnings. |
+| Compact rendered result | At requested 390 × 844 and 320 × 568 viewports in dark mode with reduced motion and a coarse pointer, the full tree exposed exactly `form "Quick add a work item"`. Document client/scroll widths were 375/375px and 305/305px. The title textbox retained its exact independent name and visible focus ring; the form stayed fully in view at 351.3 × 96.0px and 281.0 × 96.0px, and animation/transition durations reduced to `0.000001s`. |
+| Wide rendered result | At 1280 × 900 in light mode, the tree retained exactly the same one named form. Its 1175.9 × 88.0px boundary and focused textbox remained inside the 1280px document, client and scroll widths both stayed 1280px, and the visible Grid and 8/8 workspace were unchanged. |
+| Page-tool truthfulness and lifecycle | Work discovery remained exactly `get_current_work_view` and `show_work_search`. The read-only getter stayed silent, reported Grid density, and retained exact 8 shown / 8 matching / 8 workspace / 0 remaining / 3 blocked counts. Navigating to Review made the prior Work handle fail as stale and exposed only `get_current_review_queue` and `set_review_scope`. No setter, form submission, receipt, workspace write, storage mutation, draft mutation, or network mutation was performed. |
+| Automated gate and bundle | `npm run verify` passed: manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 69/69, static artifacts 6/6, and the production build at 358 SSR / 329 client modules. The Work server entry changed from 78.80 / 16.31 to 78.84 / 16.33 kB gzip. |
+| Cleanup | Validation restored default Grid, unfiltered 8/8 work, default Guide state, normal media emulation, zero temporary tabs, and a closed preview port. The slice remains local, uncommitted, and unpushed. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.
