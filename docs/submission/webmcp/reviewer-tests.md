@@ -30,6 +30,21 @@ Source baseline: clean `origin/main` at `6dc0cb70f56776108810ab31a2780857d69044c
 | WebMCP and fallback boundary | Next still exposed exactly `get_current_next_editor` and `prepare_next_action` with unchanged descriptors. The ordinary choice/draft/Save chain contains no model-context dependency, while the existing unsupported-browser contract continues to reject registration reads when the API is absent. |
 | Browser cleanup | The visible Guide `Reset live sample` action restored the bundled sample after each mutation; emulated media/touch/viewport state was reset, the audit tab was closed, and the local preview was stopped. |
 
+## Review queue terminal-state correction — August 30, 2026
+
+This local checkpoint changes the one shared Review classifier. It does not add a route fallback, storage path, WebMCP operation, commit, deployment, or hosted-access claim.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | The 5-item Review denominator hid a membership error: Done items `garage-reset-clear-floor` and `garden-study-tag-field-notes` were included because their saved next action was empty, while active items `garage-reset-choose-bike-rack` and `garden-study-choose-followup-sample` were excluded even though their explicit next action was `Review`. Review therefore reported 2 missing-next items and silently selected the Done clear-floor item for a direct Next load. |
+| One canonical selector | `isReview` now rejects done or archived work before classification and accepts the existing `review-work` action alongside blocker and missing-next signals. The shared selector continues to serve Review preference, Review filtering and summary, standup text, the Work review count, and Next's review projection; no consumer owns a route-level terminal-state patch. |
+| Membership and denominators | The total remains truthfully 5 and blocked remains 3; missing-next changes from 2 to 0. The two active explicit Review decisions replace the two Done items. `garage-reset-sort-shelves` remains Up next, followed by 2 blocked items and the 2 active decision items. |
+| Red-first and focused contracts | The new selector contract first failed 1/8 against the old implementation, then Review, Work, and Next passed 32/32 together after the shared fix. The contract fixes all four sample ids and rejects route-level done-status filtering. |
+| Automated gate | `npm run verify` passed: manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed production prerender. |
+| Compact rendered result | At 390 × 844 in dark mode with reduced motion and a coarse pointer, the live Review getter returned 5 total / 5 filtered / 5 shown / 3 blocked / 0 missing-next. The document had no horizontal overflow, the active decision items were rendered, and neither Done item appeared. Every on-page control measured at least 44px high; the off-canvas skip link is exposed when focused. |
+| Wide rendered result | At 1440 × 1000 in forced light mode with normal motion, the same exact queue rendered with no horizontal overflow and no terminal item text. A direct Next load after Review projected `garage-reset-sort-shelves`, custom action `Clear the garage floor`, and blocker `Waiting on storage bins`. |
+| WebMCP boundary | Review still exposed exactly `get_current_review_queue` and `set_review_scope`; Next still exposed exactly `get_current_next_editor` and `prepare_next_action`. Getter metadata remained read-only and action metadata remained mutation-truthful. Browser verification changed no workspace field, and the visible Guide reset cleared the browser-local sample state afterward. |
+
 ## Priority and Quick Add production release — August 29, 2026
 
 Verified at `2026-08-29T11:54:56-04:00`. Pull request [#39](https://github.com/wornpage/projects-webmcp-extension/pull/39) merged as `dbd0d5f6fc77f4e4f261ee66808b18b41438d55b`. The reviewed branch and squash merge have the identical tree `9a26589d3dcb9f3909b613b9b064215596f77f4f`.

@@ -18,11 +18,14 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
+const nextRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
+const workRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
 const demoCss = fs.readFileSync(path.join(repoRoot, 'assets/demo.css'), 'utf8');
+const seedPacks = JSON.parse(fs.readFileSync(path.join(repoRoot, 'data/demo-packs.json'), 'utf8'));
 
 function queueView() {
 	return reviewPageView({
@@ -61,6 +64,29 @@ function queueView() {
 		}]
 	});
 }
+
+test('one Review selector excludes terminal work and includes explicit Review actions', () => {
+	assert.match(
+		workflowSource,
+		/export function isReview\(pack: DemoPack\): boolean \{\s*if \(pack\.status === 'done' \|\| pack\.archived\) return false;\s*const action = commandActionForLabel\(pack\.next \|\| ''\)\.action;\s*return hasBlocker\(pack\)\s*\|\| isMissingNextAction\(pack\)\s*\|\| action === 'review'\s*\|\| action === 'review-work';\s*\}/u
+	);
+	assert.deepEqual(
+		seedPacks.filter((pack) => pack.status === 'done' && !pack.next).map((pack) => pack.id),
+		['garage-reset-clear-floor', 'garden-study-tag-field-notes']
+	);
+	assert.deepEqual(
+		seedPacks.filter((pack) => pack.status === 'active' && pack.next === 'Review').map((pack) => pack.id),
+		['garage-reset-choose-bike-rack', 'garden-study-choose-followup-sample']
+	);
+	assert.match(workflowSource, /export function preferredReviewPack[\s\S]*?packs\.find\(isReview\)/u);
+	assert.match(workflowSource, /filter === 'review'\s*\? isReview\(pack\)/u);
+	assert.match(workflowSource, /const reviewTotal = packs\.filter\(isReview\)\.length;[\s\S]*?filterPacks\(packs, 'review', query\)/u);
+	assert.match(workflowSource, /export function buildStandupText[\s\S]*?const review = packs\.filter\(isReview\);/u);
+	assert.match(routeSource, /summarizeReviewQueue\(packs, query, reviewSubFilter\)[\s\S]*?preferredReviewPack\(list\)/u);
+	assert.match(nextRouteSource, /let candidates = \$derived\(packs\.filter\(isReview\)\);/u);
+	assert.match(workRouteSource, /if \(isReview\(pack\)\) next\.review \+= 1;/u);
+	assert.doesNotMatch(`${routeSource}\n${nextRouteSource}\n${workRouteSource}`, /(?:review|candidate)[^\n]*status\s*!==?\s*'done'/u);
+});
 
 test('Review projects only its explicit rendered queue and denominators', () => {
 	assert.deepEqual(reviewItemPageView({
