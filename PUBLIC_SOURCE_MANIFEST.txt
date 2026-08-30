@@ -36,6 +36,7 @@ svelte-frontend/src/lib/components/WorkGridCard.svelte
 svelte-frontend/src/lib/components/WorkListCard.svelte
 svelte-frontend/src/lib/components/WornPage.svelte
 svelte-frontend/src/lib/components/WornToast.svelte
+svelte-frontend/src/lib/decision-workspace-navigation.mjs
 svelte-frontend/src/lib/demo-client.ts
 svelte-frontend/src/lib/demo-workflow.ts
 svelte-frontend/src/lib/focus-pulse.mjs

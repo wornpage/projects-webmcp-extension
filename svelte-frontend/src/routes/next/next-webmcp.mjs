@@ -1,3 +1,10 @@
+import {
+	DECISION_WORKSPACE_CONTEXT,
+	DECISION_WORKSPACE_CONTEXT_REASON,
+	decisionWorkspaceContextDecider,
+	exactWorkId
+} from '../../lib/decision-workspace-navigation.mjs';
+
 export const CURRENT_NEXT_EDITOR_TOOL_NAME = 'get_current_next_editor';
 export const PREPARE_NEXT_ACTION_TOOL_NAME = 'prepare_next_action';
 export const NEXT_EDITOR_PREVIEW_ID = 'next-action-preview';
@@ -23,11 +30,12 @@ const MAX_EVIDENCE_REFERENCES = 3;
 /** @typedef {{ id: string, title: string }} NextEditorWork */
 /** @typedef {{ mode: NextEditorMode, choice: string }} NextEditorChoice */
 /** @typedef {{ blocker: string | null, nextAction: string }} NextEditorPreview */
+/** @typedef {{ mode: 'decision-workspace', reason: string, decider: string | null }} NextDecisionContext */
 /** @typedef {{ workId: string, field: NextEvidenceField, expectedValue: string }} NextEvidenceReference */
 /** @typedef {{ id: string, title: string, workflow: string, blocker: string }} NextEvidenceWork */
 /** @typedef {{ work: NextEditorWork, field: NextEvidenceField, label: string, value: string }} NextVerifiedEvidence */
 /** @typedef {{ summary: string, work: NextEditorWork, evidenceNote: string, evidence: NextVerifiedEvidence[], preparedAction: string, workspaceChanged: false, requiresHumanSave: true }} NextPreparationReceipt */
-/** @typedef {{ work: NextEditorWork, presetChoices: string[], editor: NextEditorChoice, preview: NextEditorPreview, preparationReceipt: NextPreparationReceipt | null, canSave: boolean, busy: boolean, staleReason: string | null }} NextEditorView */
+/** @typedef {{ work: NextEditorWork, decisionContext: NextDecisionContext | null, presetChoices: string[], editor: NextEditorChoice, preview: NextEditorPreview, preparationReceipt: NextPreparationReceipt | null, canSave: boolean, busy: boolean, staleReason: string | null }} NextEditorView */
 /** @typedef {{ choice: string, expectedMode: NextEditorMode, expectedChoice: string, evidence: NextEvidenceReference[] }} PrepareNextActionInput */
 /** @typedef {{ changed: boolean, focus: { id: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }, next: NextEditorView }} PrepareNextActionReceipt */
 /** @typedef {{ markMutated: () => void }} PrepareNextActionInvocation */
@@ -45,6 +53,10 @@ export function nextEditorPageView(input) {
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	if (typeof candidate.canSave !== 'boolean' || typeof candidate.busy !== 'boolean' || (candidate.staleReason !== null && typeof candidate.staleReason !== 'string')) return null;
 	const work = nextEditorWork(candidate.work);
+	if (!Object.hasOwn(candidate, 'decisionContext')) return null;
+	const decisionContext = candidate.decisionContext === null
+		? null
+		: nextDecisionContext(candidate.decisionContext);
 	const presetChoices = nextEditorPresetChoices(candidate.presetChoices);
 	const editor = nextEditorChoice(candidate.editor);
 	const preview = nextEditorPreview(candidate.preview);
@@ -52,7 +64,7 @@ export function nextEditorPageView(input) {
 	const preparationReceipt = candidate.preparationReceipt === null
 		? null
 		: nextPreparationReceipt(candidate.preparationReceipt);
-	if (!work || !presetChoices || !editor || !preview || (candidate.preparationReceipt !== null && !preparationReceipt)) return null;
+	if (!work || (candidate.decisionContext !== null && !decisionContext) || !presetChoices || !editor || !preview || (candidate.preparationReceipt !== null && !preparationReceipt)) return null;
 	if (editor.mode === 'preset' && (!editor.choice || !presetChoices.includes(editor.choice))) return null;
 	if (candidate.canSave !== (Boolean(editor.choice) && !candidate.busy && candidate.staleReason === null)) return null;
 	if (
@@ -63,6 +75,7 @@ export function nextEditorPageView(input) {
 	) return null;
 	return {
 		work,
+		decisionContext,
 		presetChoices,
 		editor,
 		preview,
@@ -79,7 +92,7 @@ export function createCurrentNextEditorTool(getEditor) {
 	return {
 		name: CURRENT_NEXT_EDITOR_TOOL_NAME,
 		title: 'Get current Next editor',
-		description: 'Read the exact current work item, visible choices, unsaved editor, and preview shown on Next. This does not change or save the editor.',
+		description: 'Read the exact current work item, visible Decision Workspace context when present, choices, unsaved editor, and preview shown on Next. This does not change or save the editor.',
 		inputSchema: {
 			type: 'object',
 			properties: {},
@@ -127,7 +140,7 @@ export function createPrepareNextActionTool(prepareNextAction, transaction) {
 					items: {
 						type: 'object',
 						properties: {
-							workId: { type: 'string', minLength: 1, maxLength: 200, description: 'Exact work item id returned by Work or Review.' },
+							workId: { type: 'string', minLength: 1, description: 'Exact work item id returned by Work or Review.' },
 							field: { type: 'string', enum: EVIDENCE_FIELDS, description: 'Exact projected field being cited.' },
 							expectedValue: { type: 'string', minLength: 1, maxLength: 200, description: 'Exact field value returned by Work or Review.' }
 						},
@@ -172,9 +185,26 @@ export function createPrepareNextActionTool(prepareNextAction, transaction) {
 function nextEditorWork(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
-	const id = pageText(candidate.id, 200);
+	const id = exactWorkId(candidate.id);
 	const title = pageText(candidate.title, 200);
 	return id && title ? { id, title } : null;
+}
+
+/** @param {unknown} input @returns {NextDecisionContext | null} */
+function nextDecisionContext(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	const decider = candidate.decider === null ? null : decisionWorkspaceContextDecider(candidate.decider);
+	if (
+		candidate.mode !== DECISION_WORKSPACE_CONTEXT ||
+		candidate.reason !== DECISION_WORKSPACE_CONTEXT_REASON ||
+		(candidate.decider !== null && !decider)
+	) return null;
+	return {
+		mode: DECISION_WORKSPACE_CONTEXT,
+		reason: DECISION_WORKSPACE_CONTEXT_REASON,
+		decider
+	};
 }
 
 /** @param {unknown} input @returns {string[] | null} */
@@ -323,7 +353,7 @@ function prepareNextActionReceipt(input, choice, references) {
  */
 export function verifyNextPreparationEvidence(references, workspace, currentWorkId) {
 	const normalizedReferences = nextEvidenceReferenceList(references);
-	const normalizedCurrentWorkId = pageText(currentWorkId, 200);
+	const normalizedCurrentWorkId = exactWorkId(currentWorkId);
 	if (!normalizedReferences || !normalizedCurrentWorkId) {
 		throw new TypeError('Prepare next action requires valid evidence references and a current work item.');
 	}
@@ -378,7 +408,7 @@ function nextEvidenceReference(input) {
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	const keys = Object.keys(candidate);
 	if (keys.length !== EVIDENCE_INPUT_KEYS.length || keys.some((key) => !EVIDENCE_INPUT_KEYS.includes(key))) return null;
-	const workId = trimmedPageText(candidate.workId, 200);
+	const workId = exactWorkId(candidate.workId);
 	const expectedValue = trimmedPageText(candidate.expectedValue, 200);
 	if (!workId || !expectedValue || !EVIDENCE_FIELDS.includes(/** @type {string} */ (candidate.field))) return null;
 	return { workId, field: /** @type {NextEvidenceField} */ (candidate.field), expectedValue };
@@ -388,7 +418,7 @@ function nextEvidenceReference(input) {
 function nextEvidenceWork(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
-	const id = pageText(candidate.id, 200);
+	const id = exactWorkId(candidate.id);
 	const title = pageText(candidate.title, 200);
 	const workflow = pageText(candidate.workflow, 200);
 	const blocker = pageText(candidate.blocker, 200);

@@ -31,14 +31,16 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 | --- | --- | --- |
 | Guide | `get_projects_handoff_guide` | Read the visible guide, editable brief, discovered Work scopes, selected query, and exact workspace denominator |
 | Priority | `get_next_recommendation` | Read the one visible actionable recommendation as its id, title, destination, and reason; no navigation, fetch, or write |
-| Work | `get_current_work_view` | Read the bounded, filtered list and its denominators |
+| Work | `get_current_work_view` | Read the bounded, filtered list, its denominators, and the visible Decision Workspace recommendation |
 | Work | `show_work_search` | Change only the visible search scope |
 | Review | `get_current_review_queue` | Read the bounded queue, denominators, and visible reasons each item surfaced |
 | Review | `set_review_scope` | Change only the visible review filter and query |
-| Next | `get_current_next_editor` | Read the visible next-action editor |
+| Next | `get_current_next_editor` | Read the visible next-action editor and its validated Decision Workspace context when present |
 | Next | `prepare_next_action` | Prepare an unsaved choice from 1–3 exact Work or Review facts; stale or mismatched facts are rejected and the page generates the visible evidence note |
 
 The page owns registration and teardown through `document.modelContext.registerTool`. Every successful tool invocation leaves a polite, screen-reader-announced receipt naming the tool and what it read or prepared. Read receipts mark page presentation unchanged; reversible actions describe their page-local effect; all receipts report that saved workspace changes are `None`. On Next, the agent submits exact `workId` / `field` / `expectedValue` references already observed on Work or Review. The page requires a current-item fact, checks every value against the live workspace, and deterministically generates the displayed evidence note; arbitrary agent prose cannot enter that field. Consequential saves remain visible, human-owned controls.
+
+Decision Workspace navigation carries only the exact work id and a bounded context-mode marker into Next. The marker is not treated as provenance: Next independently verifies that the same loaded item remains an explicit open decision, then explains only current-state rules and the current decision owner. The route does not serialize recommendation prose or workspace facts, create a draft, or add another storage path; a person must still choose an action and approve the existing Save control.
 
 On the Guide, **All visible work** is selected immediately with the full workspace denominator. Compact alternatives are derived from the current workspace's area fields and counted through the same shared text search used by Work; no sample family name is embedded in the chooser logic. **Custom** reveals the bounded query input only when a person wants another visible term or an honest zero-match result. The collapsed browser status distinguishes an exposed reader API from registration success. The reader returns those exact live DOM choices, selection, counts, query, and editable brief, but has no navigation, persistence, server, telemetry, or decision authority. When the API is unavailable, Copy brief and the three ordinary route buttons remain usable.
 
