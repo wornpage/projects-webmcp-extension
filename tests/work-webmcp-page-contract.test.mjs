@@ -293,6 +293,15 @@ test('one exported Work-search normalizer serves tools and safe URL arrival', ()
 	assert.doesNotMatch(arrival, /fetch\(|localStorage|sessionStorage|goto\(|runPackAction|registerPageTools/u);
 });
 
+test('human and WebMCP Work search share one explicit length boundary', () => {
+	assert.match(helperSource, /export const WORK_SEARCH_MAX_LENGTH = 120;/u);
+	assert.match(helperSource, /maxLength: WORK_SEARCH_MAX_LENGTH,/u);
+	assert.match(helperSource, /query\.length <= WORK_SEARCH_MAX_LENGTH \? query : null/u);
+	assert.match(workFilterControlsSource, /import \{ WORK_SEARCH_MAX_LENGTH \} from '\.\/work-webmcp\.mjs';/u);
+	assert.match(workFilterControlsSource, /function setHumanWorkSearch\(nextQuery: string\) \{[\s\S]*?query = nextQuery\.slice\(0, WORK_SEARCH_MAX_LENGTH\);[\s\S]*?\}/u);
+	assert.match(workFilterControlsSource, /<WornInput[\s\S]*?type="search"[\s\S]*?maxlength=\{WORK_SEARCH_MAX_LENGTH\}[\s\S]*?bind:value=\{query\}[\s\S]*?oninput=\{\(\) => setHumanWorkSearch\(query\)\}/u);
+});
+
 test('Work presentation receipts freeze the normalized query and live denominators', () => {
 	const work = workView({ search: 'Garage reset', workspace: 8, matching: 4, blocked: 2 });
 	const receipt = workSearchPresentationReceipt({

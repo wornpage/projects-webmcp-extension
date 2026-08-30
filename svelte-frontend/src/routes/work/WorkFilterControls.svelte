@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ENERGY_OPTIONS } from '$lib/demo-workflow';
 	import { WornChip, WornCollapsible, WornInput, WornSelect, WornTabs, WornToolbar } from '$lib/components';
+	import { WORK_SEARCH_MAX_LENGTH } from './work-webmcp.mjs';
 
 	type Density = 'card' | 'grid';
 	type FilterOption = { value: string; label: string };
@@ -98,6 +99,10 @@
 	function recurrenceLabel(value: string): string {
 		return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 	}
+
+	function setHumanWorkSearch(nextQuery: string) {
+		query = nextQuery.slice(0, WORK_SEARCH_MAX_LENGTH);
+	}
 </script>
 
 <div class="work-filter-stack">
@@ -114,7 +119,9 @@
 			class="demo-search-input"
 			placeholder="Search…"
 			aria-label="Filter work items by text"
+			maxlength={WORK_SEARCH_MAX_LENGTH}
 			bind:value={query}
+			oninput={() => setHumanWorkSearch(query)}
 		/>
 	</WornToolbar>
 	<WornCollapsible summary={secondaryFilterSummary} ariaLabel="Additional work filters" bind:open={secondaryFiltersOpen}>
