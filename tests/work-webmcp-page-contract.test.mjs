@@ -20,6 +20,7 @@ import { summarizeWorkMetadata } from '../svelte-frontend/src/lib/work-metadata.
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
+const workDeleteDialogSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WorkDeleteConfirmDialog.svelte'), 'utf8');
 const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
 const workListCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkListCard.svelte'), 'utf8');
 const reviewRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
@@ -55,6 +56,14 @@ function workView({ search = '', items = null, workspace = 4, matching = 3, bloc
 		rawPacks: [{ secret: 'not exposed' }]
 	});
 }
+
+test('Work batch deletion uses one canonical singular-or-plural item noun', () => {
+	assert.match(workDeleteDialogSource, /let batchItemNoun = \$derived\(selectedCount === 1 \? 'work item' : 'work items'\);/u);
+	assert.match(workDeleteDialogSource, /`Delete \$\{selectedCount\.toLocaleString\(\)\} \$\{batchItemNoun\}\?`/u);
+	assert.match(workDeleteDialogSource, /`Delete \$\{selectedCount\.toLocaleString\(\)\} \$\{batchItemNoun\}`/u);
+	assert.match(workDeleteDialogSource, /<strong>\{selectedCount\.toLocaleString\(\)\}<\/strong> selected \{batchItemNoun\} will be permanently deleted\./u);
+	assert.doesNotMatch(workDeleteDialogSource, /work item\{selectedCount === 1 \? '' : 's'\}/u);
+});
 
 test('Work overdue scope and due labels exclude terminal work', () => {
 	const packs = [
