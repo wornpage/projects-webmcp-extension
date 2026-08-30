@@ -108,7 +108,7 @@
 			<p class="agent-brief-kicker">Editable browser-agent brief</p>
 			<h2 id="agent-brief-title">Set the next investigation</h2>
 		</div>
-		<p class="agent-brief-limit" aria-label={`${brief.length} of 1000 characters`}>{brief.length}/1000</p>
+		<p class="agent-brief-limit" id="agent-brief-limit" aria-label={`${brief.length} of 1000 characters`}>{brief.length}/1000</p>
 	</div>
 	<p class="agent-brief-help" id="agent-brief-help">All visible work is ready by default; choose a counted scope or Custom, then ask: <q>Follow the brief on this page.</q></p>
 	<section
@@ -176,7 +176,7 @@
 			<div class="agent-work-query-field">
 				<div class="agent-work-query-label">
 					<label for="agent-work-query-input">Custom Work search term (optional)</label>
-					<span aria-label={`${workQuery.length} of 120 characters`}>{workQuery.length}/120</span>
+					<span id="agent-work-query-limit" aria-label={`${workQuery.length} of 120 characters`}>{workQuery.length}/120</span>
 				</div>
 				<input
 					bind:value={workQuery}
@@ -184,7 +184,7 @@
 					id="agent-work-query-input"
 					maxlength="120"
 					type="text"
-					aria-describedby="agent-work-query-help agent-brief-status"
+					aria-describedby="agent-work-query-help agent-work-query-limit agent-brief-status"
 					oninput={noteCustomQuery}
 				/>
 				<p id="agent-work-query-help" class="agent-brief-help">Empty includes all visible work; an unmatched term stays at zero.</p>
@@ -199,7 +199,7 @@
 		id="agent-brief-input"
 		maxlength="1000"
 		rows="6"
-		aria-describedby="agent-brief-help agent-brief-status"
+		aria-describedby="agent-brief-help agent-brief-limit agent-brief-status"
 		oninput={noteLocalDraft}
 	></textarea>
 	<div class="agent-brief-actions">

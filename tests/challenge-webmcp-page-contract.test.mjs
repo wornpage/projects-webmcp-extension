@@ -141,6 +141,13 @@ test('Projects workflow surfaces keep the Guide compact and product-labeled', ()
 	assert.match(editorSource, /All visible work is ready by default; choose a counted scope or Custom, then ask:/u);
 });
 
+test('Guide editable fields include their live character bounds in accessible descriptions', () => {
+	assert.match(editorSource, /<p class="agent-brief-limit" id="agent-brief-limit" aria-label=\{`\$\{brief\.length\} of 1000 characters`\}>/u);
+	assert.match(editorSource, /<textarea[\s\S]*?id="agent-brief-input"[\s\S]*?aria-describedby="agent-brief-help agent-brief-limit agent-brief-status"/u);
+	assert.match(editorSource, /<span id="agent-work-query-limit" aria-label=\{`\$\{workQuery\.length\} of 120 characters`\}>/u);
+	assert.match(editorSource, /<input[\s\S]*?id="agent-work-query-input"[\s\S]*?aria-describedby="agent-work-query-help agent-work-query-limit agent-brief-status"/u);
+});
+
 test('Guide derives bounded scope choices from stable fields and the supplied Work search counter', () => {
 	const queries = [];
 	const visible = [
