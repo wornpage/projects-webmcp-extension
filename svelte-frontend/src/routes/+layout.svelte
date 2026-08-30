@@ -347,6 +347,10 @@
 			padding-inline: 4px;
 		}
 
+		.challenge-shell-nav nav .pending-approval-link {
+			grid-column: 1 / -1;
+		}
+
 		.challenge-route :global(.worn-receipt) {
 			margin-block: 12px 14px;
 			padding: 14px;

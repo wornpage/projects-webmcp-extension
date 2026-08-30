@@ -148,6 +148,17 @@ test('Guide editable fields include their live character bounds in accessible de
 	assert.match(editorSource, /<input[\s\S]*?id="agent-work-query-input"[\s\S]*?aria-describedby="agent-work-query-help agent-work-query-limit agent-brief-status"/u);
 });
 
+test('compact navigation gives pending approvals the existing second row', () => {
+	const compactStart = layoutSource.indexOf('@media (max-width: 700px)');
+	const compactEnd = layoutSource.indexOf('@media (prefers-reduced-motion: reduce)', compactStart);
+	assert.notEqual(compactStart, -1);
+	assert.notEqual(compactEnd, -1);
+	const compactSource = layoutSource.slice(compactStart, compactEnd);
+	assert.match(compactSource, /\.pending-approval-link\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/u);
+	assert.doesNotMatch(layoutSource.slice(0, compactStart), /\.pending-approval-link[^}]*grid-column:/u);
+	assert.doesNotMatch(layoutSource.slice(compactEnd), /\.pending-approval-link[^}]*grid-column:/u);
+});
+
 test('Guide derives bounded scope choices from stable fields and the supplied Work search counter', () => {
 	const queries = [];
 	const visible = [
