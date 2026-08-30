@@ -418,6 +418,22 @@ This local checkpoint keeps the visible Work search inside the same existing 120
 | Wide and cleanup | At 1280 × 900 in light mode, the same bound produced a 120-character getter-visible scope; the 926.9 × 44px input stayed fully visible with 0px overflow and no workspace storage. Visible Clear search restored 8 shown / 8 matching / 8 workspace / 3 blocked, returned focus to `Filter work items by text`, and left browser diagnostics empty. |
 | Bundle boundary | The build stayed at 358 SSR / 329 client modules. Work moved from 78.80 / 16.31 to 78.96 / 16.38 kB gzip; its client node moved from 48.41 / 15.28 to 48.49 / 15.32. The shared `work-webmcp` server chunk moved from 12.81 / 3.69 to 12.73 / 3.67. No other route or shared component source changed. |
 
+## Work Quick Add title-length parity — August 29, 2026
+
+This local checkpoint makes Quick Add's visible unsaved title agree with the canonical create owner's stored-title boundary. It adds no create tool, storage path, request, draft, or compatibility behavior.
+
+| Gate | Exact result |
+| --- | --- |
+| Before baseline | Quick Add exposed no `maxlength`; a 225-character automation fill remained 225 characters and enabled Add. The only canonical `createPack` transaction normalized the title to 200 characters, so the visible pre-submit value could disagree with the value that a human submission stored. No submit was performed. |
+| Expected observable improvement | Human typing and programmatic input must settle to the same explicit 200-character title accepted by `createPack`, while the ordinary 1-form Quick Add flow, optional proof target, workspace data, and Work page-tool catalog stay unchanged. |
+| One active boundary | `DEMO_WORK_TITLE_MAX_LENGTH = 200` is exported by the existing browser-state owner. `createPack` and Work's route-owned Quick Add input consume that exact constant. The input exposes native `maxlength`, and its input handler clamps the live DOM value before WornInput's binding reads it; no second create or persistence path was added. |
+| Red-first and focused contract | The added source contract first failed with 12/13 Work checks passing because the shared constant was absent. After the cutover, `node --test tests/work-webmcp-page-contract.test.mjs` passed 13/13, including the one canonical `createPack` path and the native-plus-handler boundary. |
+| Automated gate | `npm run verify` passed on the implementation tree: public manifest 88/88, Svelte 0 errors and 0 warnings, WebMCP 70/70, static artifacts 6/6, and a completed production build with 358 SSR and 329 client modules. |
+| Compact rendered result | At a requested 390 × 844 viewport in dark mode with reduced motion and a coarse pointer, the 375px document received 225 characters and settled to exactly 200. The DOM reported `maxlength="200"` and `maxLength = 200`; Add was enabled, the input occupied x = 12.0–311.1px inside its x = 12.0–363.3px row, and document client/scroll widths both remained 375px. Canonical workspace storage remained absent. |
+| Wide rendered result | At a requested 1280 × 900 viewport in light mode with normal motion and a fine pointer, the 1265px document again settled 225 characters to exactly 200. The 1127.1px input stayed inside its 1176.0px row, document client/scroll widths both remained 1265px, and workspace storage remained absent. |
+| Bundle observation | Module cardinality stayed at 358 SSR / 329 client. Work SSR moved from 78.80 / 16.31 to 79.05 / 16.38 kB gzip and its client node from 48.41 / 15.28 to 48.53 / 15.33 kB gzip; no new module, request, or active path accounts for the bounded handler cost. |
+| WebMCP and data boundary | Work discovery remained exactly `get_current_work_view` and `show_work_search`; no create tool was registered or invoked. Rendered checks did not submit Quick Add. A final reload cleared the unsaved field, disabled Add, retained 8/8 workspace state, and confirmed canonical workspace storage was still absent. |
+
 ## Browser-agent path
 
 1. Open `/webmcp-challenge`.

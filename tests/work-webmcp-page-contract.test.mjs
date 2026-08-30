@@ -22,6 +22,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
 const workDeleteDialogSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WorkDeleteConfirmDialog.svelte'), 'utf8');
 const workFilterControlsSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkFilterControls.svelte'), 'utf8');
+const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
 const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
 const workListCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkListCard.svelte'), 'utf8');
 const reviewRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
@@ -510,6 +511,23 @@ test('Work Focus mode requires selected work before claiming an active state', (
 	assert.match(toggleFocusSource, /focusMode = !focusMode;[\s\S]*?document\.documentElement\.classList\.toggle\('focus-mode', focusMode\);[\s\S]*?if \(focusMode\) displayToast\('Focus on\. Press F to exit\.', 'info'\);/u);
 	assert.match(windowKeysSource, /if \(\s*\(e\.key === 'f' \|\| e\.key === 'F'\)[\s\S]*?tag !== 'INPUT'[\s\S]*?tag !== 'TEXTAREA'[\s\S]*?tag !== 'SELECT'[\s\S]*?!\(e\.target as HTMLElement\)\?\.isContentEditable[\s\S]*?!e\.repeat[\s\S]*?e\.preventDefault\(\);[\s\S]*?toggleFocusMode\(\);[\s\S]*?return;/u);
 	assert.match(routeSource, /<WornIconButton[^>]*label="Focus"[^>]*title=\{focusMode \? 'Exit Focus \(F\)' : \$demoState\?\.selectedId \? 'Focus on selected work \(F\)' : 'Select a work item to use Focus'\}[^>]*data-action="focus-mode"[^>]*aria-pressed=\{focusMode\}[^>]*disabled=\{!focusMode && !\$demoState\?\.selectedId\}[^>]*onclick=\{toggleFocusMode\}[^>]*>/u);
+});
+
+test('Quick Add and the canonical create owner share one explicit title-length boundary', () => {
+	assert.match(demoClientSource, /export const DEMO_WORK_TITLE_MAX_LENGTH = 200;/u);
+	assert.match(
+		demoClientSource,
+		/export async function createPack[\s\S]*?const title = normalizeText\(payload\.title, DEMO_WORK_TITLE_MAX_LENGTH\);/u
+	);
+	assert.match(routeSource, /DEMO_WORK_TITLE_MAX_LENGTH,[\s\S]*?\} from '\$lib\/demo-client';/u);
+	assert.match(
+		routeSource,
+		/function setHumanQuickTitle\(event: Event\) \{[\s\S]*?const input = event\.currentTarget as HTMLInputElement;[\s\S]*?const nextTitle = input\.value\.slice\(0, DEMO_WORK_TITLE_MAX_LENGTH\);[\s\S]*?input\.value = nextTitle;[\s\S]*?quickTitle = nextTitle;[\s\S]*?\}/u
+	);
+	assert.match(
+		routeSource,
+		/<WornInput[\s\S]*?class="quick-create-input"[\s\S]*?maxlength=\{DEMO_WORK_TITLE_MAX_LENGTH\}[\s\S]*?bind:value=\{quickTitle\}[\s\S]*?oninput=\{setHumanQuickTitle\}/u
+	);
 });
 
 test('expanded Recent activity follows the Work page heading hierarchy', () => {
