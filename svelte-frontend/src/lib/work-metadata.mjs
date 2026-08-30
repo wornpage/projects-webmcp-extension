@@ -5,7 +5,7 @@
  * its existing normalization/date helpers so this remains behaviorally tied
  * to the UI's canonical semantics.
  * @param {DemoPack[]} packs
- * @param {{ isMissingOwnerValue: (value: string | undefined) => boolean, dueUrgency: (value: string | undefined) => string }} helpers
+ * @param {{ isMissingOwnerValue: (value: string | undefined) => boolean, dueUrgency: (pack: DemoPack) => string }} helpers
  */
 export function summarizeWorkMetadata(packs, { isMissingOwnerValue, dueUrgency }) {
 	const uniqueAreas = new Set();
@@ -34,7 +34,7 @@ export function summarizeWorkMetadata(packs, { isMissingOwnerValue, dueUrgency }
 		countByRecurrence[recurrenceKey] = (countByRecurrence[recurrenceKey] ?? 0) + 1;
 		const ownerKey = isMissingOwnerValue(pack.owner) ? '_unassigned' : String(pack.owner).trim();
 		countByOwner[ownerKey] = (countByOwner[ownerKey] ?? 0) + 1;
-		const urgency = dueUrgency(pack.due);
+		const urgency = dueUrgency(pack);
 		if (urgency) countByDueUrgency[urgency] = (countByDueUrgency[urgency] ?? 0) + 1;
 		if (!pack.archived && pack.status === 'done') hasDoneWork = true;
 	}

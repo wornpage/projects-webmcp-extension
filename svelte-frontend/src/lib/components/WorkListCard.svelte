@@ -161,7 +161,7 @@
 		{/if}
 	</div>
 	<div class="demo-card-meta">
-		{#if pack.due}<span class="due-{dueUrgency(pack.due)}">{dueDateLabel(pack.due)}</span>{/if}
+		{#if pack.due}<span class="due-{dueUrgency(pack)}">{dueDateLabel(pack)}</span>{/if}
 		{#if pack.area && !typeAndAreaMatch(pack.type, pack.area)}<WornBadge variant="muted" label={pack.area} />{/if}
 		{#if pack.recurrence && pack.recurrence !== 'none'}
 			<WornBadge size="sm" label={pack.recurrence.charAt(0).toUpperCase() + pack.recurrence.slice(1)} />

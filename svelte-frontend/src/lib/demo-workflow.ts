@@ -281,8 +281,9 @@ export function parseDateOnly(value: string | undefined): Date | null {
 		: null;
 }
 
-export function dueUrgency(value: string | undefined): '' | 'overdue' | 'today' | 'soon' {
-	const due = parseDateOnly(value);
+export function dueUrgency(pack: DemoPack): '' | 'overdue' | 'today' | 'soon' {
+	if (pack.status === 'done' || pack.archived) return '';
+	const due = parseDateOnly(pack.due);
 	if (!due) return '';
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -292,10 +293,10 @@ export function dueUrgency(value: string | undefined): '' | 'overdue' | 'today' 
 	return days <= 7 ? 'soon' : '';
 }
 
-export function dueDateLabel(value: string | undefined): string {
-	const date = normalizeText(value, 40);
+export function dueDateLabel(pack: DemoPack): string {
+	const date = normalizeText(pack.due, 40);
 	if (!parseDateOnly(date)) return '';
-	const urgency = dueUrgency(date);
+	const urgency = dueUrgency(pack);
 	if (urgency === 'overdue') return `Due ${date} (overdue)`;
 	if (urgency === 'today') return 'Due today';
 	return `Due ${date}`;
@@ -351,8 +352,7 @@ export function workflowCardClass(
 
 export function orderPacks(packs: DemoPack[], sortBy = 'urgency'): DemoPack[] {
 	const urgencyRank = (pack: DemoPack): number => {
-		if (pack.status === 'done') return 3;
-		const urgency = dueUrgency(pack.due);
+		const urgency = dueUrgency(pack);
 		return urgency === 'overdue' ? 0 : urgency === 'today' ? 1 : urgency === 'soon' ? 2 : 3;
 	};
 	const compare = (a: DemoPack, b: DemoPack): number => {

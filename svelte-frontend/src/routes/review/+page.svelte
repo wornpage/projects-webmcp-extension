@@ -210,7 +210,7 @@
 			title: workTitle(pack),
 			workflow: workflowLabel(pack),
 			owner: ownerLabel(pack.owner),
-			due: pack.due ? dueDateLabel(pack.due) : null,
+			due: pack.due ? dueDateLabel(pack) : null,
 			blocker: hasBlocker(pack) ? blockerText(pack) : null,
 			attentionReasons: attentionReasons(pack)
 		});
@@ -500,7 +500,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 				</div>
 			{/if}
 			<div class="demo-card-meta">
-				{#if firstReview.due}<span>{dueDateLabel(firstReview.due)}</span>{/if}
+				{#if firstReview.due}<span>{dueDateLabel(firstReview)}</span>{/if}
 				<span>{ownerLabel(firstReview.owner)}</span>
 			</div>
 			<div class="review-reasons" aria-label="Why this work item surfaced">
@@ -574,7 +574,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 						</div>
 					</div>
 					<div class="demo-card-meta">
-						{#if pack.due}<span>{dueDateLabel(pack.due)}</span>{/if}
+						{#if pack.due}<span>{dueDateLabel(pack)}</span>{/if}
 						<span>{ownerLabel(pack.owner)}</span>
 					</div>
 					<div class="review-reasons compact" aria-label="Why this work item surfaced">

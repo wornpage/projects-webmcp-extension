@@ -16,10 +16,14 @@ import {
 	workSearchPresentationReceipt
 } from '../svelte-frontend/src/routes/work/work-webmcp.mjs';
 import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
+import { summarizeWorkMetadata } from '../svelte-frontend/src/lib/work-metadata.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
 const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
+const workListCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkListCard.svelte'), 'utf8');
+const reviewRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
+const workMetadataSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/work-metadata.mjs'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/work-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
@@ -51,6 +55,26 @@ function workView({ search = '', items = null, workspace = 4, matching = 3, bloc
 		rawPacks: [{ secret: 'not exposed' }]
 	});
 }
+
+test('Work overdue scope and due labels exclude terminal work', () => {
+	const packs = [
+		{ id: 'open-overdue', status: 'blocked', due: 'past', archived: false },
+		{ id: 'done-past', status: 'done', due: 'past', archived: false },
+		{ id: 'archived-past', status: 'active', due: 'past', archived: true }
+	];
+	const metadata = summarizeWorkMetadata(packs, {
+		isMissingOwnerValue: () => false,
+		dueUrgency: (pack) => pack.status === 'done' || pack.archived ? '' : pack.due === 'past' ? 'overdue' : ''
+	});
+	assert.equal(metadata.countByDueUrgency.overdue, 1);
+	assert.match(workflowSource, /export function dueUrgency\(pack: DemoPack\)[\s\S]*?if \(pack\.status === 'done' \|\| pack\.archived\) return '';/u);
+	assert.match(workflowSource, /export function dueDateLabel\(pack: DemoPack\)[\s\S]*?normalizeText\(pack\.due, 40\)/u);
+	assert.match(workMetadataSource, /const urgency = dueUrgency\(pack\);/u);
+	assert.match(routeSource, /dueUrgency\(p\)\s*===\s*dueUrgencyFilter/u);
+	for (const source of [routeSource, workGridCardSource, workListCardSource, reviewRouteSource]) {
+		assert.doesNotMatch(source, /dueUrgency\([^)]*\.due\)|dueDateLabel\([^)]*\.due\)/u);
+	}
+});
 
 test('Work projects only its live scope, explicit denominators, and bounded rendered items', () => {
 	const view = workView();
