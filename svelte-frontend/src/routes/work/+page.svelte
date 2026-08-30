@@ -19,6 +19,7 @@
 		ChallengeStateError,
 		displayToast,
 		actionBusy,
+		DEMO_WORK_TITLE_MAX_LENGTH,
 		createPack
 	} from '$lib/demo-client';
 	import {
@@ -671,6 +672,13 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		goto(primaryCommandNavigation(pack));
 	}
 
+	function setHumanQuickTitle(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const nextTitle = input.value.slice(0, DEMO_WORK_TITLE_MAX_LENGTH);
+		input.value = nextTitle;
+		quickTitle = nextTitle;
+	}
+
 	async function quickCreate() {
 		const title = quickTitle.trim();
 		const proofTarget = quickProofTarget.trim();
@@ -1034,7 +1042,15 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	{/if}
 
 	<form class="quick-create-row" aria-label="Quick add a work item" onsubmit={(e) => { e.preventDefault(); quickCreate(); }}>
-		<WornInput class="quick-create-input" bind:value={quickTitle} placeholder="Quick-add a work item…" aria-label="Quick-add a work item" disabled={quickCreating} />
+		<WornInput
+			class="quick-create-input"
+			maxlength={DEMO_WORK_TITLE_MAX_LENGTH}
+			bind:value={quickTitle}
+			oninput={setHumanQuickTitle}
+			placeholder="Quick-add a work item…"
+			aria-label="Quick-add a work item"
+			disabled={quickCreating}
+		/>
 		<WornButton class="quick-create-submit" data-work-quick-create-submit type="submit" variant="primary" size="sm" disabled={quickCreating || !quickTitle.trim()}>{quickCreating ? 'Adding…' : 'Add'}</WornButton>
 		<details class="quick-create-options">
 			<summary>Proof target <span>Optional</span></summary>

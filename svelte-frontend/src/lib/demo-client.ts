@@ -41,6 +41,8 @@ const FORWARD_PATH_FIELDS = [
 	'purpose'
 ] as const;
 
+export const DEMO_WORK_TITLE_MAX_LENGTH = 200;
+
 export const demoState = writable<DemoState | null>(null);
 export const demoStateLoading = writable(false);
 export const demoStateError = writable('');
@@ -395,7 +397,7 @@ export async function createPack(payload: Record<string, unknown>): Promise<{
 	pack: DemoPack;
 	state: DemoState;
 }> {
-	const title = normalizeText(payload.title, 200);
+	const title = normalizeText(payload.title, DEMO_WORK_TITLE_MAX_LENGTH);
 	if (!title) throw new ChallengeStateError('A work title is required.');
 	if (!globalThis.crypto?.randomUUID) {
 		throw new ChallengeStateError('This browser cannot create a collision-safe local work id.');
