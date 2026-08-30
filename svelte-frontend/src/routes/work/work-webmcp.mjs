@@ -1,4 +1,4 @@
-import { decisionWorkspaceNextHref, exactWorkId } from '../../lib/decision-workspace-navigation.mjs';
+import { decisionWorkspaceNextHref, decisionWorkspaceReviewHref, exactWorkId } from '../../lib/decision-workspace-navigation.mjs';
 
 export const WORK_CURRENT_TOOL_NAME = 'get_current_work_view';
 export const WORK_SEARCH_TOOL_NAME = 'show_work_search';
@@ -13,7 +13,7 @@ const WORK_DUE_SCOPES = new Set(['all', 'overdue']);
 /** @typedef {{ search: string, appliedSearch: string, status: string, energy: string, area: string, recurrence: string, owner: string, dueUrgency: string, sort: string, hideDone: boolean, focusMode: boolean, density: WorkDensity }} WorkScopeView */
 /** @typedef {{ workspace: number, matching: number, shown: number, remaining: number, blocked: number }} WorkCountsView */
 /** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string | null, due: string | null, blocker: string | null }} WorkItemView */
-/** @typedef {{ id: string, title: string, href: string, reason: string, decider: string | null, decisionCount: number, blockedCount: number, overdueCount: number, sourceCount: number }} WorkDecisionRecommendationView */
+/** @typedef {{ id: string, title: string, href: string, reviewHref: string, reason: string, decider: string | null, decisionCount: number, blockedCount: number, overdueCount: number, sourceCount: number }} WorkDecisionRecommendationView */
 /** @typedef {{ scope: WorkScopeView, counts: WorkCountsView, recommendation: WorkDecisionRecommendationView | null, items: WorkItemView[] }} WorkView */
 /** @typedef {{ target: 'item', itemId: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean } | { target: 'search', itemId: null, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }} WorkSearchFocus */
 /** @typedef {{ changed: boolean, query: string, focus: WorkSearchFocus, work: WorkView }} WorkSearchReceipt */
@@ -208,7 +208,18 @@ function workDecisionRecommendationView(input) {
 	const overdueCount = nonNegativeSafeInteger(candidate.overdueCount);
 	const sourceCount = nonNegativeSafeInteger(candidate.sourceCount);
 	if (!id || !title || !reason || decider === undefined || decisionCount === null || blockedCount === null || overdueCount === null || sourceCount === null) return undefined;
-	return { id, title, href: decisionWorkspaceNextHref(id), reason, decider, decisionCount, blockedCount, overdueCount, sourceCount };
+	return {
+		id,
+		title,
+		href: decisionWorkspaceNextHref(id),
+		reviewHref: decisionWorkspaceReviewHref(id),
+		reason,
+		decider,
+		decisionCount,
+		blockedCount,
+		overdueCount,
+		sourceCount
+	};
 }
 
 /** @param {unknown} value @returns {number | null} */

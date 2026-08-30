@@ -15,6 +15,7 @@ import {
 	reviewScopePresentationReceipt,
 	settleReviewScopeFocus
 } from '../svelte-frontend/src/routes/review/review-webmcp.mjs';
+import { decisionWorkspaceReviewFocusRequest } from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
@@ -377,6 +378,28 @@ test('Work-to-Review retained scroll settles before strict visible-focus proof',
 	);
 });
 
+test('Review accepts only one exact Decision Workspace focus request and leaves absent targets unfocused', () => {
+	const exactId = '  review / exact id  ';
+	const longExactId = ` ${'r'.repeat(201)} / exact `;
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams()), { present: false, workId: '' });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams(`focus=${encodeURIComponent(exactId)}`)), { present: true, workId: exactId });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams(`focus=${encodeURIComponent(longExactId)}`)), { present: true, workId: longExactId });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams('focus=one&focus=two')), { present: true, workId: '' });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams('focus=')), { present: true, workId: '' });
+
+	const focusOwner = routeSource.match(/async function focusReviewScopeDestination[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(focusOwner, /requestedItemId = ''[\s\S]*?currentReviewView\?\.upNext[\s\S]*?item\?\.id === requestedItemId/u);
+	assert.match(focusOwner, /requestedItemId && \(!requestedItem \|\| !requestedCard \|\| requestedCard\.dataset\.packId !== requestedItemId\)\) return null;/u);
+	assert.match(focusOwner, /requestedItemId && itemId !== requestedItemId\) return null;/u);
+	assert.match(focusOwner, /focusAndPulse\(focusTarget, \{/u);
+	assert.doesNotMatch(focusOwner, /setSelectedWork|query\s*=|reviewSubFilter\s*=/u);
+
+	const refreshOwner = routeSource.match(/async function refreshReview[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(refreshOwner, /reviewFocusRequest\.present\) return;[\s\S]*?setSelectedWork/u);
+	assert.match(routeSource, /let reviewFocusRequest = \$derived\([\s\S]*?decisionWorkspaceReviewFocusRequest\(\$page\.url\.searchParams\)[\s\S]*?const target = reviewFocusRequest\.workId;[\s\S]*?await focusReviewScopeDestination\(true, target\);[\s\S]*?focus\?\.target === 'item' && focus\.itemId === target/u);
+	assert.doesNotMatch(routeSource, /\$page\.url\.searchParams\.get\('focus'\)/u);
+});
+
 test('every visible Review to Next activation uses one canonical focused handoff', () => {
 	assert.match(routeSource, /async function handoffToNext\(packId: string \| undefined, event\?: MouseEvent\)[\s\S]*?event\?\.preventDefault\(\);[\s\S]*?await goto\(`\/next\?pack=\$\{encodeURIComponent\(packId\)\}`\);[\s\S]*?await tick\(\);[\s\S]*?document\.querySelector<HTMLElement>\('\[data-next-preview\]'\)[\s\S]*?if \(!preview\) throw new Error\('Next preview did not render\.'\);[\s\S]*?focusAndPulse\(preview, \{ behavior: 'auto', block: 'center', requireVisibleFocus: true \}\);/u);
 	assert.equal(routeSource.match(/await goto\(`\/next\?pack=/gu)?.length, 1);
@@ -414,7 +437,7 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /class="review-reasons"[\s\S]*?Why this surfaced[\s\S]*?attentionReasons\(firstReview\)/u);
 	assert.match(routeSource, /async function applyReviewScope\([\s\S]*?query = nextQuery;\s*reviewSubFilter = nextFilter;\s*await tick\(\);[\s\S]*?await focusReviewScopeDestination\(requireVisibleFocus\)/u);
 	assert.match(routeSource, /const requestedQueue = summarizeReviewQueue\(packs, nextQuery, 'all'\);[\s\S]*?nextFilter === reviewSubFilter[\s\S]*?const \{ changed, focus \} = await applyReviewScope\(nextQuery, nextFilter, 'results', true\);[\s\S]*?if \(!focus\)[\s\S]*?return \{ changed, focus, review: currentReviewView \};/u);
-	assert.match(routeSource, /async function focusReviewScopeDestination\(requireVisibleFocus: boolean\)[\s\S]*?\.review-priority\[data-pack-id\] \.demo-card-title[\s\S]*?focusAndPulse\(focusTarget, \{[\s\S]*?requireVisibleFocus: verify[\s\S]*?await settleReviewScopeFocus\(runFocus\)[\s\S]*?target: 'item'[\s\S]*?target: 'search'[\s\S]*?target: 'queue'/u);
+	assert.match(routeSource, /async function focusReviewScopeDestination\(requireVisibleFocus: boolean, requestedItemId = ''\)[\s\S]*?currentReviewView\?\.upNext[\s\S]*?\.review-priority\[data-pack-id\] \.demo-card-title[\s\S]*?focusAndPulse\(focusTarget, \{[\s\S]*?requireVisibleFocus: verify[\s\S]*?await settleReviewScopeFocus\(runFocus\)[\s\S]*?target: 'item'[\s\S]*?target: 'search'[\s\S]*?target: 'queue'/u);
 	assert.match(routeSource, /async function recordReviewWebMcpResult[\s\S]*?if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?webMcpScopeReceipt = \{ \.\.\.reviewScopePresentationReceipt\(outcome\), toolName \}/u);
 	assert.match(helperSource, /function reviewScopePresentationReceipt[\s\S]*?Visible Review scope[\s\S]*?Current queue[\s\S]*?Search-match evidence[\s\S]*?Status[\s\S]*?Not saved/u);
 	assert.match(routeSource, /webMcpScopeReceipt = \{ \.\.\.reviewScopePresentationReceipt\(outcome\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?await focusReviewScopeDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Review receipt focus did not match the rendered scope destination\.'\)/u);

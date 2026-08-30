@@ -16,6 +16,7 @@ import {
 	workSearchPresentationReceipt
 } from '../svelte-frontend/src/routes/work/work-webmcp.mjs';
 import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
+import { decisionWorkspaceReviewFocusRequest, decisionWorkspaceReviewHref } from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
 import { summarizeWorkMetadata } from '../svelte-frontend/src/lib/work-metadata.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -180,6 +181,7 @@ test('Work projects only the rendered decision recommendation and rejects imposs
 		id: 'bike rack / choice',
 		title: 'Choose bike rack',
 		href: '/next?pack=bike%20rack%20%2F%20choice&context=decision-workspace',
+		reviewHref: '/review?focus=bike%20rack%20%2F%20choice',
 		reason: 'First open decision in this filtered and sorted view.',
 		decider: 'Household',
 		decisionCount: 1,
@@ -191,6 +193,7 @@ test('Work projects only the rendered decision recommendation and rejects imposs
 	const exactIdRecommendation = workView({ recommendation: { ...recommendation, id: ' bike rack / choice ' } });
 	assert.equal(exactIdRecommendation?.recommendation?.id, ' bike rack / choice ');
 	assert.equal(exactIdRecommendation?.recommendation?.href, '/next?pack=%20bike%20rack%20%2F%20choice%20&context=decision-workspace');
+	assert.equal(exactIdRecommendation?.recommendation?.reviewHref, '/review?focus=%20bike%20rack%20%2F%20choice%20');
 	for (const invalidRecommendation of [
 		{ ...recommendation, decisionCount: 0 },
 		{ ...recommendation, decisionCount: 4 },
@@ -200,6 +203,18 @@ test('Work projects only the rendered decision recommendation and rejects imposs
 	]) {
 		assert.equal(workPageView({ ...view, recommendation: invalidRecommendation }), null);
 	}
+});
+
+test('Decision Workspace uses one exact encoded Review destination for visible and reader handoffs', () => {
+	const exactId = '  review / exact id  ';
+	const longExactId = ` ${'r'.repeat(201)} / exact `;
+	assert.equal(decisionWorkspaceReviewHref(exactId), '/review?focus=%20%20review%20%2F%20exact%20id%20%20');
+	assert.equal(decisionWorkspaceReviewHref(longExactId), `/review?focus=${encodeURIComponent(longExactId)}`);
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams(decisionWorkspaceReviewHref(exactId).split('?')[1])), { present: true, workId: exactId });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams(decisionWorkspaceReviewHref(longExactId).split('?')[1])), { present: true, workId: longExactId });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams('focus=one&focus=two')), { present: true, workId: '' });
+	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams('focus=')), { present: true, workId: '' });
+	assert.throws(() => decisionWorkspaceReviewHref(''), /exact work item id/u);
 });
 
 test('the current-Work descriptor is closed, read-only, untrusted-content aware, and live', async () => {
@@ -437,9 +452,12 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(workflowSource, /visibleBlockedCount: visiblePacks\.filter\(hasBlocker\)\.length/u);
 	assert.match(routeSource, /let decisionWorkspace = \$derived\(recommendedDecisionWork\(visible\)\);[\s\S]*?recommendation: decisionWorkspace[\s\S]*?reason: decisionWorkspaceReason/u);
 	assert.match(routeSource, /data-decision-workspace[\s\S]*?Decision workspace[\s\S]*?Needs a decision[\s\S]*?data-decision-workspace-review[\s\S]*?data-decision-workspace-next/u);
+	assert.match(routeSource, /data-decision-workspace-review[\s\S]*?href=\{decisionWorkspaceReviewHref\(decisionWorkspace\.pack\.id\)\}/u);
 	assert.match(routeSource, /data-decision-workspace-next[\s\S]*?href=\{decisionWorkspaceNextHref\(decisionWorkspace\.pack\.id\)\}/u);
 	assert.match(helperSource, /href: decisionWorkspaceNextHref\(id\)/u);
+	assert.match(helperSource, /reviewHref: decisionWorkspaceReviewHref\(id\)/u);
 	assert.equal(decisionNavigationSource.match(/export function decisionWorkspaceNextHref/gu)?.length, 1);
+	assert.equal(decisionNavigationSource.match(/export function decisionWorkspaceReviewHref/gu)?.length, 1);
 	const decisionWorkspaceMarkup = routeSource.match(/\{#if decisionWorkspace\}[\s\S]*?<\/section>/u)?.[0] ?? '';
 	assert.doesNotMatch(decisionWorkspaceMarkup, /onclick|doAction|runPrimary|savePack|createPack/u);
 	assert.doesNotMatch(routeSource, /decision-workspace\{[^}]*margin-inline:/u);

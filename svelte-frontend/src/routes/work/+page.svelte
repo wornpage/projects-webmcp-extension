@@ -48,7 +48,7 @@
 	import { buildActionUndoSnapshot, commitActionUndo, receiptUndo, undoReceipt } from '$lib/undo';
 	import { activityActor, activityEvidenceText, recentPackActivity, relativeActivityTime } from '$lib/activity';
 	import { localDateInputValue } from '$lib/local-date.mjs';
-	import { decisionWorkspaceNextHref } from '$lib/decision-workspace-navigation.mjs';
+	import { decisionWorkspaceNextHref, decisionWorkspaceReviewHref } from '$lib/decision-workspace-navigation.mjs';
 	import { summarizeWorkMetadata } from '$lib/work-metadata.mjs';
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
@@ -999,7 +999,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 					<h3>You control</h3>
 					<p>Review the decision in the existing queue, choose the next action, and save only the choice you approve.</p>
 					<div class="decision-workspace-actions">
-						<WornButton data-decision-workspace-review variant="primary" size="sm" href="/review">Review in queue</WornButton>
+						<WornButton data-decision-workspace-review variant="primary" size="sm" href={decisionWorkspaceReviewHref(decisionWorkspace.pack.id)}>Review in queue</WornButton>
 						<WornButton data-decision-workspace-next size="sm" href={decisionWorkspaceNextHref(decisionWorkspace.pack.id)}>Set next action</WornButton>
 					</div>
 				</div>
