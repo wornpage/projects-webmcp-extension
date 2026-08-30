@@ -413,9 +413,18 @@
 		if (batchMode) displayToast('Select cards to act on them.', 'info');
 	}
 
-	function clearBatchSelection() {
-		if (busyId === 'batch') return;
+	async function clearBatchSelection() {
+		if (busyId === 'batch' || batchSelected.size === 0) return;
+		const batchToggle = document.querySelector<HTMLElement>('[data-action="batch-mode"]');
 		batchSelected.clear();
+		await tick();
+		if (
+			batchToggle?.isConnected &&
+			batchToggle.getClientRects().length > 0 &&
+			!batchToggle.matches(':disabled, [aria-disabled="true"]')
+		) {
+			batchToggle.focus({ preventScroll: true });
+		}
 	}
 
 	function requestBatchDelete(event: MouseEvent) {
@@ -938,7 +947,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			<WornButton  size="sm" type="button" data-action="batch-start" disabled={!hasDraftSelected || busyId === 'batch'} onclick={() => batchAction('start')}>{batchBusyAction === 'start' ? 'Starting…' : 'Start'}</WornButton>
 			<WornButton  size="sm" type="button" data-action="batch-block" disabled={batchSelected.size === 0 || busyId === 'batch'} onclick={() => batchAction('block')}>{batchBusyAction === 'block' ? 'Blocking…' : 'Block'}</WornButton>
 			<WornButton variant="danger" size="sm" type="button" data-action="batch-delete" disabled={batchSelected.size === 0 || busyId === 'batch'} onclick={requestBatchDelete}>Delete</WornButton>
-			<WornButton  size="sm" type="button" data-action="batch-clear" disabled={busyId === 'batch'} onclick={clearBatchSelection}>Deselect</WornButton>
+			<WornButton  size="sm" type="button" data-action="batch-clear" disabled={batchSelected.size === 0 || busyId === 'batch'} onclick={clearBatchSelection}>Deselect</WornButton>
 		</div>
 	{/if}
 

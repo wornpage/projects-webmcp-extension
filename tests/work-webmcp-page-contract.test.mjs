@@ -430,6 +430,15 @@ test('successful Work batch delete restores focus through an enabled durable fal
 	assert.match(confirmDelete, /await onconfirm\(\);[\s\S]*?open = false;[\s\S]*?await restoreFocus\(\);/u);
 });
 
+test('Work batch toolbar disables empty Deselect and hands completed Deselect focus to Batch', () => {
+	const batchToolbar = routeSource.match(/<div class="demo-batch-bar"[\s\S]*?<\/div>/u)?.[0] ?? '';
+	assert.match(batchToolbar, /data-action="batch-clear" disabled=\{batchSelected\.size === 0 \|\| busyId === 'batch'\}/u);
+	const clearSelection = routeSource.match(/async function clearBatchSelection\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(clearSelection, /if \(busyId === 'batch' \|\| batchSelected\.size === 0\) return;/u);
+	assert.match(clearSelection, /const batchToggle = document\.querySelector<HTMLElement>\('\[data-action="batch-mode"\]'\);[\s\S]*?batchSelected\.clear\(\);[\s\S]*?await tick\(\);/u);
+	assert.match(clearSelection, /batchToggle\?\.isConnected[\s\S]*?getClientRects\(\)\.length > 0[\s\S]*?:disabled[\s\S]*?aria-disabled="true"[\s\S]*?focus\(\{ preventScroll: true \}\)/u);
+});
+
 test('compact Work grid cards remain readable and contained for fine and coarse pointers', () => {
 	assert.doesNotMatch(workGridCardSource, /@media \(max-width: 800px\) and \(pointer: coarse\)/u);
 	const compactRules = workGridCardSource.match(/@media \(max-width: 800px\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
