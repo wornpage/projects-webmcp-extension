@@ -129,6 +129,7 @@
 	let batchDeleteDialogOpen = $state(false);
 	let batchDeleteTarget = $state<{ ids: string[]; count: number } | null>(null);
 	let batchDeleteReturnFocus = $state<HTMLElement | null>(null);
+	let batchDeleteFallbackFocus = $state<HTMLElement | null>(null);
 	let focusMode = $state(false);
 	const DENSITY_TABS: Array<{ id: 'card' | 'grid'; label: string }> = [
 		{ id: 'card', label: 'Cards' },
@@ -422,6 +423,7 @@
 		const ids = [...batchSelected];
 		batchDeleteTarget = { ids, count: ids.length };
 		batchDeleteReturnFocus = event.currentTarget as HTMLElement;
+		batchDeleteFallbackFocus = document.querySelector<HTMLElement>('[data-action="batch-mode"]');
 		batchDeleteDialogOpen = true;
 	}
 
@@ -944,6 +946,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		bind:open={batchDeleteDialogOpen}
 		selectedCount={batchDeleteTarget?.count || 0}
 		returnFocus={batchDeleteReturnFocus}
+		fallbackFocus={batchDeleteFallbackFocus}
 		onconfirm={confirmBatchDelete}
 	/>
 

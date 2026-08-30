@@ -417,6 +417,19 @@ test('Work active-filter count excludes the separately persisted display density
 	assert.doesNotMatch(clearCondition, /density/u);
 });
 
+test('successful Work batch delete restores focus through an enabled durable fallback', () => {
+	assert.match(routeSource, /let batchDeleteFallbackFocus = \$state<HTMLElement \| null>\(null\);/u);
+	const deleteRequest = routeSource.match(/function requestBatchDelete\(event: MouseEvent\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(deleteRequest, /batchDeleteReturnFocus = event\.currentTarget as HTMLElement;[\s\S]*?batchDeleteFallbackFocus = document\.querySelector<HTMLElement>\('\[data-action="batch-mode"\]'\);[\s\S]*?batchDeleteDialogOpen = true;/u);
+	assert.match(routeSource, /<WorkDeleteConfirmDialog[\s\S]*?fallbackFocus=\{batchDeleteFallbackFocus\}[\s\S]*?onconfirm=\{confirmBatchDelete\}/u);
+	assert.match(workDeleteDialogSource, /import \{ tick \} from 'svelte';/u);
+	assert.match(workDeleteDialogSource, /fallbackFocus\?: HTMLElement \| null;/u);
+	const restoreFocus = workDeleteDialogSource.match(/async function restoreFocus\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(restoreFocus, /await tick\(\);[\s\S]*?\[returnFocus, fallbackFocus\][\s\S]*?:disabled[\s\S]*?aria-disabled="true"[\s\S]*?focus\(\{ preventScroll: true \}\)/u);
+	const confirmDelete = workDeleteDialogSource.match(/async function confirm\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(confirmDelete, /await onconfirm\(\);[\s\S]*?open = false;[\s\S]*?await restoreFocus\(\);/u);
+});
+
 test('compact Work grid cards remain readable and contained for fine and coarse pointers', () => {
 	assert.doesNotMatch(workGridCardSource, /@media \(max-width: 800px\) and \(pointer: coarse\)/u);
 	const compactRules = workGridCardSource.match(/@media \(max-width: 800px\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
