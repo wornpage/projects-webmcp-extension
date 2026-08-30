@@ -413,11 +413,9 @@
 		if (batchMode) displayToast('Select cards to act on them.', 'info');
 	}
 
-	async function clearBatchSelection() {
-		if (busyId === 'batch' || batchSelected.size === 0) return;
-		const batchToggle = document.querySelector<HTMLElement>('[data-action="batch-mode"]');
-		batchSelected.clear();
+	async function focusBatchModeToggle() {
 		await tick();
+		const batchToggle = document.querySelector<HTMLElement>('[data-action="batch-mode"]');
 		if (
 			batchToggle?.isConnected &&
 			batchToggle.getClientRects().length > 0 &&
@@ -425,6 +423,12 @@
 		) {
 			batchToggle.focus({ preventScroll: true });
 		}
+	}
+
+	async function clearBatchSelection() {
+		if (busyId === 'batch' || batchSelected.size === 0) return;
+		batchSelected.clear();
+		await focusBatchModeToggle();
 	}
 
 	function requestBatchDelete(event: MouseEvent) {
@@ -567,13 +571,21 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	// Apply the selected local action to each item in sequence; the final
 	// receipt remains visible. Delete updates the browser-local list once.
 	let hasDraftSelected = $derived(batchSelected.size > 0 && packs.some(p => batchSelected.has(p.id!) && p.status === 'draft'));
+	let hasIncompleteSelected = $derived(batchSelected.size > 0 && packs.some(p => batchSelected.has(p.id!) && p.status !== 'done'));
 
 	async function batchAction(action: 'done' | 'start' | 'block' | 'delete', selectedIds = [...batchSelected], reportError = true) {
-		const ids = [...selectedIds];
+		const requestedIds = [...selectedIds];
+		const alreadyDoneCount = action === 'done'
+			? requestedIds.filter((id) => packs.some((pack) => pack.id === id && pack.status === 'done')).length
+			: 0;
+		const ids = action === 'done'
+			? requestedIds.filter((id) => packs.some((pack) => pack.id === id && pack.status !== 'done'))
+			: requestedIds;
 		if (!ids.length || busyId) return;
 		busyId = 'batch';
 		batchBusyAction = action;
 		errorText = '';
+		let completedBatchAction = false;
 		try {
 			if (action === 'delete') {
 				await saveBrowserState((draft) => {
@@ -588,8 +600,13 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				}
 			}
 			const label = { done: 'done', start: 'started', block: 'blocked', delete: 'deleted' }[action];
-			displayToast(`${ids.length} ${ids.length === 1 ? 'item' : 'items'} ${label}.`, 'success');
+			const completed = `${ids.length} ${ids.length === 1 ? 'item' : 'items'} ${label}.`;
+			const skipped = alreadyDoneCount > 0
+				? `${alreadyDoneCount} ${alreadyDoneCount === 1 ? 'item is' : 'items are'} already done.`
+				: '';
+			displayToast([completed, skipped].filter(Boolean).join(' '), 'success');
 			batchSelected.clear();
+			completedBatchAction = true;
 		} catch (error) {
 			const message = describeError(error, 'The batch action failed partway — check the list.');
 			if (reportError) errorText = message;
@@ -599,6 +616,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			busyId = '';
 			actionBusy.set('');
 		}
+		if (completedBatchAction && action !== 'delete') await focusBatchModeToggle();
 	}
 
 	async function doAction(pack: DemoPack, action: string) {
@@ -943,7 +961,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	{#if batchMode}
 		<div class="demo-batch-bar" class:is-active={batchSelected.size > 0} role="toolbar" aria-label="Batch actions">
 			<span class="demo-batch-count" aria-live="polite" aria-atomic="true">{batchSelected.size} selected</span>
-			<WornButton  size="sm" type="button" data-action="batch-done" disabled={batchSelected.size === 0 || busyId === 'batch'} onclick={() => batchAction('done')}>{batchBusyAction === 'done' ? 'Finishing…' : 'Done'}</WornButton>
+			<WornButton  size="sm" type="button" data-action="batch-done" disabled={!hasIncompleteSelected || busyId === 'batch'} onclick={() => batchAction('done')}>{batchBusyAction === 'done' ? 'Finishing…' : 'Done'}</WornButton>
 			<WornButton  size="sm" type="button" data-action="batch-start" disabled={!hasDraftSelected || busyId === 'batch'} onclick={() => batchAction('start')}>{batchBusyAction === 'start' ? 'Starting…' : 'Start'}</WornButton>
 			<WornButton  size="sm" type="button" data-action="batch-block" disabled={batchSelected.size === 0 || busyId === 'batch'} onclick={() => batchAction('block')}>{batchBusyAction === 'block' ? 'Blocking…' : 'Block'}</WornButton>
 			<WornButton variant="danger" size="sm" type="button" data-action="batch-delete" disabled={batchSelected.size === 0 || busyId === 'batch'} onclick={requestBatchDelete}>Delete</WornButton>

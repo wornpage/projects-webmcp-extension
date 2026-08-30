@@ -435,8 +435,20 @@ test('Work batch toolbar disables empty Deselect and hands completed Deselect fo
 	assert.match(batchToolbar, /data-action="batch-clear" disabled=\{batchSelected\.size === 0 \|\| busyId === 'batch'\}/u);
 	const clearSelection = routeSource.match(/async function clearBatchSelection\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
 	assert.match(clearSelection, /if \(busyId === 'batch' \|\| batchSelected\.size === 0\) return;/u);
-	assert.match(clearSelection, /const batchToggle = document\.querySelector<HTMLElement>\('\[data-action="batch-mode"\]'\);[\s\S]*?batchSelected\.clear\(\);[\s\S]*?await tick\(\);/u);
-	assert.match(clearSelection, /batchToggle\?\.isConnected[\s\S]*?getClientRects\(\)\.length > 0[\s\S]*?:disabled[\s\S]*?aria-disabled="true"[\s\S]*?focus\(\{ preventScroll: true \}\)/u);
+	assert.match(clearSelection, /batchSelected\.clear\(\);[\s\S]*?await focusBatchModeToggle\(\);/u);
+});
+
+test('Work batch Done excludes completed work, reports skips, and restores durable focus', () => {
+	assert.match(routeSource, /let hasIncompleteSelected = \$derived\(batchSelected\.size > 0 && packs\.some\(p => batchSelected\.has\(p\.id!\) && p\.status !== 'done'\)\);/u);
+	const batchToolbar = routeSource.match(/<div class="demo-batch-bar"[\s\S]*?<\/div>/u)?.[0] ?? '';
+	assert.match(batchToolbar, /data-action="batch-done" disabled=\{!hasIncompleteSelected \|\| busyId === 'batch'\}/u);
+	const batchAction = routeSource.match(/async function batchAction\([\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(batchAction, /const requestedIds = \[\.\.\.selectedIds\];[\s\S]*?const alreadyDoneCount = action === 'done'[\s\S]*?pack\.status === 'done'/u);
+	assert.match(batchAction, /const ids = action === 'done'[\s\S]*?pack\.status !== 'done'[\s\S]*?: requestedIds;/u);
+	assert.match(batchAction, /const skipped = alreadyDoneCount > 0[\s\S]*?already done[\s\S]*?displayToast\(\[completed, skipped\]\.filter\(Boolean\)\.join\(' '\), 'success'\)/u);
+	assert.match(batchAction, /completedBatchAction = true;[\s\S]*?finally[\s\S]*?busyId = '';[\s\S]*?if \(completedBatchAction && action !== 'delete'\) await focusBatchModeToggle\(\);/u);
+	const focusBatchModeToggle = routeSource.match(/async function focusBatchModeToggle\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(focusBatchModeToggle, /await tick\(\);[\s\S]*?\[data-action="batch-mode"\][\s\S]*?isConnected[\s\S]*?getClientRects\(\)\.length > 0[\s\S]*?:disabled[\s\S]*?aria-disabled="true"[\s\S]*?focus\(\{ preventScroll: true \}\)/u);
 });
 
 test('compact Work grid cards remain readable and contained for fine and coarse pointers', () => {
