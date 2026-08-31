@@ -6,12 +6,13 @@ assets/favicon.png
 assets/favicon.svg
 assets/landing.css
 assets/landing.js
+assets/not-found.css
 assets/og-image.svg
 data/demo-packs.json
+docs/submission/webmcp/edge-recording-script.md
 docs/submission/webmcp/public-repository-boundary.md
 docs/submission/webmcp/README.md
 docs/submission/webmcp/reviewer-tests.md
-index.html
 landing.html
 LICENSE
 manifest.json

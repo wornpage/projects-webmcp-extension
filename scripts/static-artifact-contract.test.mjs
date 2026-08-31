@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
@@ -40,6 +41,10 @@ function collectCss(directory) {
 function getAttribute(element, name) {
 	const match = element.match(new RegExp(`\\b${name}="([^"]*)"`, 'u'));
 	return match?.[1] ?? null;
+}
+
+function countTopLevelTests(source) {
+	return source.match(/^test\(/gmu)?.length ?? 0;
 }
 
 function findCssBlocks(css, atRuleName) {
@@ -95,18 +100,44 @@ function findRule(rules, selectorPattern) {
 	return rule;
 }
 
+test('README verification denominators match the current manifest and contract sources', () => {
+	const readme = readFileSync(path.join(root, 'README.md'), 'utf8');
+	const manifestCount = readFileSync(path.join(root, 'PUBLIC_SOURCE_MANIFEST.txt'), 'utf8')
+		.trim()
+		.split(/\r?\n/u).length;
+	const webMcpContractCount = readdirSync(path.join(root, 'tests'))
+		.filter((name) => name.includes('webmcp') && name.endsWith('.test.mjs'))
+		.reduce(
+			(total, name) =>
+				total + countTopLevelTests(readFileSync(path.join(root, 'tests', name), 'utf8')),
+			0
+		);
+	const artifactContractCount = countTopLevelTests(
+		readFileSync(path.join(root, 'scripts', 'static-artifact-contract.test.mjs'), 'utf8')
+	);
+
+	assert.match(
+		readme,
+		new RegExp(
+			`Current expected denominators are ${manifestCount}/${manifestCount} public source paths, ${webMcpContractCount}/${webMcpContractCount} WebMCP contracts, and ${artifactContractCount}/${artifactContractCount} static-artifact contracts\\.`,
+			'u'
+		)
+	);
+});
+
 test('static artifact publishes the complete challenge input and security metadata', () => {
 	for (const file of [
-		'index.html',
 		'landing.html',
 		'THIRD_PARTY_LICENSES.txt',
 		'manifest.json',
 		'assets/og-image.svg',
+		'assets/not-found.css',
 		'data/demo-packs.json'
 	]) {
 		assert.ok(STATIC_PUBLISH_FILES.includes(file), `${file} is published`);
 		assert.ok(existsSync(path.join(root, file)), `${file} exists`);
 	}
+	assert.equal(STATIC_PUBLISH_FILES.includes('index.html'), false, 'root HTML is derived from the landing source');
 	for (const file of ['_headers', 'robots.txt']) {
 		assert.ok(SVELTE_PUBLIC_FILES.includes(file), `${file} is published`);
 		assert.ok(existsSync(path.join(root, 'svelte-frontend', 'static', file)), `${file} exists`);
@@ -133,11 +164,16 @@ test('Svelte prerender validates one static adapter and no server output', () =>
 });
 
 test('static mode identifies its bounded routes without production fallbacks', () => {
-	const index = readFileSync(path.join(root, 'index.html'), 'utf8');
 	const landing = readFileSync(path.join(root, 'landing.html'), 'utf8');
+	const landingScript = readFileSync(path.join(root, 'assets', 'landing.js'), 'utf8');
+	const demoCss = readFileSync(path.join(root, 'assets', 'demo.css'), 'utf8');
 	const app = readFileSync(path.join(root, 'svelte-frontend', 'src', 'app.html'), 'utf8');
 	const headers = readFileSync(path.join(root, 'svelte-frontend', 'static', '_headers'), 'utf8');
-	for (const html of [index, landing, app]) {
+	const submissionReadme = readFileSync(path.join(root, 'docs', 'submission', 'webmcp', 'README.md'), 'utf8');
+	const recordingScript = readFileSync(path.join(root, 'docs', 'submission', 'webmcp', 'edge-recording-script.md'), 'utf8');
+	const reviewerTests = readFileSync(path.join(root, 'docs', 'submission', 'webmcp', 'reviewer-tests.md'), 'utf8');
+	const browserAgentPath = reviewerTests.match(/## Browser-agent path[\s\S]*?## Security and scope checks/u)?.[0] ?? '';
+	for (const html of [landing, app]) {
 		assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive"/u);
 	}
 	assert.match(landing, /href="\/work"/u);
@@ -145,12 +181,41 @@ test('static mode identifies its bounded routes without production fallbacks', (
 	assert.match(landing, /<a class="lp-skip" href="#main-content">Skip to main content<\/a>/u);
 	assert.match(landing, /<main id="main-content" tabindex="-1">/u);
 	assert.match(landing, /Let an agent find the next move\. Keep the final say\./u);
-	assert.match(landing, /No automatic saves/u);
+	assert.match(landing, /No automatic starts/u);
 	assert.match(landing, /Open the handoff workflow/u);
+	assert.match(landing, /<span class="lp-insight-value">9<\/span>[\s\S]*?<strong>Route-owned tools<\/strong>/u);
+	assert.match(landing, /<span class="lp-insight-value">4<\/span>[\s\S]*?<strong>Bounded page actions<\/strong>[\s\S]*?search, scope, Draft creation, and unsaved preparation/u);
+	assert.doesNotMatch(landing, /Reversible page actions/u);
+	assert.match(landing, /Press play — four steps, about ten seconds/u);
+	assert.match(landingScript, /function advance\(wrap\)[\s\S]*?if \(index >= steps\.length - 1\)[\s\S]*?if \(wrap === false\) \{ pause\(\); return; \}[\s\S]*?selectStep\(0\)[\s\S]*?selectStep\(index \+ 1\)/u);
+	assert.match(landingScript, /advance\(true\);[\s\S]*?setInterval\(function \(\) \{ advance\(false\); \}, STEP_MS\)/u);
+	assert.match(landingScript, /if \(reduced\)[\s\S]*?advance\(true\); \/\/ wraps: 1 → 2 → 3 → 4 → 1/u);
+	assert.doesNotMatch(landingScript, /selectStep\(\(index \+ 1\) % steps\.length\)/u);
 	assert.match(landing, /Public static sample, no login, no backend, and five focused workflow pages/u);
-	assert.match(landing, /Only explicit human controls, including Add and Save, write browser-local workspace state/u);
+	assert.match(landing, /WebMCP can add at most three browser-local Draft items at once; only visible human controls can Start work or approve a final Save/u);
 	assert.doesNotMatch(landing, /judge|contest|garage reset|recording/iu);
 	assert.doesNotMatch(`${landing}\n${app}`, /projectsdemo\.org|\/agents|\/billing/u);
+	assert.match(app, /<div class="sveltekit-body">%sveltekit\.body%<\/div>/u);
+	assert.doesNotMatch(app, /\sstyle=/u);
+	assert.match(demoCss, /\.sveltekit-body\s*\{\s*display: contents;\s*\}/u);
+	assert.equal(headers.match(/Content-Security-Policy:/gu)?.length, 1);
+	assert.match(headers, /\/\*[\s\S]*?Content-Security-Policy: default-src 'self';[\s\S]*?script-src 'self' __PROJECTS_SVELTE_SCRIPT_HASHES__; style-src 'self'; style-src-elem 'self'; style-src-attr 'unsafe-inline';[\s\S]*?connect-src 'self'/u);
+	assert.match(submissionReadme, /\[edge-recording-script\.md\]\(edge-recording-script\.md\)/u);
+	assert.match(recordingScript, /Target length: \*\*2:45\*\*\. Hard stop: \*\*2:50\*\*/u);
+	assert.match(recordingScript, /fixed \*\*2\.25-second settle window\*\*/u);
+	assert.match(recordingScript, /Complete this three times before recording[\s\S]*?press `N`[\s\S]*?press `Enter`[\s\S]*?get_projects_handoff_guide/u);
+	assert.match(recordingScript, /Open and pin the Edge browser-agent panel before recording[\s\S]*?Click the already-open agent prompt field, then press `Ctrl\+V`, `Enter`/u);
+	assert.doesNotMatch(recordingScript, /AGENT_SHORTCUT|replace this|placeholder/iu);
+	assert.match(recordingScript, /Treat chat as the trigger only[\s\S]*?Agent activity · WebMCP[\s\S]*?show_work_search[\s\S]*?set_review_scope[\s\S]*?prepare_next_action/u);
+	assert.match(recordingScript, /Chat remains the visual focus after prompt submission, or any named in-app WebMCP receipt is absent/u);
+	assert.match(recordingScript, /## Optional custom-worker fast ending[\s\S]*?Use fast-create brief[\s\S]*?Follow the brief on this page\.[\s\S]*?create_work_drafts[\s\S]*?Created `3 · Draft`[\s\S]*?three custom Draft titles remain named even if the current filter hides their cards[\s\S]*?Workspace `8 → 11`[\s\S]*?Human Start required[\s\S]*?Create fast\. Start deliberately\./u);
+	assert.match(recordingScript, /Reset live sample to remove all three recording drafts and confirm the original 8-item sample/u);
+	assert.match(recordingScript, /00:00–00:08[\s\S]*?02:40–02:45/u);
+	assert.match(recordingScript, /Abort the take immediately[\s\S]*?Focus is lost after the Review-to-Next handoff[\s\S]*?CSP violation/u);
+	assert.match(browserAgentPath, /Use fast-create brief[\s\S]*?453-character brief[\s\S]*?forbid Save\/Start\/block\/completion\/deletion[\s\S]*?Reset[\s\S]*?original no-workspace-change brief/u);
+	assert.match(browserAgentPath, /Discover exactly `get_current_work_view`, `show_work_search`, and `create_work_drafts`\./u);
+	assert.match(browserAgentPath, /create_work_drafts[\s\S]*?one atomic `8 → 11` receipt[\s\S]*?three visible human \*\*Start\*\* controls[\s\S]*?stale count `8`[\s\S]*?duplicate-title rejection[\s\S]*?Reset live sample[\s\S]*?exact original 8-item workspace/u);
+	assert.doesNotMatch(browserAgentPath, /Discover `get_current_work_view` and `show_work_search` only/u);
 	assert.match(headers, /X-Content-Type-Options: nosniff/u);
 	assert.match(headers, /X-Robots-Tag: noindex, nofollow, noarchive/u);
 });
@@ -170,20 +235,37 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 		.filter((name) => name.endsWith('.html'))
 		.sort((left, right) => left.localeCompare(right));
 	assert.deepEqual(actualHtml, expectedHtml);
+	assert.equal(
+		readFileSync(path.join(artifactRoot, 'index.html'), 'utf8'),
+		readFileSync(path.join(artifactRoot, 'landing.html'), 'utf8'),
+		'canonical root and landing alias share one HTML source'
+	);
 	assert.equal(existsSync(path.join(artifactRoot, '_worker.js')), false);
 	assert.equal(existsSync(path.join(artifactRoot, 'functions')), false);
 	assert.equal(collectFiles(artifactRoot).some((file) => file.endsWith('.map')), false);
 	assert.ok(existsSync(path.join(artifactRoot, 'THIRD_PARTY_LICENSES.txt')));
-	assert.match(
-		readFileSync(path.join(artifactRoot, '404.html'), 'utf8'),
-		/<meta name="robots" content="noindex,nofollow,noarchive"/u
-	);
+	const builtHeaders = readFileSync(path.join(artifactRoot, '_headers'), 'utf8');
+	assert.doesNotMatch(builtHeaders, /__PROJECTS_SVELTE_SCRIPT_HASHES__|script-src[^;]*'unsafe-inline'/u);
+	const inlineScriptHashes = new Set();
+	for (const name of actualHtml) {
+		const html = readFileSync(path.join(artifactRoot, name), 'utf8');
+		for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gu)) {
+			if (/\bsrc\s*=/u.test(match[1]) || !match[2].trim()) continue;
+			inlineScriptHashes.add(`'sha256-${createHash('sha256').update(match[2], 'utf8').digest('base64')}'`);
+		}
+	}
+	assert.ok(inlineScriptHashes.size > 0, 'built Svelte routes contain bootstrap scripts to hash');
+	for (const hash of inlineScriptHashes) assert.ok(builtHeaders.includes(hash), `built CSP includes ${hash}`);
+	const notFoundHtml = readFileSync(path.join(artifactRoot, '404.html'), 'utf8');
+	assert.match(notFoundHtml, /<meta name="robots" content="noindex,nofollow,noarchive"/u);
+	assert.match(notFoundHtml, /<link rel="stylesheet" href="\/assets\/not-found\.css">/u);
+	assert.doesNotMatch(notFoundHtml, /<style|\sstyle=/u);
 	const artifactText = collectText(artifactRoot).join('\n');
 	for (const route of ['webmcp-challenge.html', 'priority.html', 'work.html', 'review.html', 'next.html']) {
 		const html = readFileSync(path.join(artifactRoot, route), 'utf8');
 		const brand = html.match(/<a\b[^>]*\bclass="[^"]*\bchallenge-brand\b[^"]*"[^>]*>[\s\S]*?<\/a>/u)?.[0];
 		assert.ok(brand, `${route} contains the interactive challenge-brand anchor`);
-		assert.equal(getAttribute(brand, 'href'), '/landing.html', `${route} preserves the landing route`);
+		assert.equal(getAttribute(brand, 'href'), '/landing.html', `${route} preserves the static landing route`);
 		assert.equal(
 			getAttribute(brand, 'aria-label'),
 			'Wornpage Projects landing page',
@@ -212,8 +294,12 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	assert.doesNotMatch(guideHtml, /data-agent-work-query-input/u);
 	assert.match(guideHtml, /All visible work is ready by default/u);
 	assert.match(guideHtml, /Follow the brief on this page\./u);
+	assert.match(guideHtml, /data-agent-brief-fast-create[^>]*>.*?Use fast-create brief/u);
 	assert.match(guideHtml, /Local draft · not saved · workspace unchanged/u);
 	assert.match(guideHtml, /Authority and browser status/u);
+	assert.match(guideHtml, /create up to three Draft items through the bounded Work tool/u);
+	assert.match(guideHtml, /control Start, final Save, blocking, completion, and deletion/u);
+	assert.doesNotMatch(guideHtml, /approve, save, or discard every workspace change/u);
 	assert.doesNotMatch(guideHtml, /challenge-facts|Projects workflow capabilities/u);
 	assert.match(artifactText, /data-agent-work-query-input/u);
 	assert.match(artifactText, /Custom Work search term \(optional\)/u);

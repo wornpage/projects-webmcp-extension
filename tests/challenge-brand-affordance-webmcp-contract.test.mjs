@@ -38,7 +38,7 @@ test('shared challenge layout keeps content compact and receipts comfortably sep
 	assert.match(activityStripSource, /\.webmcp-activity-inset \{[\s\S]*?padding: 12px;[\s\S]*?width: 100%;/u);
 	assert.match(activityStripSource, /@media \(max-width: 500px\) \{[\s\S]*?\.webmcp-activity-inset \{[\s\S]*?padding: 8px;/u);
 	assert.match(activityStripSource, /@media \(max-width: 500px\) \{[\s\S]*?padding: 11px 12px;/u);
-	assert.match(workRouteSource, /\{#if webMcpSearchReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="work"[\s\S]*?\{#each densityPanelTabs/u);
+	assert.match(workRouteSource, /\{#if webMcpActivityReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="work"[\s\S]*?\{#each densityPanelTabs/u);
 	assert.match(reviewRouteSource, /\{#if \$demoStateError\}[\s\S]*?\{#if webMcpScopeReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?route="review"[\s\S]*?\{#if firstReview\}/u);
 	assert.match(nextRouteSource, /\{#if preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?route="next"[\s\S]*?<div class="next-presenter-result">[\s\S]*?data-next-preview/u);
 });
@@ -97,8 +97,8 @@ test('action presenters publish only after success and preserve valid pre-invoca
 	assert.match(registrationSource, /catch \(error\) \{[\s\S]*?await onInvocationError\(\{ toolName: name, toolTitle, error \}\);[\s\S]*?throw error;/u);
 
 	const workPresenter = workRouteSource.match(/async function showWorkSearchFromWebMcp[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.doesNotMatch(workPresenter, /webMcpSearchReceipt\s*=/u);
-	assert.match(workRouteSource, /async function clearFailedWorkWebMcpReceipt\(\) \{\s*webMcpSearchReceipt = null;\s*await tick\(\);\s*\}/u);
+	assert.doesNotMatch(workPresenter, /webMcpActivityReceipt\s*=/u);
+	assert.match(workRouteSource, /async function clearFailedWorkWebMcpReceipt\(\{ toolName \}[\s\S]*?toolName === WORK_DRAFT_TOOL_NAME[\s\S]*?webMcpActivityReceipt\?\.toolName === toolName[\s\S]*?await tick\(\);\s*\}/u);
 
 	const reviewPresenter = reviewRouteSource.match(/async function setReviewScopeFromWebMcp[\s\S]*?\n\t\}/u)?.[0] ?? '';
 	assert.doesNotMatch(reviewPresenter, /webMcpScopeReceipt\s*=/u);

@@ -222,6 +222,8 @@ let showingCustom = $state(false);
 	let saveNextHelp = $derived.by(() => {
 		if (!pack) return '';
 		if (!effectiveChoice) return 'Type a custom next action.';
+		if (!pendingDraft) return `Choose or confirm an action to create a draft for ${workTitle(pack)}.`;
+		if (pendingDraftStale) return 'This draft is stale. Refresh the evidence before approval.';
 		return `Save "${effectiveChoice}" as the next action for ${workTitle(pack)}.`;
 	});
 

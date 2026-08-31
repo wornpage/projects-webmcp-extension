@@ -10,9 +10,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="description" content="A public WebMCP project workspace where a browser agent reads visible work, narrows attention, and prepares an unsaved next action for a person to approve.">
   <meta property="og:title" content="Wornpage Projects — a visible WebMCP handoff" />
-  <meta property="og:description" content="Let a browser agent find the next move while you keep the final say. Public sample data, no login, no automatic saves." />
+  <meta property="og:description" content="Let browser workers create bounded drafts and prepare the next move while you keep control of Start and final Save." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://projects-webmcp-extension.pages.dev/landing.html" />
+  <meta property="og:url" content="https://projects-webmcp-extension.pages.dev/" />
   <meta property="og:site_name" content="Wornpage Projects" />
   <meta property="og:locale" content="en_US" />
   <meta property="og:image" content="https://projects-webmcp-extension.pages.dev/assets/og-image.svg" />
@@ -21,7 +21,7 @@
   <meta property="og:image:type" content="image/svg+xml" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Wornpage Projects — a visible WebMCP handoff" />
-  <meta name="twitter:description" content="Let a browser agent find the next move while you keep the final say. Public sample data, no login, no automatic saves." />
+  <meta name="twitter:description" content="Let browser workers create bounded drafts and prepare the next move while you keep control of Start and final Save." />
   <meta name="twitter:image" content="https://projects-webmcp-extension.pages.dev/assets/og-image.svg" />
   <meta name="theme-color" content="#f5f3ef" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0f1714" media="(prefers-color-scheme: dark)">
@@ -34,7 +34,7 @@
   <a class="lp-skip" href="#main-content">Skip to main content</a>
 
   <header class="lp-nav" role="banner">
-    <a class="lp-brand" href="landing.html" aria-label="Wornpage Projects home">
+    <a class="lp-brand" href="/" aria-label="Wornpage Projects home">
       <span class="lp-brand-mark" aria-hidden="true">P</span>
       <span>
         <strong>Wornpage Projects</strong>
@@ -54,7 +54,7 @@
       <div class="lp-hero-copy">
         <span class="lp-kicker">WebMCP project workspace · live sample · no login</span>
         <h1 id="hero-title">Let an agent find the next move. Keep the final say.</h1>
-        <p class="lp-lede">A browser agent reads and narrows the same work you see, then prepares an unsaved next action for you to approve.</p>
+        <p class="lp-lede">Browser workers read and narrow the same work you see, can add bounded Draft items, then prepare an unsaved next action for you to approve.</p>
         <div class="lp-cta-row">
           <a class="lp-btn lp-btn-primary" href="/webmcp-challenge">Open the handoff workflow <span class="lp-arrow" aria-hidden="true">→</span></a>
           <a class="lp-btn" id="guided-review-link" href="/review?tour=landing">Explore the sample <span class="lp-arrow" aria-hidden="true">→</span></a>
@@ -62,7 +62,7 @@
         <p class="lp-fine">
           <span>No backend</span>
           <span class="lp-dot" aria-hidden="true"></span>
-          <span>No automatic saves</span>
+          <span>No automatic starts</span>
         </p>
       </div>
 
@@ -162,14 +162,14 @@
     <section class="lp-insights" aria-label="What this is">
       <div class="lp-wrap lp-insight-grid">
         <div class="lp-insight is-good">
-          <span class="lp-insight-value">8</span>
+          <span class="lp-insight-value">9</span>
           <strong>Route-owned tools</strong>
           <small>bounded to the page the person sees</small>
         </div>
         <div class="lp-insight">
-          <span class="lp-insight-value">3</span>
-          <strong>Reversible page actions</strong>
-          <small>search, scope, and unsaved preparation</small>
+          <span class="lp-insight-value">4</span>
+          <strong>Bounded page actions</strong>
+          <small>search, scope, Draft creation, and unsaved preparation</small>
         </div>
         <div class="lp-insight is-good">
           <span class="lp-insight-value">1</span>
@@ -220,7 +220,7 @@
           <div class="lp-feature">
             <span class="lp-feat-num" aria-hidden="true">3</span>
             <h3>Agent prepares</h3>
-            <p>A proposed next action arrives with an evidence note generated from verified workspace facts, while the receipt says nothing was saved.</p>
+            <p>Workers can add bounded Draft work, then prepare a next action whose evidence note comes from verified workspace facts.</p>
           </div>
           <div class="lp-feature">
             <span class="lp-feat-num" aria-hidden="true">4</span>
@@ -256,7 +256,7 @@
             <p>Next rejects a proposal if the editor no longer matches the state the agent most recently read.</p>
           </div>
         </div>
-        <p class="lp-honesty"><b>Scope:</b> Public static sample, no login, no backend, and five focused workflow pages. Only explicit human controls, including Add and Save, write browser-local workspace state.</p>
+        <p class="lp-honesty"><b>Scope:</b> Public static sample, no login, no backend, and five focused workflow pages. WebMCP can add at most three browser-local Draft items at once; only visible human controls can Start work or approve a final Save.</p>
       </div>
     </section>
 

@@ -617,6 +617,7 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(routeSource, /pendingDraft && pendingDraftStale[\s\S]*?Draft is stale/u);
 	assert.match(routeSource, /canSave: Boolean\(effectiveChoice\) && !busy && Boolean\(pendingDraft\) && !pendingDraftStale,[\s\S]*?staleReason: pendingDraftStale \? 'Draft is stale[\s\S]*?No pending draft/u);
 	assert.match(routeSource, /disabled=\{busy \|\| !effectiveChoice \|\| !pendingDraft \|\| pendingDraftStale\}/u);
+	assert.match(routeSource, /let saveNextHelp = \$derived\.by\(\(\) => \{[\s\S]*?if \(!effectiveChoice\) return 'Type a custom next action\.';[\s\S]*?if \(!pendingDraft\) return `Choose or confirm an action to create a draft for \$\{workTitle\(pack\)\}\.`;[\s\S]*?if \(pendingDraftStale\) return 'This draft is stale\. Refresh the evidence before approval\.';[\s\S]*?return `Save "\$\{effectiveChoice\}" as the next action for \$\{workTitle\(pack\)\}\.`;/u);
 	assert.match(routeSource, /next-authority[\s\S]*?savedNextReceipt \? 'none · completed'[\s\S]*?savedNextReceipt \? 'updated'[\s\S]*?saved and approved by the person/u);
 	assert.match(routeSource, /function savedEditorBaseline\(target: DemoPack \| null\): EditorSnapshot[\s\S]*?defaultChoiceFor\(target\)[\s\S]*?NEXT_ACTION_CHOICES/u);
 	assert.match(routeSource, /function setHumanNextEditorChoice[\s\S]*?setNextEditorChoice\(boundedChoice, mode\);[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);/u);

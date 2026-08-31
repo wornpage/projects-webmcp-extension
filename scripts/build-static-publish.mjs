@@ -9,13 +9,13 @@ const distRoot = path.join(repoRoot, 'dist');
 export const DEFAULT_STATIC_PUBLISH_DIR = path.join(distRoot, 'static-publish');
 
 export const STATIC_PUBLISH_FILES = Object.freeze([
-	'index.html',
 	'landing.html',
 	'THIRD_PARTY_LICENSES.txt',
 	'manifest.json',
 	'assets/demo.css',
 	'assets/landing.css',
 	'assets/landing.js',
+	'assets/not-found.css',
 	'assets/favicon.png',
 	'assets/favicon.svg',
 	'assets/og-image.svg',
@@ -34,13 +34,7 @@ const STATIC_404_PAGE = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>Not found — WebMCP Challenge</title>
-<style>
-body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f3ef; color: #21322b; font: 15px/1.5 system-ui, sans-serif; }
-main { max-width: 420px; padding: 32px 20px; text-align: center; }
-h1 { font-size: 20px; margin: 0 0 8px; }
-p { margin: 0 0 20px; color: #5b6b63; }
-a { color: #0d716a; font-weight: 700; }
-</style>
+<link rel="stylesheet" href="/assets/not-found.css">
 </head>
 <body><main><h1>This route is not in the challenge build</h1><p>The public edition contains only the judge Guide, Priority, Work, Review, and Next screens.</p><p><a href="/webmcp-challenge">Open the guide</a></p></main></body>
 </html>
@@ -63,6 +57,10 @@ export async function buildStaticPublish(outputDir) {
 		await fs.mkdir(path.dirname(target), { recursive: true });
 		await fs.copyFile(source, target);
 	}
+
+	// The landing page is the single source for both the canonical root and its
+	// explicit alias. Avoid a meta refresh and a second clean-URL redirect.
+	await fs.copyFile(path.join(repoRoot, 'landing.html'), path.join(resolvedOutputDir, 'index.html'));
 
 	for (const relativeFile of SVELTE_PUBLIC_FILES) {
 		const source = path.join(repoRoot, 'svelte-frontend', 'static', relativeFile);

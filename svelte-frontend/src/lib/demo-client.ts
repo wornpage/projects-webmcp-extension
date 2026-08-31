@@ -8,8 +8,10 @@ import {
 	nextChoiceForwardPath,
 	rebaseSeedPacks,
 	PACK_ACTIONS,
+	PACK_ENERGIES,
 	STATE_FILTERS,
 	VALID_PACK_STATUSES,
+	parseDateOnly,
 	workflowLabel,
 	hasBlocker,
 	blockerText,
@@ -42,6 +44,34 @@ const FORWARD_PATH_FIELDS = [
 ] as const;
 
 export const DEMO_WORK_TITLE_MAX_LENGTH = 200;
+const CREATE_PACK_FIELDS = new Set([
+	'title',
+	'status',
+	'next',
+	'blocker',
+	'owner',
+	'area',
+	'type',
+	'due',
+	'energy',
+	'recurrence',
+	'purpose',
+	'doneWhen'
+]);
+type NormalizedCreatePackFields = {
+	title: string;
+	status: string;
+	blocker: string;
+	next: string;
+	owner?: string;
+	area?: string;
+	type?: string;
+	due?: string;
+	energy?: string;
+	recurrence?: string;
+	purpose?: string;
+	doneWhen?: string;
+};
 
 export const demoState = writable<DemoState | null>(null);
 export const demoStateLoading = writable(false);
@@ -397,23 +427,14 @@ export async function createPack(payload: Record<string, unknown>): Promise<{
 	pack: DemoPack;
 	state: DemoState;
 }> {
-	const title = normalizeText(payload.title, DEMO_WORK_TITLE_MAX_LENGTH);
-	if (!title) throw new ChallengeStateError('A work title is required.');
+	const fields = normalizedCreatePackFields(payload);
 	if (!globalThis.crypto?.randomUUID) {
 		throw new ChallengeStateError('This browser cannot create a collision-safe local work id.');
 	}
-	const requestedStatus = normalizeText(payload.status, 40) || 'draft';
-	if (!VALID_PACK_STATUSES.has(requestedStatus)) {
-		throw new ChallengeStateError('Work path status is not supported.');
-	}
 	const id = `challenge-${globalThis.crypto.randomUUID()}`;
 	const pack: DemoPack = {
-		...payload,
+		...fields,
 		id,
-		title,
-		status: requestedStatus,
-		blocker: normalizeStoredBlocker(payload.blocker),
-		next: normalizeText(payload.next, 200) || (requestedStatus === 'active' ? 'Open' : 'Set next action'),
 		activity: [formatActivityEntry('Created.')],
 		pinned: false,
 		archived: false
@@ -421,12 +442,95 @@ export async function createPack(payload: Record<string, unknown>): Promise<{
 	const state = await saveBrowserState((draft) => {
 		draft.packs.push(pack);
 		draft.selectedId = id;
-		draft.status = `Created ${formatWorkTitle(title)}.`;
+		draft.status = `Created ${formatWorkTitle(fields.title)}.`;
 	});
 	if (!state) throw new ChallengeStateError('Workspace data is not available.');
 	const created = state.packs.find((item) => item.id === id)!;
 	displayToast(`Created: ${formatWorkTitle(created.title)}`, 'success');
 	return { pack: created, state };
+}
+
+export async function createDraftPacks(
+	payloads: Array<Record<string, unknown>>,
+	expectedWorkspaceCount: number
+): Promise<{ packs: DemoPack[]; state: DemoState }> {
+	if (!Array.isArray(payloads) || payloads.length < 1 || payloads.length > 3) {
+		throw new ChallengeStateError('Draft work creation requires one to three items.');
+	}
+	if (!Number.isSafeInteger(expectedWorkspaceCount) || expectedWorkspaceCount < 0) {
+		throw new ChallengeStateError('Draft work creation requires an exact workspace count.');
+	}
+	if (!globalThis.crypto?.randomUUID) {
+		throw new ChallengeStateError('This browser cannot create collision-safe local work ids.');
+	}
+	const fields = payloads.map(normalizedCreatePackFields);
+	if (fields.some((item) => item.status !== 'draft')) {
+		throw new ChallengeStateError('Worker-created work must remain in Draft status.');
+	}
+	const titleKeys = fields.map((item) => item.title.toLocaleLowerCase('en-US'));
+	if (new Set(titleKeys).size !== titleKeys.length) throw new ChallengeStateError('Draft work titles must be unique.');
+	const packs = fields.map((item) => ({
+		...item,
+		id: `challenge-${globalThis.crypto.randomUUID()}`,
+		activity: [formatActivityEntry('Created as a worker draft.')],
+		pinned: false,
+		archived: false
+	} satisfies DemoPack));
+	const ids = new Set(packs.map((pack) => pack.id));
+	const state = await saveBrowserState((draft) => {
+		if (draft.packs.length !== expectedWorkspaceCount) {
+			throw new ChallengeStateError('Workspace changed after the worker read it. Refresh Work and try again.');
+		}
+		const existingTitles = new Set(draft.packs.map((pack) => workTitle(pack).toLocaleLowerCase('en-US')));
+		if (titleKeys.some((title) => existingTitles.has(title))) {
+			throw new ChallengeStateError('A draft work title already exists in the workspace.');
+		}
+		draft.packs.push(...packs);
+		draft.selectedId = packs[0].id!;
+		draft.status = `Created ${packs.length} ${packs.length === 1 ? 'draft work item' : 'draft work items'} for human review.`;
+	});
+	if (!state) throw new ChallengeStateError('Workspace data is not available.');
+	const created = state.packs.filter((pack) => ids.has(pack.id));
+	if (created.length !== packs.length) throw new ChallengeStateError('Draft work creation did not persist every item.');
+	displayToast(`Created ${created.length} ${created.length === 1 ? 'draft' : 'drafts'} for review.`, 'success');
+	return { packs: created, state };
+}
+
+function normalizedCreatePackFields(payload: Record<string, unknown>): NormalizedCreatePackFields {
+	const unsupportedFields = Object.keys(payload).filter((field) => !CREATE_PACK_FIELDS.has(field)).sort();
+	if (unsupportedFields.length > 0) {
+		throw new ChallengeStateError(`Work creation does not support field "${unsupportedFields[0]}".`);
+	}
+	const title = normalizeText(payload.title, DEMO_WORK_TITLE_MAX_LENGTH);
+	if (!title) throw new ChallengeStateError('A work title is required.');
+	const requestedStatus = normalizeText(payload.status, 40) || 'draft';
+	if (!VALID_PACK_STATUSES.has(requestedStatus)) {
+		throw new ChallengeStateError('Work path status is not supported.');
+	}
+	const due = normalizeText(payload.due, 40);
+	if (due && !parseDateOnly(due)) throw new ChallengeStateError('Work due date must be a valid calendar date.');
+	const energy = normalizeText(payload.energy, 40);
+	if (energy && !PACK_ENERGIES.includes(energy)) throw new ChallengeStateError('Work energy is not supported.');
+	const owner = normalizeText(payload.owner, 120);
+	const area = normalizeText(payload.area, 120);
+	const type = normalizeText(payload.type, 120);
+	const recurrence = normalizeText(payload.recurrence, 120);
+	const purpose = normalizeText(payload.purpose, 1000);
+	const doneWhen = normalizeText(payload.doneWhen, 1000);
+	return {
+		title,
+		status: requestedStatus,
+		blocker: normalizeStoredBlocker(payload.blocker),
+		next: normalizeText(payload.next, 200) || (requestedStatus === 'active' ? 'Open' : 'Set next action'),
+		...(owner ? { owner } : {}),
+		...(area ? { area } : {}),
+		...(type ? { type } : {}),
+		...(due ? { due } : {}),
+		...(energy ? { energy } : {}),
+		...(recurrence ? { recurrence } : {}),
+		...(purpose ? { purpose } : {}),
+		...(doneWhen ? { doneWhen } : {})
+	};
 }
 
 function pathSignature(pack: DemoPack): string {

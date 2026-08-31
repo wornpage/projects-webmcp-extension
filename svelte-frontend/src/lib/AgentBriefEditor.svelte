@@ -20,6 +20,7 @@
 	};
 
 	export const DEFAULT_AGENT_BRIEF = 'Use the WebMCP tools on Work, Review, and Next to inspect the visible project state, narrow the items that need attention, and prepare an evidence-based next action for my review. Do not save or change workspace data.';
+	export const FAST_CREATE_AGENT_BRIEF = 'Use the WebMCP tools on Work, Review, and Next to inspect the visible project state, narrow the items that need attention, and prepare an evidence-based next action for my review without saving it. Then return to Work, read the latest workspace count, and create exactly three distinct browser-local Draft work items based on the visible project state. Do not save, start, block, complete, or delete work. Stop on the visible create_work_drafts receipt.';
 
 	let {
 		scopeCatalog,
@@ -80,6 +81,14 @@
 		selectedScopeId = 'all';
 		workQuery = '';
 		noteLocalDraft();
+	}
+
+	async function useFastCreateBrief() {
+		brief = FAST_CREATE_AGENT_BRIEF;
+		status = 'Fast-create brief loaded · local draft not saved · workspace unchanged';
+		await tick();
+		briefInput?.focus();
+		briefInput?.select();
 	}
 
 	async function copyBrief() {
@@ -204,6 +213,7 @@
 	></textarea>
 	<div class="agent-brief-actions">
 		<WornButton type="button" size="sm" onclick={copyBrief}>Copy brief</WornButton>
+		<WornButton data-agent-brief-fast-create type="button" size="sm" onclick={useFastCreateBrief}>Use fast-create brief</WornButton>
 		<WornButton type="button" size="sm" onclick={resetBrief}>Reset</WornButton>
 		<p id="agent-brief-status" class="agent-brief-status" aria-live="polite">{status}</p>
 	</div>
@@ -343,6 +353,7 @@
 		}
 		.agent-brief-actions :global(.worn-btn) {
 			flex: 1 1 auto;
+			min-height: 44px;
 		}
 		.agent-brief-status {
 			flex-basis: 100%;

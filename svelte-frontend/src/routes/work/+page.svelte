@@ -20,7 +20,8 @@
 		displayToast,
 		actionBusy,
 		DEMO_WORK_TITLE_MAX_LENGTH,
-		createPack
+		createPack,
+		createDraftPacks
 	} from '$lib/demo-client';
 	import {
 		PACK_ACTIONS,
@@ -38,13 +39,14 @@
 		dueUrgency,
 		parseDateOnly,
 		PACK_ENERGIES,
+		ENERGY_OPTIONS,
 		recommendedDecisionWork,
 		receiptCells,
 		workTitle,
 		workflowLabel,
 		type DemoPack
 	} from '$lib/demo-workflow';
-	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAccordion, WornDialog, WornInput, WornAlert, WornBadge, WornKbd, WornTimeline, WornPage, WornReceipt } from '$lib/components';
+	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAccordion, WornDialog, WornInput, WornSelect, WornAlert, WornBadge, WornKbd, WornTimeline, WornPage, WornReceipt } from '$lib/components';
 	import { buildActionUndoSnapshot, commitActionUndo, receiptUndo, undoReceipt } from '$lib/undo';
 	import { activityActor, activityEvidenceText, recentPackActivity, relativeActivityTime } from '$lib/activity';
 	import { localDateInputValue } from '$lib/local-date.mjs';
@@ -62,9 +64,12 @@
 	import WorkFilterControls from './WorkFilterControls.svelte';
 	import {
 		WORK_SEARCH_TOOL_NAME,
+		WORK_DRAFT_TOOL_NAME,
 		createCurrentWorkTool,
 		createShowWorkSearchTool,
+		createWorkDraftsTool,
 		routeWorkSearch,
+		visibleDecisionDecider,
 		workItemPageView,
 		workPageView,
 		workSearchPresentationReceipt
@@ -150,13 +155,25 @@
 	let snoozeDays = $state<Record<string, string>>({});
 	let quickTitle = $state('');
 	let quickProofTarget = $state('');
+	let quickOwner = $state('');
+	let quickArea = $state('');
+	let quickType = $state('');
+	let quickDue = $state('');
+	let quickEnergy = $state('');
+	let quickRecurrence = $state('');
 	let quickCreating = $state(false);
+	const QUICK_METADATA_MAX_LENGTH = 120;
 	let sortBy = $state('urgency');
 	let renderLimit = $state(WORK_RENDER_LIMIT);
 
 	let filter = $derived($demoState?.filter || 'all');
 	let visible = $derived((()=>{let v=orderPacks(filterPacks(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone), sortBy);if(dueUrgencyFilter!=='all'){v=v.filter(p=>dueUrgency(p)===dueUrgencyFilter)}const sel=$demoState?.selectedId;if(focusMode&&sel){return v.filter(p=>p.id===sel)}return v})());
 	let decisionWorkspace = $derived(recommendedDecisionWork(visible));
+	let decisionWorkspaceDecider = $derived(
+		decisionWorkspace
+			? visibleDecisionDecider(decisionWorkspace.pack.area, decisionWorkspace.pack.decider)
+			: null
+	);
 	let decisionWorkspaceReason = $derived(
 		decisionWorkspace
 			? `First open decision in this filtered and sorted view. ${decisionWorkspace.sameAreaBlockedCount} blocked ${decisionWorkspace.pack.area || 'related'} ${decisionWorkspace.sameAreaBlockedCount === 1 ? 'item is' : 'items are'} in view. One of ${decisionWorkspace.visibleDecisionCount} open ${decisionWorkspace.visibleDecisionCount === 1 ? 'decision is' : 'decisions are'} shown.`
@@ -229,7 +246,7 @@
 				id: decisionWorkspace.pack.id,
 				title: workTitle(decisionWorkspace.pack),
 				reason: decisionWorkspaceReason,
-				decider: decisionWorkspace.pack.decider || null,
+				decider: decisionWorkspaceDecider,
 				decisionCount: decisionWorkspace.visibleDecisionCount,
 				blockedCount: decisionWorkspace.visibleBlockedCount,
 				overdueCount: decisionWorkspace.visibleOverdueCount,
@@ -249,10 +266,10 @@
 		? JSON.stringify({ scope: currentWorkView.scope, counts: currentWorkView.counts })
 		: '');
 	let receipt = $derived($demoState?.actionReceipt || null);
-	let webMcpSearchReceipt = $state<{
+	let webMcpActivityReceipt = $state<{
 		summary: string;
 		cells: Array<{ label: string; value: string }>;
-		scopeKey: string;
+		scopeKey: string | null;
 		toolName: string;
 	} | null>(null);
 	let receiptVisible = $derived(Boolean(receipt?.summary && receipt.summary !== dismissedReceiptSummary));
@@ -260,8 +277,8 @@
 	let stopWorkWebMcp: (() => void) | null = null;
 
 	$effect(() => {
-		if (webMcpSearchReceipt && webMcpSearchReceipt.scopeKey !== workReceiptScopeKey) {
-			webMcpSearchReceipt = null;
+		if (webMcpActivityReceipt?.scopeKey && webMcpActivityReceipt.scopeKey !== workReceiptScopeKey) {
+			webMcpActivityReceipt = null;
 		}
 	});
 
@@ -270,7 +287,7 @@
 		const outcome = result as Parameters<typeof workSearchPresentationReceipt>[0] & {
 			focus?: ReturnType<typeof focusWorkSearchDestination>;
 		};
-		webMcpSearchReceipt = { ...workSearchPresentationReceipt(outcome), toolName };
+		webMcpActivityReceipt = { ...workSearchPresentationReceipt(outcome), toolName };
 		await tick();
 		const finalFocus = focusWorkSearchDestination(true);
 		if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
@@ -278,8 +295,9 @@
 		}
 	}
 
-	async function clearFailedWorkWebMcpReceipt() {
-		webMcpSearchReceipt = null;
+	async function clearFailedWorkWebMcpReceipt({ toolName }: { toolName: string }) {
+		if (toolName === WORK_DRAFT_TOOL_NAME) return;
+		if (webMcpActivityReceipt?.toolName === toolName) webMcpActivityReceipt = null;
 		await tick();
 	}
 
@@ -328,7 +346,8 @@
 		const routeSearch = applyRouteWorkSearch($page.url.searchParams.get('search'));
 		stopWorkWebMcp = registerPageTools(document, [
 			createCurrentWorkTool(() => currentWorkView),
-			createShowWorkSearchTool(showWorkSearchFromWebMcp)
+			createShowWorkSearchTool(showWorkSearchFromWebMcp),
+			createWorkDraftsTool(createWorkerDraftsFromWebMcp)
 		], {
 			onInvocationError: clearFailedWorkWebMcpReceipt,
 			onResult: recordWorkWebMcpResult
@@ -349,7 +368,7 @@
 			mounted = false;
 			stopWorkWebMcp?.();
 			stopWorkWebMcp = null;
-			webMcpSearchReceipt = null;
+			webMcpActivityReceipt = null;
 			if (receiptFocusTimer) clearTimeout(receiptFocusTimer);
 			receiptFocusTimer = null;
 			// Leaving Work drops its route-only batch and focus modes.
@@ -543,6 +562,92 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			work: currentWorkView
 		};
 	}
+	type WorkerDraftInput = {
+		expectedWorkspaceCount: number;
+		drafts: Array<{
+			title: string;
+			owner: string | null;
+			area: string | null;
+			type: string | null;
+			due: string | null;
+			energy: string | null;
+			recurrence: string | null;
+			proofTarget: string | null;
+		}>;
+	};
+	async function createWorkerDraftsFromWebMcp(input: WorkerDraftInput) {
+		if (quickCreating || busyId) throw new Error('Worker draft creation is unavailable while Work is busy.');
+		if (input.expectedWorkspaceCount !== packs.length) {
+			throw new Error('Workspace changed after the worker read it. Refresh Work and try again.');
+		}
+		const existingTitles = new Set(packs.map((pack) => workTitle(pack).toLocaleLowerCase('en-US')));
+		const duplicateDraft = input.drafts.find((draft) => existingTitles.has(draft.title.toLocaleLowerCase('en-US')));
+		if (duplicateDraft) {
+			throw new Error(`Draft work title "${duplicateDraft.title}" already exists. Choose a unique title.`);
+		}
+		const previousReceipt = webMcpActivityReceipt ? $state.snapshot(webMcpActivityReceipt) : null;
+		webMcpActivityReceipt = {
+			summary: `Preparing ${input.drafts.length} ${input.drafts.length === 1 ? 'draft' : 'drafts'} for creation…`,
+			cells: [
+				{ label: 'Requested drafts', value: String(input.drafts.length) },
+				{ label: 'Workspace', value: `${input.expectedWorkspaceCount} current · not changed yet` },
+				{ label: 'Authority', value: 'Draft status only · Human Start required' }
+			],
+			scopeKey: null,
+			toolName: WORK_DRAFT_TOOL_NAME
+		};
+		await tick();
+		const receiptTarget = document.getElementById('work-webmcp-activity');
+		if (!(receiptTarget instanceof HTMLElement)) {
+			webMcpActivityReceipt = previousReceipt;
+			throw new Error('Worker draft creation could not find its visible receipt.');
+		}
+		try {
+			const focus = focusAndPulse(receiptTarget, { behavior: 'auto', block: 'center', requireVisibleFocus: true });
+			if (!focus.focused || !focus.focusVisible || !focus.inViewport || !focus.pulsed) {
+				throw new Error('Worker draft creation receipt focus was not verified.');
+			}
+			const result = await createDraftPacks(
+				input.drafts.map((draft) => ({
+					title: draft.title,
+					status: 'draft',
+					next: 'Start',
+					owner: draft.owner || undefined,
+					area: draft.area || undefined,
+					type: draft.type || undefined,
+					due: draft.due || undefined,
+					energy: draft.energy || undefined,
+					recurrence: draft.recurrence || undefined,
+					doneWhen: draft.proofTarget || undefined
+				})),
+				input.expectedWorkspaceCount
+			);
+			webMcpActivityReceipt = {
+				summary: `${result.packs.length} ${result.packs.length === 1 ? 'draft work item' : 'draft work items'} created for human review.`,
+				cells: [
+					{ label: 'Created', value: `${result.packs.length} · Draft` },
+					{ label: 'Draft work', value: result.packs.map((pack) => workTitle(pack)).join(' · ') },
+					{ label: 'Workspace', value: `${input.expectedWorkspaceCount} → ${result.state.packs.length}` },
+					{ label: 'Authority', value: 'No work started · Human Start required' }
+				],
+				scopeKey: null,
+				toolName: WORK_DRAFT_TOOL_NAME
+			};
+			await tick();
+			return {
+				created: result.packs.map((pack) => ({ id: pack.id!, title: workTitle(pack), status: 'draft' as const })),
+				workspaceBefore: input.expectedWorkspaceCount,
+				workspaceAfter: result.state.packs.length,
+				workspaceChanged: true as const,
+				requiresHumanStart: true as const,
+				focus: { id: 'work-webmcp-activity' as const, focused: true as const, focusVisible: true as const, inViewport: true as const, pulsed: true as const }
+			};
+		} catch (error) {
+			webMcpActivityReceipt = previousReceipt;
+			await tick();
+			throw error instanceof ChallengeStateError ? new Error(error.message) : error;
+		}
+	}
 	function handleWindowKeys(e: KeyboardEvent) {
 		const tag = (e.target as HTMLElement)?.tagName;
 		if (showShortcutHelp) {
@@ -702,6 +807,14 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	async function quickCreate() {
 		const title = quickTitle.trim();
 		const proofTarget = quickProofTarget.trim();
+		const owner = quickOwner.trim() || (ownerFilter !== 'all' && ownerFilter !== '_unassigned' ? ownerFilter : '');
+		const area = quickArea.trim() || (areaFilter !== 'all' && areaFilter !== '_none' ? areaFilter : '');
+		const type = quickType.trim();
+		const due = quickDue.trim();
+		const energy = PACK_ENERGIES.includes(quickEnergy)
+			? quickEnergy
+			: energyFilter !== 'all' && PACK_ENERGIES.includes(energyFilter) ? energyFilter : '';
+		const recurrence = quickRecurrence.trim() || (recurrenceFilter !== 'all' ? recurrenceFilter : '');
 		if (!title || quickCreating) return;
 		quickCreating = true;
 		try {
@@ -710,11 +823,21 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				status: 'active',
 				next: 'Open',
 				doneWhen: proofTarget || undefined,
-				area: areaFilter !== 'all' && areaFilter !== '_none' ? areaFilter : undefined,
-				recurrence: recurrenceFilter !== 'all' ? recurrenceFilter : undefined
+				owner: owner || undefined,
+				area: area || undefined,
+				type: type || undefined,
+				due: due || undefined,
+				energy: energy || undefined,
+				recurrence: recurrence || undefined
 			});
 			quickTitle = '';
 			quickProofTarget = '';
+			quickOwner = '';
+			quickArea = '';
+			quickType = '';
+			quickDue = '';
+			quickEnergy = '';
+			quickRecurrence = '';
 		} catch (e) {
 			displayToast('Quick create failed', 'error');
 		} finally {
@@ -981,7 +1104,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				<div class="decision-workspace-meta" aria-label="Decision context">
 					{#if decisionWorkspace.pack.due}<span class="due-{dueUrgency(decisionWorkspace.pack)}">{dueDateLabel(decisionWorkspace.pack)}</span>{/if}
 					{#if decisionWorkspace.pack.area}<WornBadge variant="muted" label={decisionWorkspace.pack.area} />{/if}
-					{#if decisionWorkspace.pack.decider}<span data-decision-workspace-decider>{decisionWorkspace.pack.decider}</span>{/if}
+					{#if decisionWorkspaceDecider}<span data-decision-workspace-decider>{decisionWorkspaceDecider}</span>{/if}
 				</div>
 			</div>
 			<div class="decision-workspace-detail">
@@ -1086,13 +1209,13 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		</div>
 	</WornDialog>
 
-	{#if webMcpSearchReceipt}
+	{#if webMcpActivityReceipt}
 		<WebMcpActivityStrip
 			id="work-webmcp-activity"
 			route="work"
-			outcome={webMcpSearchReceipt.summary}
-			toolName={webMcpSearchReceipt.toolName}
-			cells={webMcpSearchReceipt.cells}
+			outcome={webMcpActivityReceipt.summary}
+			toolName={webMcpActivityReceipt.toolName}
+			cells={webMcpActivityReceipt.cells}
 		/>
 	{/if}
 
@@ -1108,16 +1231,17 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		/>
 		<WornButton class="quick-create-submit" data-work-quick-create-submit type="submit" variant="primary" size="sm" disabled={quickCreating || !quickTitle.trim()}>{quickCreating ? 'Adding…' : 'Add'}</WornButton>
 		<details class="quick-create-options">
-			<summary>Proof target <span>Optional</span></summary>
-			<WornInput
-				id="work-quick-proof-target"
-				class="quick-proof-input"
-				bind:value={quickProofTarget}
-				maxlength={1000}
-				placeholder="What will prove this is done?"
-				aria-label="Quick-add proof target"
-				disabled={quickCreating}
-			/>
+			<summary>Work details <span>Optional</span></summary>
+			<p class="quick-create-details-help" id="quick-create-details-help">Blank owner, area, energy, and recurrence fields inherit active Work filters when possible.</p>
+			<div class="quick-create-details-grid">
+				<WornInput id="work-quick-owner" bind:value={quickOwner} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Owner" aria-label="Quick-add owner" aria-describedby="quick-create-details-help" disabled={quickCreating} />
+				<WornInput id="work-quick-area" bind:value={quickArea} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Area" aria-label="Quick-add area" aria-describedby="quick-create-details-help" disabled={quickCreating} />
+				<WornInput id="work-quick-type" bind:value={quickType} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Type" aria-label="Quick-add type" disabled={quickCreating} />
+				<WornInput id="work-quick-due" type="date" bind:value={quickDue} aria-label="Quick-add due date" disabled={quickCreating} />
+				<WornSelect id="work-quick-energy" bind:value={quickEnergy} aria-label="Quick-add energy" options={[{ value: '', label: 'Energy' }, ...ENERGY_OPTIONS]} disabled={quickCreating} />
+				<WornInput id="work-quick-recurrence" bind:value={quickRecurrence} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Recurrence" aria-label="Quick-add recurrence" aria-describedby="quick-create-details-help" disabled={quickCreating} />
+				<WornInput id="work-quick-proof-target" class="quick-proof-input" bind:value={quickProofTarget} maxlength={1000} placeholder="What will prove this is done?" aria-label="Quick-add proof target" disabled={quickCreating} />
+			</div>
 		</details>
 	</form>
 
@@ -1266,7 +1390,10 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	.quick-create-options{grid-column:1 / -1;min-width:0}
 	.quick-create-options summary{align-items:center;color:var(--worn-text-secondary);cursor:pointer;display:flex;font-size:13px;font-weight:700;gap:8px;min-block-size:36px;width:max-content}
 	.quick-create-options summary span{color:var(--worn-text-muted);font-family:var(--font-typewriter);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
-	.quick-create-options :global(.quick-proof-input){margin-top:4px;width:100%}
+	.quick-create-details-help{color:var(--worn-text-muted);font-size:12px;margin:0 0 8px}
+	.quick-create-details-grid{display:grid;gap:8px;grid-template-columns:repeat(3,minmax(0,1fr))}
+	.quick-create-details-grid :global(.worn-input),.quick-create-details-grid :global(.worn-select){min-width:0;width:100%}
+	.quick-create-details-grid :global(.quick-proof-input){grid-column:1 / -1}
 	@media(min-width:421px){
 		.demo-batch-bar {
 			align-items: center;
@@ -1286,6 +1413,8 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		.quick-create-row{align-items:stretch}
 		.quick-create-row :global(.quick-create-submit){min-block-size:44px}
 		.quick-create-options summary{min-block-size:44px}
+		.quick-create-details-grid{grid-template-columns:minmax(0,1fr)}
+		.quick-create-details-grid :global(.quick-proof-input){grid-column:auto}
 		.decision-workspace{padding:13px}
 		.decision-workspace-detail{grid-template-columns:1fr}
 		.decision-workspace-authority{border-inline-start:0;border-top:1px solid var(--worn-border);padding-inline-start:0;padding-top:12px}
@@ -1310,7 +1439,11 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	   keeps the intent (roughly 280px cards) while letting a narrow screen win. */
 	.demo-work-grid{display:grid;margin-top:4px;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:8px;max-width:100%;min-width:0}
 	.work-load-more{align-items:center;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:12px;color:var(--worn-text-muted);font-size:12px}
-	@media(max-width:800px){.demo-work-grid{grid-template-columns:1fr}}
+	@media(max-width:800px){
+		.demo-work-grid{grid-template-columns:1fr}
+		:global([data-work-item] .worn-btn[data-work-primary-navigation]),
+		:global([data-work-item] .worn-btn[data-work-primary-mutation]){min-height:44px}
+	}
 
 	.demo-work-recent {
 		margin-top: 16px;

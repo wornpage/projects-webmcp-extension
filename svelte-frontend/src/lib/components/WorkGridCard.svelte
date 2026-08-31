@@ -134,7 +134,7 @@
 		.grid-card-fact-label { font-size: 12px; }
 		.grid-card-fact strong { font-size: 14px; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; white-space: normal; word-break: break-word; }
 		.grid-card-quick { gap: 6px; margin-top: 4px; padding-top: 6px; }
-		:global(.demo-grid-card [data-work-primary-navigation]), :global(.demo-grid-card [data-work-primary-mutation]) { box-sizing: border-box; flex: 1 1 auto; font-size: 14px; min-height: 40px; min-width: 0; max-inline-size: 100%; overflow-wrap: anywhere; }
+		:global(.demo-grid-card [data-work-primary-navigation]), :global(.demo-grid-card [data-work-primary-mutation]) { box-sizing: border-box; flex: 1 1 auto; font-size: 14px; min-width: 0; max-inline-size: 100%; overflow-wrap: anywhere; }
 	}
 	:global(.demo-batch-check-slot){position:absolute;z-index:2;inset-block-start:8px;inset-inline-start:8px}
 	.demo-grid-card.batch-active .grid-card-title{display:block;box-sizing:border-box;inline-size:calc(100% - 52px);margin-inline-start:52px;min-block-size:44px}

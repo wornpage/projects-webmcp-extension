@@ -35,8 +35,8 @@
 	] as const;
 	const safety = [
 		'Agent: read the exact state currently rendered.',
-		'Agent: change page-local scope and prepare an unsaved draft.',
-		'Person: approve, save, or discard every workspace change.'
+		'Agent: change page-local scope, prepare an unsaved next action, or create up to three Draft items through the bounded Work tool.',
+		'Person: control Start, final Save, blocking, completion, and deletion.'
 	] as const;
 	let webMcpGuideReaderAvailable = $state(false);
 	let webMcpGuideReceipt = $state<{
@@ -120,7 +120,7 @@
 	<title>Projects handoff guide — Wornpage Projects™</title>
 	<meta
 		name="description"
-	content="A practical Projects handoff workflow: WebMCP tools read visible work, narrow review, and prepare a draft while you control Save."
+	content="A practical Projects handoff workflow: WebMCP tools read visible work, can create bounded Drafts, and prepare an unsaved next action while people control Start and final Save."
 	/>
 </svelte:head>
 
@@ -135,7 +135,7 @@
 			<div class="challenge-guide-rail">
 				<div class="challenge-intro">
 					<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
-					<p class="challenge-purpose">Choose visible work and edit the brief; the browser agent can inspect and prepare while you control Save.</p>
+					<p class="challenge-purpose">Choose visible work and edit the brief; the browser agent can inspect, prepare, or add bounded Drafts while you control Start and final Save.</p>
 					<div class="challenge-sample-reset">
 						<WornButton type="button" size="sm" disabled={resettingSample} onclick={resetLiveSample}>
 							{resettingSample ? 'Resetting sample…' : 'Reset live sample'}

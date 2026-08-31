@@ -6,11 +6,16 @@ import { fileURLToPath } from 'node:url';
 
 import {
 	WORK_CURRENT_TOOL_NAME,
+	WORK_DRAFT_MAX_ITEMS,
+	WORK_DRAFT_TOOL_NAME,
 	WORK_SEARCH_TOOL_NAME,
 	createCurrentWorkTool,
+	createWorkDraftsTool,
 	createShowWorkSearchTool,
 	normalizeWorkSearch,
 	routeWorkSearch,
+	visibleDecisionDecider,
+	workDraftInput,
 	workItemPageView,
 	workPageView,
 	workSearchPresentationReceipt
@@ -395,7 +400,7 @@ test('Work presentation receipts freeze the normalized query and live denominato
 
 test('Work receipt insertion is followed by strict revalidation and failure clears the provisional receipt', async () => {
 	const resultHandler = routeSource.match(/async function recordWorkWebMcpResult[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.match(resultHandler, /if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpSearchReceipt = \{ \.\.\.workSearchPresentationReceipt\(outcome\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)/u);
+	assert.match(resultHandler, /if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpActivityReceipt = \{ \.\.\.workSearchPresentationReceipt\(outcome\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)/u);
 	assert.match(resultHandler, /finalFocus\.target !== outcome\.focus\.target[\s\S]*?finalFocus\.itemId !== outcome\.focus\.itemId[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
 
 	let registered;
@@ -440,17 +445,25 @@ test('Work receipt insertion is followed by strict revalidation and failure clea
 	assert.equal(visibleReceipt, null);
 	assert.deepEqual(view, validPageState);
 	const failureHandler = routeSource.match(/async function clearFailedWorkWebMcpReceipt[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.match(failureHandler, /webMcpSearchReceipt = null;[\s\S]*?await tick\(\);/u);
+	assert.match(failureHandler, /toolName === WORK_DRAFT_TOOL_NAME[\s\S]*?webMcpActivityReceipt\?\.toolName === toolName[\s\S]*?webMcpActivityReceipt = null;[\s\S]*?await tick\(\);/u);
 	assert.doesNotMatch(failureHandler, /query\s*=|debouncedQuery\s*=/u);
 });
 
 test('Work renders and returns one canonical bounded view through its existing search owner', () => {
+	assert.equal(visibleDecisionDecider('Household', 'Household'), null);
+	assert.equal(visibleDecisionDecider(' Household ', 'household'), null);
+	assert.equal(visibleDecisionDecider('Household', 'Jordan'), 'Jordan');
+	assert.equal(visibleDecisionDecider('', 'Research lead'), 'Research lead');
+	assert.equal(visibleDecisionDecider('Research', null), null);
 	assert.match(routeSource, /import \{ registerPageTools \} from '\$lib\/webmcp\.mjs';/u);
 	assert.match(routeSource, /import \{[\s\S]*?createCurrentWorkTool,[\s\S]*?createShowWorkSearchTool,[\s\S]*?workItemPageView,[\s\S]*?workPageView[\s\S]*?\} from '\.\/work-webmcp\.mjs';/u);
 	assert.match(routeSource, /let currentWorkView = \$derived\.by\(\(\) => workPageView\(\{[\s\S]*?search: query,[\s\S]*?appliedSearch: debouncedQuery,[\s\S]*?matching: visible\.length,[\s\S]*?shown: renderedVisible\.length,[\s\S]*?items: renderedVisible\.map\(\(pack\) => workItemPageView\(/u);
 	assert.match(workflowSource, /export function recommendedDecisionWork\(visiblePacks: DemoPack\[\]\)[\s\S]*?const decisions = visiblePacks\.filter\([\s\S]*?const pack = decisions\[0\];/u);
 	assert.match(workflowSource, /visibleBlockedCount: visiblePacks\.filter\(hasBlocker\)\.length/u);
 	assert.match(routeSource, /let decisionWorkspace = \$derived\(recommendedDecisionWork\(visible\)\);[\s\S]*?recommendation: decisionWorkspace[\s\S]*?reason: decisionWorkspaceReason/u);
+	assert.match(routeSource, /let decisionWorkspaceDecider = \$derived\([\s\S]*?visibleDecisionDecider\(decisionWorkspace\.pack\.area, decisionWorkspace\.pack\.decider\)[\s\S]*?decider: decisionWorkspaceDecider/u);
+	assert.match(routeSource, /\{#if decisionWorkspaceDecider\}<span data-decision-workspace-decider>\{decisionWorkspaceDecider\}<\/span>\{\/if\}/u);
+	assert.doesNotMatch(routeSource, /data-decision-workspace-decider>\{decisionWorkspace\.pack\.decider\}/u);
 	assert.match(routeSource, /data-decision-workspace[\s\S]*?Decision workspace[\s\S]*?Needs a decision[\s\S]*?data-decision-workspace-review[\s\S]*?data-decision-workspace-next/u);
 	assert.match(routeSource, /data-decision-workspace-review[\s\S]*?href=\{decisionWorkspaceReviewHref\(decisionWorkspace\.pack\.id\)\}/u);
 	assert.match(routeSource, /data-decision-workspace-next[\s\S]*?href=\{decisionWorkspaceNextHref\(decisionWorkspace\.pack\.id\)\}/u);
@@ -466,15 +479,15 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /\{#each renderedVisible as pack, i \(pack\.id\)\}/u);
 	assert.match(routeSource, /function focusWorkSearchDestination\(requireVisibleFocus: boolean\)[\s\S]*?\[data-work-item\]\[data-pack-id\][\s\S]*?focusAndPulse\(destination, \{[\s\S]*?behavior: 'auto',[\s\S]*?block: 'center',[\s\S]*?requireVisibleFocus[\s\S]*?target: 'item'[\s\S]*?target: 'search'/u);
 	assert.match(routeSource, /async function showWorkSearchFromWebMcp\(nextQuery: string\) \{[\s\S]*?query = nextQuery;\s*debouncedQuery = nextQuery;[\s\S]*?await tick\(\);[\s\S]*?focus: focusWorkSearchDestination\(true\),[\s\S]*?work: currentWorkView/u);
-	assert.match(routeSource, /async function recordWorkWebMcpResult[\s\S]*?if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpSearchReceipt = \{ \.\.\.workSearchPresentationReceipt\(outcome\), toolName \}/u);
+	assert.match(routeSource, /async function recordWorkWebMcpResult[\s\S]*?if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpActivityReceipt = \{ \.\.\.workSearchPresentationReceipt\(outcome\), toolName \}/u);
 	assert.match(helperSource, /function workSearchPresentationReceipt[\s\S]*?Visible query[\s\S]*?Current scope[\s\S]*?Evidence[\s\S]*?Status[\s\S]*?Not saved/u);
-	assert.match(routeSource, /webMcpSearchReceipt = \{ \.\.\.workSearchPresentationReceipt\(outcome\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
+	assert.match(routeSource, /webMcpActivityReceipt = \{ \.\.\.workSearchPresentationReceipt\(outcome\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
 	assert.match(routeSource, /let workReceiptScopeKey = \$derived\([\s\S]*?currentWorkView\.scope[\s\S]*?currentWorkView\.counts/u);
-	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpSearchReceipt\.scopeKey !== workReceiptScopeKey[\s\S]*?webMcpSearchReceipt = null/u);
+	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpActivityReceipt\?\.scopeKey[\s\S]*?webMcpActivityReceipt\.scopeKey !== workReceiptScopeKey[\s\S]*?webMcpActivityReceipt = null/u);
 	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: work\.scope, counts: work\.counts \}\)/u);
 	assert.match(routeSource, /import WebMcpActivityStrip from '\$lib\/WebMcpActivityStrip\.svelte';/u);
-	assert.match(routeSource, /\{#if webMcpSearchReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id="work-webmcp-activity"[\s\S]*?route="work"[\s\S]*?outcome=\{webMcpSearchReceipt\.summary\}[\s\S]*?toolName=\{webMcpSearchReceipt\.toolName\}[\s\S]*?cells=\{webMcpSearchReceipt\.cells\}[\s\S]*?\/>[\s\S]*?\{#each densityPanelTabs/u);
-	assert.doesNotMatch(routeSource, /ondone=\{\(\) => \(webMcpSearchReceipt = null\)\}/u);
+	assert.match(routeSource, /\{#if webMcpActivityReceipt\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id="work-webmcp-activity"[\s\S]*?route="work"[\s\S]*?outcome=\{webMcpActivityReceipt\.summary\}[\s\S]*?toolName=\{webMcpActivityReceipt\.toolName\}[\s\S]*?cells=\{webMcpActivityReceipt\.cells\}[\s\S]*?\/>[\s\S]*?\{#each densityPanelTabs/u);
+	assert.doesNotMatch(routeSource, /ondone=\{\(\) => \(webMcpActivityReceipt = null\)\}/u);
 	assert.doesNotMatch(routeSource, /work-presenter-result|webmcp-tool-label/u);
 	assert.match(activityStripSource, /data-webmcp-receipt=\{route\}[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/u);
 	assert.match(activityStripSource, /Agent activity[\s\S]*?WebMCP · \{toolName\}[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence/u);
@@ -482,7 +495,7 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /\.demo-work-list\s*\{\s*overflow:\s*visible;\s*padding-block-start:\s*8px;\s*\}/u);
 	assert.match(routeSource, /registerPageTools\(document, \[[\s\S]*?createCurrentWorkTool\(\(\) => currentWorkView\),[\s\S]*?createShowWorkSearchTool\(showWorkSearchFromWebMcp\)[\s\S]*?\], \{[\s\S]*?onInvocationError: clearFailedWorkWebMcpReceipt,[\s\S]*?onResult: recordWorkWebMcpResult[\s\S]*?\}\)/u);
 	assert.match(routeSource, /stopWorkWebMcp\?\.\(\);\s*stopWorkWebMcp = null;/u);
-	assert.match(routeSource, /stopWorkWebMcp = null;\s*webMcpSearchReceipt = null;/u);
+	assert.match(routeSource, /stopWorkWebMcp = null;\s*webMcpActivityReceipt = null;/u);
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);
 	assert.doesNotMatch(`${routeSource}\n${helperSource}\n${registrationSource}`, /\/api\/mcp-proxy|jsonrpc|tools\/call|unregisterTool/u);
 	assert.doesNotMatch(helperSource, /\.\.\.(?:pack|item|work)|purpose:|memory:|sources:|activity:/u);
@@ -552,7 +565,9 @@ test('compact Work grid cards remain readable and contained for fine and coarse 
 	assert.match(compactRules, /\.grid-card-meta > span, \.grid-card-status,[\s\S]*?font-size: 13px; line-height: 1\.6; max-inline-size: 100%;/u);
 	assert.match(compactRules, /\.grid-card-fact \{[\s\S]*?grid-template-columns: auto minmax\(0, 1fr\); max-width: 100%; overflow: visible; overflow-wrap: anywhere;/u);
 	assert.match(compactRules, /\.grid-card-quick \{ gap: 6px; margin-top: 4px; padding-top: 6px; \}/u);
-	assert.match(compactRules, /\[data-work-primary-navigation\][\s\S]*?\[data-work-primary-mutation\][\s\S]*?font-size: 14px; min-height: 40px; min-width: 0; max-inline-size: 100%; overflow-wrap: anywhere;/u);
+	assert.match(compactRules, /\[data-work-primary-navigation\][\s\S]*?\[data-work-primary-mutation\][\s\S]*?font-size: 14px; min-width: 0; max-inline-size: 100%; overflow-wrap: anywhere;/u);
+	assert.doesNotMatch(compactRules, /min-height: 40px/u);
+	assert.match(routeSource, /@media\(max-width:800px\)\{[\s\S]*?:global\(\[data-work-item\] \.worn-btn\[data-work-primary-navigation\]\),[\s\S]*?:global\(\[data-work-item\] \.worn-btn\[data-work-primary-mutation\]\)\{min-height:44px\}/u);
 	assert.match(workGridCardSource, /<WornButton data-work-primary-navigation href=\{commandHref\} size="sm" variant="primary"[\s\S]*?onclick=\{\(event\) => \{ event\.stopPropagation\(\); \}\}/u);
 	assert.match(workGridCardSource, /<WornButton data-work-primary-mutation type="button" size="sm" variant="primary"[\s\S]*?onclick=\{\(event\) => \{ event\.stopPropagation\(\); onPrimaryMutation\(pack, cmd\.action\); \}\}/u);
 });
@@ -577,6 +592,79 @@ test('Work primary actions keep their visible command and add work-item context'
 	assert.match(workListCardSource, /<WornButton data-work-primary-mutation[^>]*aria-label=\{`\$\{command\.label\} for \$\{workTitle\(pack\)\}`\}/u);
 });
 
+test('custom workers create only bounded Draft-status work with visible human authority', async () => {
+	let received = null;
+	const tool = createWorkDraftsTool(async (input) => {
+		received = structuredClone(input);
+		return {
+			created: input.drafts.map((draft, index) => ({ id: `worker-draft-${index + 1}`, title: draft.title, status: 'draft' })),
+			workspaceBefore: input.expectedWorkspaceCount,
+			workspaceAfter: input.expectedWorkspaceCount + input.drafts.length,
+			workspaceChanged: true,
+			requiresHumanStart: true,
+			focus: { id: 'work-webmcp-activity', focused: true, focusVisible: true, inViewport: true, pulsed: true }
+		};
+	});
+	assert.equal(tool.name, WORK_DRAFT_TOOL_NAME);
+	assert.equal(WORK_DRAFT_MAX_ITEMS, 3);
+	assert.deepEqual(tool.annotations, {
+		readOnlyHint: false,
+		destructiveHint: false,
+		idempotentHint: false,
+		openWorldHint: false,
+		untrustedContentHint: true
+	});
+	assert.equal(tool.inputSchema.properties.drafts.minItems, 1);
+	assert.equal(tool.inputSchema.properties.drafts.maxItems, 3);
+	assert.equal(tool.inputSchema.properties.drafts.items.additionalProperties, false);
+	assert.deepEqual(tool.inputSchema.properties.drafts.items.required, ['title']);
+	const input = {
+		expectedWorkspaceCount: 8,
+		drafts: [
+			{ title: '  Interview suppliers  ', owner: '  Avery  ', area: 'Research', energy: 'high', proofTarget: 'Three calls logged' },
+			{ title: 'Draft rollout plan', due: '2026-09-12', recurrence: 'weekly' }
+		]
+	};
+	const result = await tool.execute(input);
+	assert.deepEqual(received, {
+		expectedWorkspaceCount: 8,
+		drafts: [
+			{ title: 'Interview suppliers', owner: 'Avery', area: 'Research', type: null, due: null, energy: 'high', recurrence: null, proofTarget: 'Three calls logged' },
+			{ title: 'Draft rollout plan', owner: null, area: null, type: null, due: '2026-09-12', energy: null, recurrence: 'weekly', proofTarget: null }
+		]
+	});
+	assert.deepEqual(result, {
+		created: [
+			{ id: 'worker-draft-1', title: 'Interview suppliers', status: 'draft' },
+			{ id: 'worker-draft-2', title: 'Draft rollout plan', status: 'draft' }
+		],
+		workspaceBefore: 8,
+		workspaceAfter: 10,
+		workspaceChanged: true,
+		requiresHumanStart: true,
+		focus: { id: 'work-webmcp-activity', focused: true, focusVisible: true, inViewport: true, pulsed: true }
+	});
+	for (const invalid of [
+		{},
+		{ expectedWorkspaceCount: 8, drafts: [] },
+		{ expectedWorkspaceCount: 8, drafts: [{ title: 'A' }, { title: 'B' }, { title: 'C' }, { title: 'D' }] },
+		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Same' }, { title: ' same ' }] },
+		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Bad date', due: '2026-02-30' }] },
+		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Bad energy', energy: 'urgent' }] },
+		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Extra', secret: 'no' }] },
+		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Control\u0000character' }] }
+	]) {
+		assert.throws(() => workDraftInput(invalid));
+	}
+	assert.match(routeSource, /createCurrentWorkTool\(\(\) => currentWorkView\),[\s\S]*?createShowWorkSearchTool\(showWorkSearchFromWebMcp\),[\s\S]*?createWorkDraftsTool\(createWorkerDraftsFromWebMcp\)/u);
+	assert.match(routeSource, /async function createWorkerDraftsFromWebMcp[\s\S]*?expectedWorkspaceCount !== packs\.length[\s\S]*?existingTitles[\s\S]*?duplicateDraft[\s\S]*?already exists\. Choose a unique title\.[\s\S]*?\$state\.snapshot\(webMcpActivityReceipt\)[\s\S]*?work-webmcp-activity[\s\S]*?await createDraftPacks\([\s\S]*?status: 'draft',[\s\S]*?next: 'Start'[\s\S]*?label: 'Draft work',[\s\S]*?result\.packs\.map\(\(pack\) => workTitle\(pack\)\)\.join\(' · '\)[\s\S]*?requiresHumanStart: true/u);
+	assert.doesNotMatch(routeSource.match(/async function createWorkerDraftsFromWebMcp[\s\S]*?\n\t\}/u)?.[0] ?? '', /structuredClone\(webMcpActivityReceipt\)/u);
+	assert.match(routeSource, /catch \(error\) \{[\s\S]*?webMcpActivityReceipt = previousReceipt;[\s\S]*?await tick\(\);[\s\S]*?throw error instanceof ChallengeStateError \? new Error\(error\.message\) : error;/u);
+	assert.equal(routeSource.match(/<WebMcpActivityStrip/gu)?.length, 1, 'Work keeps one shared WebMCP activity strip');
+	assert.doesNotMatch(routeSource.match(/async function createWorkerDraftsFromWebMcp[\s\S]*?\n\t\}/u)?.[0] ?? '', /createPack\(|runPackAction|saveBrowserState|fetch\(/u);
+	assert.match(demoClientSource, /export async function createDraftPacks[\s\S]*?payloads\.length < 1 \|\| payloads\.length > 3[\s\S]*?status !== 'draft'[\s\S]*?draft\.packs\.length !== expectedWorkspaceCount[\s\S]*?draft\.packs\.push\(\.\.\.packs\)/u);
+});
+
 test('Quick Add stays available through the one createPack path in both Work densities', () => {
 	const formPattern = /<form class="quick-create-row"/gu;
 	assert.equal([...routeSource.matchAll(formPattern)].length, 1, 'Work renders one Quick Add form');
@@ -586,11 +674,26 @@ test('Quick Add stays available through the one createPack path in both Work den
 	assert.ok(quickAddIndex >= 0 && quickAddIndex < densityPanelsIndex, 'Quick Add is owned once outside the density panels');
 	assert.doesNotMatch(routeSource, /@media\(max-width:420px\)\{[\s\S]*?\.quick-create-row\{display:none\}/u);
 	const quickCreateSource = routeSource.match(/async function quickCreate\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.match(routeSource, /let quickProofTarget = \$state\(''\);/u);
-	assert.match(quickCreateSource, /const proofTarget = quickProofTarget\.trim\(\);[\s\S]*?await createPack\(\{[\s\S]*?title,[\s\S]*?status: 'active',[\s\S]*?next: 'Open',[\s\S]*?doneWhen: proofTarget \|\| undefined,[\s\S]*?quickTitle = '';\s*quickProofTarget = '';/u);
-	assert.match(routeSource, /<summary>Proof target <span>Optional<\/span><\/summary>[\s\S]*?<WornInput[^>]*id="work-quick-proof-target"[^>]*maxlength=\{1000\}[^>]*aria-label="Quick-add proof target"/u);
+	for (const field of ['quickProofTarget', 'quickOwner', 'quickArea', 'quickType', 'quickDue', 'quickEnergy', 'quickRecurrence']) {
+		assert.match(routeSource, new RegExp(`let ${field} = \\$state\\(''\\);`, 'u'));
+	}
+	assert.match(quickCreateSource, /const proofTarget = quickProofTarget\.trim\(\);[\s\S]*?const owner = quickOwner\.trim\(\)[\s\S]*?const area = quickArea\.trim\(\)[\s\S]*?const type = quickType\.trim\(\);[\s\S]*?const due = quickDue\.trim\(\);[\s\S]*?PACK_ENERGIES\.includes\(quickEnergy\)[\s\S]*?const recurrence = quickRecurrence\.trim\(\)[\s\S]*?await createPack\(\{[\s\S]*?title,[\s\S]*?status: 'active',[\s\S]*?next: 'Open',[\s\S]*?doneWhen: proofTarget \|\| undefined,[\s\S]*?owner: owner \|\| undefined,[\s\S]*?area: area \|\| undefined,[\s\S]*?type: type \|\| undefined,[\s\S]*?due: due \|\| undefined,[\s\S]*?energy: energy \|\| undefined,[\s\S]*?recurrence: recurrence \|\| undefined/u);
+	for (const field of ['quickTitle', 'quickProofTarget', 'quickOwner', 'quickArea', 'quickType', 'quickDue', 'quickEnergy', 'quickRecurrence']) {
+		assert.match(quickCreateSource, new RegExp(`${field} = '';`, 'u'));
+	}
+	assert.match(routeSource, /<summary>Work details <span>Optional<\/span><\/summary>[\s\S]*?Quick-add owner[\s\S]*?Quick-add area[\s\S]*?Quick-add type[\s\S]*?Quick-add due date[\s\S]*?Quick-add energy[\s\S]*?Quick-add recurrence[\s\S]*?Quick-add proof target/u);
+	assert.match(workListCardSource, /\{#if pack\.energy \|\| pack\.location \|\| pack\.milestone \|\| pack\.doneWhen\}[\s\S]*?<dt>Proof target<\/dt><dd>\{pack\.doneWhen\}<\/dd>/u);
+	assert.match(routeSource, /\.quick-create-details-grid\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)[\s\S]*?@media\(max-width:420px\)[\s\S]*?\.quick-create-details-grid\{grid-template-columns:minmax\(0,1fr\)\}/u);
 	assert.match(routeSource, /@media\(max-width:500px\)\{\s*\.quick-create-row\{margin-inline:4px\}\s*\}/u);
 	assert.doesNotMatch(quickCreateSource, /localStorage|saveBrowserState|fetch\(/u);
+	const createPackSource = demoClientSource.match(/export async function createPack[\s\S]*?\n\}\n\nfunction pathSignature/u)?.[0] ?? '';
+	assert.match(demoClientSource, /const CREATE_PACK_FIELDS = new Set\(\[[\s\S]*?'title',[\s\S]*?'status',[\s\S]*?'next',[\s\S]*?'blocker',[\s\S]*?'owner',[\s\S]*?'area',[\s\S]*?'type',[\s\S]*?'due',[\s\S]*?'energy',[\s\S]*?'recurrence',[\s\S]*?'purpose',[\s\S]*?'doneWhen'[\s\S]*?\]\);/u);
+	assert.match(createPackSource, /Object\.keys\(payload\)\.filter\(\(field\) => !CREATE_PACK_FIELDS\.has\(field\)\)\.sort\(\)[\s\S]*?Work creation does not support field/u);
+	assert.match(createPackSource, /const due = normalizeText\(payload\.due, 40\);[\s\S]*?!parseDateOnly\(due\)[\s\S]*?const energy = normalizeText\(payload\.energy, 40\);[\s\S]*?!PACK_ENERGIES\.includes\(energy\)/u);
+	for (const [field, limit] of [['owner', 120], ['area', 120], ['type', 120], ['recurrence', 120], ['purpose', 1000], ['doneWhen', 1000]]) {
+		assert.match(createPackSource, new RegExp(`const ${field} = normalizeText\\(payload\\.${field}, ${limit}\\);`, 'u'));
+	}
+	assert.doesNotMatch(createPackSource, /\.\.\.payload/u);
 });
 
 test('Work Focus mode requires selected work before claiming an active state', () => {

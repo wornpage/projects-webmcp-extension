@@ -44,9 +44,13 @@
     if (index < stepNotes.length) setNote(stepNotes[index]);
   }
 
-  function advance() {
-    // Loop back around so the demo keeps living until the visitor leaves.
-    selectStep((index + 1) % steps.length);
+  function advance(wrap) {
+    if (index >= steps.length - 1) {
+      if (wrap === false) { pause(); return; }
+      selectStep(0);
+      return;
+    }
+    selectStep(index + 1);
   }
 
   function pause() {
@@ -59,10 +63,10 @@
     pause();
     index = -1;
     clearAll();
-    advance();
+    advance(true);
     btn.textContent = "❚❚ Stop the handoff";
     btn.setAttribute("aria-pressed", "true");
-    timer = setInterval(advance, STEP_MS);
+    timer = setInterval(function () { advance(false); }, STEP_MS);
   }
 
   function stop() {
@@ -84,7 +88,7 @@
   var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduced) {
     btn.addEventListener("click", function () {
-      advance(); // wraps: 1 → 2 → 3 → 4 → 1
+      advance(true); // wraps: 1 → 2 → 3 → 4 → 1
     });
   } else {
     btn.addEventListener("click", function () {

@@ -534,6 +534,7 @@ This local checkpoint makes Review's compact page status name the denominator be
 1. Open `/webmcp-challenge`.
    - Keep **All visible work** selected. It is the default and exposes **Open all 8 work items** to `/work`; no taxonomy knowledge or editing is needed.
    - Ask the browser agent: `Follow the brief on this page.` Verify the returned projection contains the exact default `agentBrief`, empty `workQuery`, selected All scope, 8 matching, and 8 workspace for the current sample.
+   - Click **Use fast-create brief**. Verify the visible 453-character brief and Guide reader both authorize exactly three browser-local Drafts, forbid Save/Start/block/completion/deletion, and stop on the `create_work_drafts` receipt. Click **Reset** and confirm the original no-workspace-change brief returns before continuing.
    - Choose one displayed alternative. In the current sample, the observed data-backed choices are `Household · 4` and `Research · 4`; verify the selected label, deterministic query, 4 matching, and 8 workspace agree in the visible Guide and tool result.
    - Choose **Research** and verify **Open 4 Research items** leads to `/work?search=Research`, where Work immediately shows 4 matching of 8. Choose **Custom**, enter `Definitely absent work term`, and verify disabled **No work matches** replaces the link; then ask `Follow the brief on this page.` Verify the Guide returns the exact normalized query with 0 matching of 8 workspace and Work reports 0 matching and 0 shown, preserves the full denominator, and invents no result.
    - Expand **Authority and browser status** only when needed. `Reader API detected` means this browser exposes the API; it is deliberately not a registration-success claim. The Guide reader cannot navigate, save, or change workspace data.
@@ -545,10 +546,13 @@ This local checkpoint makes Review's compact page status name the denominator be
    - Verify its id, title, href, and reason match the single visible recommendation exactly, and that invoking it neither navigates nor changes workspace data.
    - If no item is actionable, verify the visible empty state and a `null` result instead of an invented recommendation.
 3. Open `/work`.
-   - Discover `get_current_work_view` and `show_work_search` only.
+   - Discover exactly `get_current_work_view`, `show_work_search`, and `create_work_drafts`.
    - Read the view; verify workspace, matching, shown, and remaining denominators are explicit and that the getter does not create an agent-change receipt.
    - Set search to `  Garage reset  `; verify the visible query and receipt use normalized `Garage reset`, report exact shown/matching/workspace denominators, identify only the visible Work search as changed, and state `Workspace data: Unchanged`.
    - Change the search as a person; verify the now-stale agent attribution clears.
+   - Reset to the original 8-item sample, clear Work search, read the latest workspace count, and call `create_work_drafts` once with that exact count plus three distinct titles. Verify one atomic `8 → 11` receipt, all three exact titles, Draft status, three visible human **Start** controls, and no server request or automatically started work.
+   - Retry with the stale count `8` and a new title; verify rejection with 11 workspace items and the prior successful receipt preserved. Read the fresh count `11`, retry one existing title, and verify duplicate-title rejection with no partial item.
+   - Use **Reset live sample** and verify the exact original 8-item workspace, no reviewer Draft titles, and no pending agent receipt before continuing.
 4. Open `/review`.
    - Discover `get_current_review_queue` and `set_review_scope` only.
    - Read the queue and verify the getter does not create an agent-change receipt.

@@ -2,7 +2,31 @@ import { decisionWorkspaceNextHref, decisionWorkspaceReviewHref, exactWorkId } f
 
 export const WORK_CURRENT_TOOL_NAME = 'get_current_work_view';
 export const WORK_SEARCH_TOOL_NAME = 'show_work_search';
+export const WORK_DRAFT_TOOL_NAME = 'create_work_drafts';
 export const WORK_SEARCH_MAX_LENGTH = 120;
+export const WORK_DRAFT_MAX_ITEMS = 3;
+const WORK_DRAFT_FIELDS = new Set(['title', 'owner', 'area', 'type', 'due', 'energy', 'recurrence', 'proofTarget']);
+const WORK_DRAFT_ENERGIES = new Set(['low', 'medium', 'high']);
+
+/** @param {unknown} value */
+function visibleContextLabel(value) {
+	if (typeof value !== 'string') return null;
+	const label = value.trim().replace(/\s+/gu, ' ');
+	return label || null;
+}
+
+/**
+ * @param {unknown} area
+ * @param {unknown} decider
+ */
+export function visibleDecisionDecider(area, decider) {
+	const areaLabel = visibleContextLabel(area);
+	const deciderLabel = visibleContextLabel(decider);
+	if (!deciderLabel) return null;
+	return areaLabel?.toLocaleLowerCase('en-US') === deciderLabel.toLocaleLowerCase('en-US')
+		? null
+		: deciderLabel;
+}
 
 const WORK_STATUSES = new Set(['all', 'active', 'blocked', 'draft', 'done', 'review', 'archived']);
 const WORK_SORTS = new Set(['urgency', 'due', 'title', 'status', 'energy', 'recent']);
@@ -18,6 +42,11 @@ const WORK_DUE_SCOPES = new Set(['all', 'overdue']);
 /** @typedef {{ target: 'item', itemId: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean } | { target: 'search', itemId: null, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }} WorkSearchFocus */
 /** @typedef {{ changed: boolean, query: string, focus: WorkSearchFocus, work: WorkView }} WorkSearchReceipt */
 /** @typedef {{ summary: string, cells: Array<{ label: string, value: string }>, scopeKey: string }} WorkPresentationReceipt */
+/** @typedef {{ title: string, owner: string | null, area: string | null, type: string | null, due: string | null, energy: string | null, recurrence: string | null, proofTarget: string | null }} WorkCreationDraft */
+/** @typedef {{ expectedWorkspaceCount: number, drafts: WorkCreationDraft[] }} WorkDraftInput */
+/** @typedef {{ id: string, title: string, status: 'draft' }} WorkCreatedDraft */
+/** @typedef {{ id: 'work-webmcp-activity', focused: true, focusVisible: true, inViewport: true, pulsed: true }} WorkDraftFocus */
+/** @typedef {{ created: WorkCreatedDraft[], workspaceBefore: number, workspaceAfter: number, workspaceChanged: true, requiresHumanStart: true, focus: WorkDraftFocus }} WorkDraftReceipt */
 
 /**
  * Project the exact bounded Work view already available to the person. The
@@ -139,6 +168,166 @@ export function createShowWorkSearchTool(showSearch) {
 			options.signal?.throwIfAborted();
 			return receipt;
 		}
+	};
+}
+
+/** @param {(input: WorkDraftInput) => Promise<WorkDraftReceipt>} createDrafts */
+export function createWorkDraftsTool(createDrafts) {
+	if (typeof createDrafts !== 'function') throw new TypeError('Work WebMCP requires a draft-work creator.');
+	const draftProperties = {
+		title: { type: 'string', minLength: 1, maxLength: 200, description: 'Required work title.' },
+		owner: { type: 'string', maxLength: 120 },
+		area: { type: 'string', maxLength: 120 },
+		type: { type: 'string', maxLength: 120 },
+		due: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+		energy: { type: 'string', enum: ['low', 'medium', 'high'] },
+		recurrence: { type: 'string', maxLength: 120 },
+		proofTarget: { type: 'string', maxLength: 1000 }
+	};
+	return {
+		name: WORK_DRAFT_TOOL_NAME,
+		title: 'Create draft work items',
+		description: `Create one to ${WORK_DRAFT_MAX_ITEMS} browser-local work items atomically in Draft status. This changes the visible workspace but cannot start, block, complete, or delete work; a person must use the existing visible controls to act on every draft.`,
+		inputSchema: {
+			type: 'object',
+			properties: {
+				expectedWorkspaceCount: {
+					type: 'integer',
+					minimum: 0,
+					description: 'Exact workspace count returned by the latest Work reader.'
+				},
+				drafts: {
+					type: 'array',
+					minItems: 1,
+					maxItems: WORK_DRAFT_MAX_ITEMS,
+					items: {
+						type: 'object',
+						properties: draftProperties,
+						required: ['title'],
+						additionalProperties: false
+					}
+				}
+			},
+			required: ['expectedWorkspaceCount', 'drafts'],
+			additionalProperties: false
+		},
+		annotations: {
+			readOnlyHint: false,
+			destructiveHint: false,
+			idempotentHint: false,
+			openWorldHint: false,
+			untrustedContentHint: true
+		},
+		/** @param {unknown} input @param {{ signal?: AbortSignal }} [options] */
+		async execute(input, options = {}) {
+			options.signal?.throwIfAborted();
+			const createInput = workDraftInput(input);
+			const receipt = workDraftReceipt(await createDrafts(createInput), createInput);
+			options.signal?.throwIfAborted();
+			return receipt;
+		}
+	};
+}
+
+/** @param {unknown} input @returns {WorkDraftInput} */
+export function workDraftInput(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) {
+		throw new TypeError('Work draft preparation requires an object input.');
+	}
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	if (Object.keys(candidate).some((key) => key !== 'expectedWorkspaceCount' && key !== 'drafts')) {
+		throw new TypeError('Work draft preparation accepts only expectedWorkspaceCount and drafts.');
+	}
+	if (!Number.isSafeInteger(candidate.expectedWorkspaceCount) || /** @type {number} */ (candidate.expectedWorkspaceCount) < 0) {
+		throw new TypeError('Work draft preparation requires a non-negative workspace count.');
+	}
+	if (!Array.isArray(candidate.drafts) || candidate.drafts.length < 1 || candidate.drafts.length > WORK_DRAFT_MAX_ITEMS) {
+		throw new TypeError(`Work draft preparation requires one to ${WORK_DRAFT_MAX_ITEMS} drafts.`);
+	}
+	const drafts = candidate.drafts.map(workCreationDraft);
+	const titleKeys = drafts.map(({ title }) => title.toLocaleLowerCase('en-US'));
+	if (new Set(titleKeys).size !== titleKeys.length) throw new TypeError('Work draft titles must be unique.');
+	return {
+		expectedWorkspaceCount: /** @type {number} */ (candidate.expectedWorkspaceCount),
+		drafts
+	};
+}
+
+/** @param {unknown} input @returns {WorkCreationDraft} */
+function workCreationDraft(input) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError('Each Work draft must be an object.');
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	if (Object.keys(candidate).some((key) => !WORK_DRAFT_FIELDS.has(key))) throw new TypeError('Work drafts contain an unsupported field.');
+	const title = workDraftText(candidate.title, 200, true);
+	const owner = workDraftText(candidate.owner, 120);
+	const area = workDraftText(candidate.area, 120);
+	const type = workDraftText(candidate.type, 120);
+	const due = workDraftText(candidate.due, 40);
+	const energy = workDraftText(candidate.energy, 40);
+	const recurrence = workDraftText(candidate.recurrence, 120);
+	const proofTarget = workDraftText(candidate.proofTarget, 1000);
+	if (due && !exactCalendarDay(due)) throw new TypeError('Work draft due date must be a valid calendar date.');
+	if (energy && !WORK_DRAFT_ENERGIES.has(energy)) throw new TypeError('Work draft energy is not supported.');
+	return { title: /** @type {string} */ (title), owner, area, type, due, energy, recurrence, proofTarget };
+}
+
+/** @param {unknown} value @param {number} maxLength @param {boolean} [required] */
+function workDraftText(value, maxLength, required = false) {
+	if (value === undefined || value === null) {
+		if (required) throw new TypeError('Work draft title is required.');
+		return null;
+	}
+	if (typeof value !== 'string' || /\p{Cc}/u.test(value)) throw new TypeError('Work draft text is invalid.');
+	const text = value.trim().replace(/\s+/gu, ' ');
+	if ((required && !text) || text.length > maxLength) throw new TypeError('Work draft text is outside its allowed length.');
+	return text || null;
+}
+
+/** @param {string} value */
+function exactCalendarDay(value) {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value);
+	if (!match) return false;
+	const year = Number(match[1]);
+	const month = Number(match[2]);
+	const day = Number(match[3]);
+	const parsed = new Date(Date.UTC(year, month - 1, day));
+	return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
+
+/** @param {unknown} input @param {WorkDraftInput} createInput @returns {WorkDraftReceipt} */
+function workDraftReceipt(input, createInput) {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError('Work draft creation returned no verifiable receipt.');
+	const candidate = /** @type {Record<string, unknown>} */ (input);
+	if (!Array.isArray(candidate.created) || candidate.created.length !== createInput.drafts.length) {
+		throw new TypeError('Work draft creation returned no verifiable created items.');
+	}
+	const created = candidate.created.map((entry, index) => {
+		if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new TypeError('Work draft creation returned an invalid item.');
+		const item = /** @type {Record<string, unknown>} */ (entry);
+		const id = exactWorkId(item.id);
+		const title = normalizedText(item.title);
+		if (!id || title !== createInput.drafts[index].title || item.status !== 'draft') throw new TypeError('Work draft creation returned an invalid item.');
+		return { id, title, status: /** @type {'draft'} */ ('draft') };
+	});
+	const focus = candidate.focus;
+	if (
+		candidate.workspaceBefore !== createInput.expectedWorkspaceCount ||
+		candidate.workspaceAfter !== createInput.expectedWorkspaceCount + created.length ||
+		candidate.workspaceChanged !== true || candidate.requiresHumanStart !== true ||
+		!focus || typeof focus !== 'object' || Array.isArray(focus)
+	) throw new TypeError('Work draft creation returned no verifiable receipt.');
+	const focusCandidate = /** @type {Record<string, unknown>} */ (focus);
+	if (
+		focusCandidate.id !== 'work-webmcp-activity' || focusCandidate.focused !== true ||
+		focusCandidate.focusVisible !== true || focusCandidate.inViewport !== true || focusCandidate.pulsed !== true
+	) throw new TypeError('Work draft preparation focus was not verified.');
+	return {
+		created,
+		workspaceBefore: createInput.expectedWorkspaceCount,
+		workspaceAfter: createInput.expectedWorkspaceCount + created.length,
+		workspaceChanged: true,
+		requiresHumanStart: true,
+		focus: { id: 'work-webmcp-activity', focused: true, focusVisible: true, inViewport: true, pulsed: true }
 	};
 }
 

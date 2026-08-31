@@ -135,7 +135,7 @@ function renderedGuideDocument(fixture) {
 test('Projects workflow surfaces keep the Guide compact and product-labeled', () => {
 	assert.match(layoutSource, /<nav aria-label="Projects workflow navigation">/u);
 	assert.doesNotMatch(layoutSource, /aria-label="Challenge pages"/u);
-	assert.match(pageSource, /Choose visible work and edit the brief; the browser agent can inspect and prepare while you control Save\./u);
+	assert.match(pageSource, /Choose visible work and edit the brief; the browser agent can inspect, prepare, or add bounded Drafts while you control Start and final Save\./u);
 	assert.match(pageSource, /<WornAccordion label="Authority and browser status">/u);
 	assert.doesNotMatch(pageSource, /challenge-facts|Projects workflow capabilities/u);
 	assert.match(editorSource, /All visible work is ready by default; choose a counted scope or Custom, then ask:/u);
@@ -345,7 +345,9 @@ test('handoff route owns one data-backed reader without navigation, write, or mo
 	assert.match(pageSource, /selectedMatchingCount = \$derived\(filterPacks\(guidePacks, 'all', workQuery\)\.length\)/u);
 	assert.match(layoutSource, /shared workspace shell hydrates the one browser-local state owner[\s\S]*?refreshDemoState\(\{ reuseRecent: true \}\)/u);
 	assert.match(pageSource, /<AgentBriefEditor scopeCatalog=\{guideScopeCatalog\} bind:selectedScopeId bind:workQuery \{selectedMatchingCount\} \/>/u);
-	assert.match(pageSource, /Person: approve, save, or discard every workspace change/u);
+	assert.match(pageSource, /Agent: change page-local scope, prepare an unsaved next action, or create up to three Draft items through the bounded Work tool\./u);
+	assert.match(pageSource, /Person: control Start, final Save, blocking, completion, and deletion\./u);
+	assert.doesNotMatch(pageSource, /approve, save, or discard every workspace change/u);
 	assert.match(pageSource, /typeof webMcpDocument\.modelContext\?\.registerTool === 'function'/u);
 	assert.doesNotMatch(pageSource, /fetch\(|apiFetch|localStorage|sessionStorage|\.click\(|goto\(/u);
 	assert.doesNotMatch(editorSource, /fetch\(|apiFetch|localStorage|sessionStorage|modelContext|goto\(/u);
@@ -395,7 +397,12 @@ test('wide Guide layout keeps the existing steps in the left rail beside the edi
 	}
 });
 
-test('editable Guide fallback preserves composite copy, all semantics, and manual-copy focus', () => {
+test('editable Guide brief preserves its safe default, explicit fast-create preset, composite copy, and manual-copy focus', () => {
+	assert.match(editorSource, /DEFAULT_AGENT_BRIEF = '[^']*Do not save or change workspace data\.';/u);
+	assert.match(editorSource, /FAST_CREATE_AGENT_BRIEF = '[^']*return to Work, read the latest workspace count, and create exactly three distinct browser-local Draft work items[^']*Do not save, start, block, complete, or delete work\. Stop on the visible create_work_drafts receipt\.';/u);
+	assert.match(editorSource, /async function useFastCreateBrief\(\) \{[\s\S]*?brief = FAST_CREATE_AGENT_BRIEF;[\s\S]*?Fast-create brief loaded · local draft not saved · workspace unchanged[\s\S]*?await tick\(\);[\s\S]*?briefInput\?\.focus\(\);[\s\S]*?briefInput\?\.select\(\);/u);
+	assert.match(editorSource, /<WornButton data-agent-brief-fast-create[\s\S]*?onclick=\{useFastCreateBrief\}>Use fast-create brief<\/WornButton>/u);
+	assert.match(editorSource, /@media \(max-width: 520px\)[\s\S]*?\.agent-brief-actions :global\(\.worn-btn\) \{[\s\S]*?flex: 1 1 auto;[\s\S]*?min-height: 44px;/u);
 	assert.match(editorSource, /const scopedQuery = workQuery\.trim\(\);/u);
 	assert.match(editorSource, /scopedQuery\s*\? `Brief for the browser agent:\\n\$\{brief\}\\n\\nWork to focus on:\\n\$\{scopedQuery\}`\s*:\s*brief/u);
 	assert.match(editorSource, /navigator\.clipboard\.writeText\(copyText\)/u);
