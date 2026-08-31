@@ -19,6 +19,7 @@
 		ChallengeStateError,
 		displayToast,
 		actionBusy,
+		pendingNextActionDrafts,
 		DEMO_WORK_TITLE_MAX_LENGTH,
 		createPack,
 		createDraftPacks
@@ -57,6 +58,7 @@
 	import { parseRecentWorkIds, prependRecentWorkId } from '$lib/recent-work.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
+	import { recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import WorkDeleteConfirmDialog from '$lib/WorkDeleteConfirmDialog.svelte';
 	import WorkGridCard from '$lib/components/WorkGridCard.svelte';
@@ -283,16 +285,52 @@
 	});
 
 	async function recordWorkWebMcpResult({ toolName, result }: { toolName: string; result: unknown }) {
+		if (toolName === WORK_DRAFT_TOOL_NAME) {
+			const outcome = result as {
+				created: Array<{ title: string; status: 'draft' }>;
+				workspaceBefore: number;
+				workspaceAfter: number;
+				requiresHumanStart: true;
+			};
+			recordWebMcpHandoffStep({
+				id: 'draft-batch',
+				title: 'Draft work staged',
+				summary: `${outcome.created.length} Drafts · ${outcome.workspaceBefore} → ${outcome.workspaceAfter}`,
+				evidence: outcome.created.map(({ title }) => title).join(' · '),
+				authority: 'Draft only · Human Start required'
+			});
+			const pendingWebMcpDraft = pendingNextActionDrafts($demoState).find(({ source }) => source === 'webmcp');
+			if (pendingWebMcpDraft) {
+				recordWebMcpHandoffStep({
+					id: 'human-decision',
+					title: 'Human decision',
+					summary: 'Pending approval',
+					evidence: `Return to Pending 1 to approve or discard the prepared action for ${pendingWebMcpDraft.workId}.`,
+					authority: 'Only a person can Save or Start'
+				});
+			}
+			return;
+		}
 		if (toolName !== WORK_SEARCH_TOOL_NAME) return;
-		const outcome = result as Parameters<typeof workSearchPresentationReceipt>[0] & {
+		const outcome = result as {
 			focus?: ReturnType<typeof focusWorkSearchDestination>;
+			work: {
+				counts: { matching: number; workspace: number; blocked: number; shown: number };
+			};
 		};
-		webMcpActivityReceipt = { ...workSearchPresentationReceipt(outcome), toolName };
+		webMcpActivityReceipt = { ...workSearchPresentationReceipt(result), toolName };
 		await tick();
 		const finalFocus = focusWorkSearchDestination(true);
 		if (!outcome.focus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
 			throw new Error('Work receipt focus did not match the rendered search destination.');
 		}
+		recordWebMcpHandoffStep({
+			id: 'work-scope',
+			title: 'Work narrowed',
+			summary: `${outcome.work.counts.matching} matching of ${outcome.work.counts.workspace}`,
+			evidence: `${outcome.work.counts.blocked} blocked · ${outcome.work.counts.shown} shown`,
+			authority: 'Page view only · Workspace unchanged'
+		});
 	}
 
 	async function clearFailedWorkWebMcpReceipt({ toolName }: { toolName: string }) {

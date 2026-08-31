@@ -400,7 +400,7 @@ test('Work presentation receipts freeze the normalized query and live denominato
 
 test('Work receipt insertion is followed by strict revalidation and failure clears the provisional receipt', async () => {
 	const resultHandler = routeSource.match(/async function recordWorkWebMcpResult[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.match(resultHandler, /if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpActivityReceipt = \{ \.\.\.workSearchPresentationReceipt\(outcome\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)/u);
+	assert.match(resultHandler, /if \(toolName === WORK_DRAFT_TOOL_NAME\)[\s\S]*?if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpActivityReceipt = \{ \.\.\.workSearchPresentationReceipt\(result\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)/u);
 	assert.match(resultHandler, /finalFocus\.target !== outcome\.focus\.target[\s\S]*?finalFocus\.itemId !== outcome\.focus\.itemId[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
 
 	let registered;
@@ -479,9 +479,9 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /\{#each renderedVisible as pack, i \(pack\.id\)\}/u);
 	assert.match(routeSource, /function focusWorkSearchDestination\(requireVisibleFocus: boolean\)[\s\S]*?\[data-work-item\]\[data-pack-id\][\s\S]*?focusAndPulse\(destination, \{[\s\S]*?behavior: 'auto',[\s\S]*?block: 'center',[\s\S]*?requireVisibleFocus[\s\S]*?target: 'item'[\s\S]*?target: 'search'/u);
 	assert.match(routeSource, /async function showWorkSearchFromWebMcp\(nextQuery: string\) \{[\s\S]*?query = nextQuery;\s*debouncedQuery = nextQuery;[\s\S]*?await tick\(\);[\s\S]*?focus: focusWorkSearchDestination\(true\),[\s\S]*?work: currentWorkView/u);
-	assert.match(routeSource, /async function recordWorkWebMcpResult[\s\S]*?if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpActivityReceipt = \{ \.\.\.workSearchPresentationReceipt\(outcome\), toolName \}/u);
+	assert.match(routeSource, /async function recordWorkWebMcpResult[\s\S]*?if \(toolName === WORK_DRAFT_TOOL_NAME\)[\s\S]*?id: 'draft-batch'[\s\S]*?id: 'human-decision'[\s\S]*?if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?webMcpActivityReceipt = \{ \.\.\.workSearchPresentationReceipt\(result\), toolName \}/u);
 	assert.match(helperSource, /function workSearchPresentationReceipt[\s\S]*?Visible query[\s\S]*?Current scope[\s\S]*?Evidence[\s\S]*?Status[\s\S]*?Not saved/u);
-	assert.match(routeSource, /webMcpActivityReceipt = \{ \.\.\.workSearchPresentationReceipt\(outcome\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)/u);
+	assert.match(routeSource, /webMcpActivityReceipt = \{ \.\.\.workSearchPresentationReceipt\(result\), toolName \};[\s\S]*?await tick\(\);[\s\S]*?focusWorkSearchDestination\(true\)[\s\S]*?finalFocus\.target !== outcome\.focus\.target[\s\S]*?throw new Error\('Work receipt focus did not match the rendered search destination\.'\)[\s\S]*?id: 'work-scope'/u);
 	assert.match(routeSource, /let workReceiptScopeKey = \$derived\([\s\S]*?currentWorkView\.scope[\s\S]*?currentWorkView\.counts/u);
 	assert.match(routeSource, /\$effect\(\(\) => \{[\s\S]*?webMcpActivityReceipt\?\.scopeKey[\s\S]*?webMcpActivityReceipt\.scopeKey !== workReceiptScopeKey[\s\S]*?webMcpActivityReceipt = null/u);
 	assert.match(helperSource, /scopeKey: JSON\.stringify\(\{ scope: work\.scope, counts: work\.counts \}\)/u);
@@ -490,7 +490,7 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.doesNotMatch(routeSource, /ondone=\{\(\) => \(webMcpActivityReceipt = null\)\}/u);
 	assert.doesNotMatch(routeSource, /work-presenter-result|webmcp-tool-label/u);
 	assert.match(activityStripSource, /data-webmcp-receipt=\{route\}[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/u);
-	assert.match(activityStripSource, /Agent activity[\s\S]*?WebMCP · \{toolName\}[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence/u);
+	assert.match(activityStripSource, /Live WebMCP handoff[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence[\s\S]*?WebMCP · \{toolName\}/u);
 	assert.match(activityStripSource, /grid-template-columns: repeat\(auto-fit, minmax\(min\(190px, 100%\), 1fr\)\);[\s\S]*?@media \(max-width: 500px\)/u);
 	assert.match(routeSource, /\.demo-work-list\s*\{\s*overflow:\s*visible;\s*padding-block-start:\s*8px;\s*\}/u);
 	assert.match(routeSource, /registerPageTools\(document, \[[\s\S]*?createCurrentWorkTool\(\(\) => currentWorkView\),[\s\S]*?createShowWorkSearchTool\(showWorkSearchFromWebMcp\)[\s\S]*?\], \{[\s\S]*?onInvocationError: clearFailedWorkWebMcpReceipt,[\s\S]*?onResult: recordWorkWebMcpResult[\s\S]*?\}\)/u);

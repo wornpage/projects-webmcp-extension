@@ -25,6 +25,7 @@
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
+	import { recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import {
 		REVIEW_SEARCH_MAX_LENGTH,
@@ -201,15 +202,25 @@
 
 	async function recordReviewWebMcpResult({ toolName, result }: { toolName: string; result: unknown }) {
 		if (toolName !== REVIEW_SCOPE_TOOL_NAME) return;
-		const outcome = result as Parameters<typeof reviewScopePresentationReceipt>[0] & {
+		const outcome = result as {
 			focus?: Awaited<ReturnType<typeof focusReviewScopeDestination>>;
+			review: {
+				counts: { shown: number; totalReview: number; blocked: number; searchMatches: number };
+			};
 		};
-		webMcpScopeReceipt = { ...reviewScopePresentationReceipt(outcome), toolName };
+		webMcpScopeReceipt = { ...reviewScopePresentationReceipt(result), toolName };
 		await tick();
 		const finalFocus = await focusReviewScopeDestination(true);
 		if (!outcome.focus || !finalFocus || finalFocus.target !== outcome.focus.target || finalFocus.itemId !== outcome.focus.itemId) {
 			throw new Error('Review receipt focus did not match the rendered scope destination.');
 		}
+		recordWebMcpHandoffStep({
+			id: 'review-scope',
+			title: 'Review verified',
+			summary: `${outcome.review.counts.shown} shown of ${outcome.review.counts.totalReview}`,
+			evidence: `${outcome.review.counts.blocked} blocked · ${outcome.review.counts.searchMatches} search matches`,
+			authority: 'Page view only · Workspace unchanged'
+		});
 	}
 
 	async function clearFailedReviewWebMcpReceipt() {

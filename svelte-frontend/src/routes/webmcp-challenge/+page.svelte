@@ -5,6 +5,7 @@
 	import { ChallengeStateError, demoState, displayToast, resetDemoSampleState } from '$lib/demo-client';
 	import { filterPacks, type DemoPack } from '$lib/demo-workflow';
 	import { registerPageTools } from '$lib/webmcp.mjs';
+	import { resetWebMcpHandoffSession } from '$lib/webmcp-handoff-store';
 	import seedPacks from '../../../../data/demo-packs.json';
 	import {
 		PROJECTS_HANDOFF_GUIDE_TOOL_NAME,
@@ -61,6 +62,7 @@
 		resettingSample = true;
 		try {
 			await resetDemoSampleState();
+			resetWebMcpHandoffSession();
 			displayToast('Live sample reset. Previous local results were cleared.', 'success');
 		} catch (error) {
 			displayToast(

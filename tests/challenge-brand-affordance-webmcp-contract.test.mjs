@@ -79,8 +79,8 @@ test('presentation-changing tools produce truthful accessible receipts without m
 	assert.match(registrationSource, /if \(!registrationController\.signal\.aborted\)/u);
 
 	assert.match(guideRouteSource, /registerPageTools\(document,[\s\S]*?onResult:/u);
-	assert.match(workRouteSource, /if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?workSearchPresentationReceipt/u);
-	assert.match(reviewRouteSource, /if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?reviewScopePresentationReceipt/u);
+	assert.match(workRouteSource, /if \(toolName === WORK_DRAFT_TOOL_NAME\)[\s\S]*?recordWebMcpHandoffStep[\s\S]*?if \(toolName !== WORK_SEARCH_TOOL_NAME\) return;[\s\S]*?workSearchPresentationReceipt\(result\)/u);
+	assert.match(reviewRouteSource, /if \(toolName !== REVIEW_SCOPE_TOOL_NAME\) return;[\s\S]*?reviewScopePresentationReceipt\(result\)/u);
 	assert.doesNotMatch(nextRouteSource, /webMcpReadReceipt|data-webmcp-receipt="next-read"/u);
 	assert.match(nextRouteSource, /label: 'Verified evidence'[\s\S]*?label: 'Status', value: 'Draft — waiting for your approval'[\s\S]*?label: 'Save', value: 'Not saved'/u);
 	assert.doesNotMatch(nextRouteSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '', /Work item|Prepared action|Browser agent changed/u);
@@ -89,7 +89,7 @@ test('presentation-changing tools produce truthful accessible receipts without m
 		assert.match(source, /import WebMcpActivityStrip from '\$lib\/WebMcpActivityStrip\.svelte';/u, `${route} must render the shared activity strip`);
 	}
 	assert.match(activityStripSource, /data-webmcp-receipt=\{route\}[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/u);
-	assert.match(activityStripSource, /Agent activity[\s\S]*?WebMCP · \{toolName\}[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence/u);
+	assert.match(activityStripSource, /Live WebMCP handoff[\s\S]*?webmcp-activity-step[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence[\s\S]*?webmcp-activity-authority[\s\S]*?WebMCP · \{toolName\}/u);
 	assert.doesNotMatch(activityStripSource, /WornReceipt|ondone|JSON\.stringify|localStorage|sessionStorage|fetch\(/u);
 });
 
@@ -105,7 +105,7 @@ test('action presenters publish only after success and preserve valid pre-invoca
 	assert.match(reviewRouteSource, /async function clearFailedReviewWebMcpReceipt\(\) \{\s*webMcpScopeReceipt = null;\s*await tick\(\);\s*\}/u);
 
 	assert.doesNotMatch(nextRouteSource, /onInvocationError:|webMcpReadReceipt/u);
-	assert.match(nextRouteSource, /onResult: \(\{ toolName \}\)[\s\S]*?toolName === PREPARE_NEXT_ACTION_TOOL_NAME/u);
+	assert.match(nextRouteSource, /onResult: \(\{ toolName, result \}\)[\s\S]*?toolName !== PREPARE_NEXT_ACTION_TOOL_NAME[\s\S]*?recordWebMcpHandoffStep/u);
 	assert.match(nextRouteSource, /createPrepareNextActionTool\(prepareNextActionFromWebMcp, \{[\s\S]*?capture: captureNextPreparationSnapshot,[\s\S]*?restore: restoreNextPreparationSnapshot/u);
 	assert.match(guideRouteSource, /onInvocationError: async \(\) => \{\s*webMcpGuideReceipt = null;\s*await tick\(\);\s*\}/u);
 });

@@ -50,6 +50,7 @@
 	} from '$lib/decision-workspace-navigation.mjs';
 	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
+	import { recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import {
 		NEXT_ACTION_MAX_LENGTH,
@@ -240,8 +241,25 @@ let showingCustom = $state(false);
 				restore: restoreNextPreparationSnapshot
 			})
 		], {
-			onResult: ({ toolName }) => {
-				if (toolName === PREPARE_NEXT_ACTION_TOOL_NAME) preparationToolName = toolName;
+			onResult: ({ toolName, result }) => {
+				if (toolName !== PREPARE_NEXT_ACTION_TOOL_NAME) return;
+				preparationToolName = toolName;
+				const outcome = result as {
+					next: {
+						preparationReceipt: {
+							preparedAction: string;
+							evidence: unknown[];
+							workspaceChanged: false;
+						};
+					};
+				};
+				recordWebMcpHandoffStep({
+					id: 'next-proposal',
+					title: 'Next prepared',
+					summary: `Unsaved · ${outcome.next.preparationReceipt.preparedAction}`,
+					evidence: `${outcome.next.preparationReceipt.evidence.length} verified facts · Workspace unchanged`,
+					authority: 'Human approval required'
+				});
 			}
 		});
 		return () => {
@@ -469,9 +487,19 @@ let showingCustom = $state(false);
 	}
 
 	async function discardPreparation() {
+		const wasWebMcpPreparation = preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME;
 		const previous = preparationPreviousEditor;
 		if (pack?.id) await discardPendingNextActionDraft(pack.id);
 		clearPreparation();
+		if (wasWebMcpPreparation) {
+			recordWebMcpHandoffStep({
+				id: 'human-decision',
+				title: 'Human decision',
+				summary: 'Discarded by person',
+				evidence: 'The prepared Next draft was removed. Workspace unchanged.',
+				authority: 'Human decision completed'
+			});
+		}
 		if (previous) setNextEditorChoice(previous.choice, previous.mode, false);
 		void scheduleEditorFocus('choices');
 	}
@@ -503,6 +531,7 @@ let showingCustom = $state(false);
 		if (saveFocusFrame !== null) cancelAnimationFrame(saveFocusFrame);
 		saveFocusFrame = null;
 		try {
+			const wasWebMcpPreparation = preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME;
 			const result = pendingDraft
 				? await setPackNextAction(pack.id)
 				: null;
@@ -510,6 +539,15 @@ let showingCustom = $state(false);
 			const summary = result?.receipt?.summary || `Next action saved: ${effectiveChoice}.`;
 			savedNextReceipt = { summary, pack: result.pack };
 			clearPreparation();
+			if (wasWebMcpPreparation) {
+				recordWebMcpHandoffStep({
+					id: 'human-decision',
+					title: 'Human decision',
+					summary: 'Approved and saved by person',
+					evidence: `Next action: ${effectiveChoice}`,
+					authority: 'Human decision completed'
+				});
+			}
 			displayToast(summary, 'success');
 			// Land focus on the preview so keyboard users land on the updated
 			// state — the /next analogue of the pack page's afterSave receipt

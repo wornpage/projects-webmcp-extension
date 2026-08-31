@@ -4,6 +4,7 @@
 	import { demoState, pendingNextActionDrafts, refreshDemoState, toasts } from '$lib/demo-client';
 	import { pendingDraftNavigation } from '$lib/pending-next-action.mjs';
 	import WornToast from '$lib/components/WornToast.svelte';
+	import WebMcpHandoffRail from '$lib/WebMcpHandoffRail.svelte';
 
 	type RouteItem = {
 		href: '/webmcp-challenge' | '/priority' | '/work' | '/review' | '/next';
@@ -63,6 +64,8 @@
 			{/if}
 		</nav>
 	</header>
+
+	<WebMcpHandoffRail />
 
 	<div class="demo-toast-container">
 		{#each $toasts as toast (toast.id)}
