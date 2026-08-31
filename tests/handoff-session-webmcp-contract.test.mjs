@@ -93,9 +93,10 @@ test('one shared rail records only successful scoped receipts and reset clears t
 	assert.match(reducerSource, /'work-scope'[\s\S]*?'review-scope'[\s\S]*?'next-proposal'[\s\S]*?'draft-batch'[\s\S]*?'human-decision'/u);
 	assert.doesNotMatch(`${reducerSource}\n${storeSource}`, /localStorage|sessionStorage|fetch\(|apiFetch|goto\(|runPackAction|saveBrowserState/u);
 	assert.equal((layoutSource.match(/<WebMcpHandoffRail \/>/gu) ?? []).length, 1);
-	assert.match(railSource, /Live WebMCP handoff[\s\S]*?One agent run · visible across pages[\s\S]*?\{steps\.length\} of 5 steps/u);
-	assert.match(railSource, /STEP_NUMBERS[\s\S]*?'work-scope': 1[\s\S]*?'review-scope': 2[\s\S]*?'next-proposal': 3[\s\S]*?'draft-batch': 4[\s\S]*?'human-decision': 5/u);
-	assert.match(railSource, /Agent authority[\s\S]*?agentSaved[\s\S]*?saved ·[\s\S]*?agentStarted[\s\S]*?started[\s\S]*?Human final decision required/u);
+	assert.match(railSource, /Live WebMCP handoff[\s\S]*?currentStep\.title[\s\S]*?Ready for one bounded run[\s\S]*?currentStep\?\.summary[\s\S]*?\{steps\.length\} of 5 steps/u);
+	assert.match(railSource, /STAGES[\s\S]*?'work-scope', number: 1, label: 'Work'[\s\S]*?'review-scope', number: 2, label: 'Review'[\s\S]*?'next-proposal', number: 3, label: 'Next'[\s\S]*?'draft-batch', number: 4, label: 'Drafts'[\s\S]*?'human-decision', number: 5, label: 'Decide'/u);
+	assert.match(railSource, /Agent authority[\s\S]*?agentSaved[\s\S]*?saved ·[\s\S]*?agentStarted[\s\S]*?started[\s\S]*?Human decides/u);
+	assert.doesNotMatch(railSource, /step\?\.evidence|step\.evidence|min-height: 108px|One agent run · visible across pages/u);
 	assert.match(stripSource, /Step 1 · Narrow Work[\s\S]*?Step 2 · Verify Review[\s\S]*?Step 3 · Prepare Next[\s\S]*?Step 4 · Stage Drafts/u);
 	assert.match(stripSource, /font-size: 18px;[\s\S]*?font-size: 14px;/u);
 	assert.match(workSource, /id: 'work-scope'[\s\S]*?Page view only · Workspace unchanged/u);
