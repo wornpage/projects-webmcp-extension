@@ -17,7 +17,7 @@ Target final length: **1:50**. Hard stop: **2:00**. Record one continuous Micros
 
 - Tab control observes—but does not override—the native Edge viewport and owns the monotonic timeline, route navigation, fixed holds, DOM checkpoints, focus checks, and abort decision.
 - Every timed route change—including Guide → Work → Review → Next → Work—uses real Tab or Shift+Tab focus movement to an existing visible link, followed by Enter.
-- Vertical reveals use keyboard PageDown only. The pointer stays parked; do not use the wheel, drag a scrollbar, or add scrolling where the WebMCP focus owner already presents the receipt and focused evidence together.
+- Vertical reveals use keyboard PageDown only. Guide sends PageDown to the page body so the scroll has one deterministic owner; Next keeps PageDown on its focused receipt. The pointer stays parked; do not use the wheel or drag a scrollbar.
 - Visible focus is required when each WebMCP receipt first appears. PageDown may then transfer focus to the page while scrolling; acceptance depends on the named receipt and controls remaining simultaneously visible, not on claiming the receipt retained focus after the scroll.
 - Do not click route links, use full-document `goto`, address-bar navigation, browser Back, pointer activation, retry a transition, or extend a hold to hide late execution.
 - The side-panel agent owns every WebMCP call. Tab control never substitutes a direct workspace API, server request, or second mutation path.
@@ -36,7 +36,7 @@ Complete this exact path once immediately before recording. Any mismatch cancels
 7. Review receipt → Next: one Shift+Tab press, then Enter on **3 Next**.
 8. Prepared Next receipt → Work: four Shift+Tab presses, then Enter on **1 Work**.
 9. Work Draft receipt → pending decision: nine Shift+Tab presses, then Enter on **Pending 1**.
-10. Guide: the upper view must first show the counted scope; one PageDown must then reveal the complete brief and fast-brief control.
+10. Guide: the upper view must first show the counted scope; one PageDown pressed on the page body must then reveal the complete brief and fast-brief control.
 11. Next: two PageDown presses must keep the WebMCP receipt visible while bringing **Discard draft** and **Approve and save** fully into view.
 12. Confirm **Reader API detected**, exact 8-item state, visible focus at every destination, and no browser error or warning.
 13. Confirm the shared rail advances exactly 1 → 2 → 3 → 5 steps across Work, Review, Next, and Draft creation while agent authority stays `0 saved · 0 started`.
@@ -48,7 +48,7 @@ Use a fixed **2.25-second settle window** after every route activation. Abort in
 | Final time | Keyboard/WebMCP action | Required visible checkpoint | Narration track |
 | --- | --- | --- | --- |
 | 00:00–00:06 | Hold the canonical landing hero. | `Let an agent find the next move. Keep the final say.`; 9 tools; 4 bounded actions; No automatic starts. | “Projects gives a browser agent bounded access to visible work while the person keeps the final say.” |
-| 00:06–00:18 | Tab to Guide, show the clean 0-of-5 rail and upper scope, then press PageDown once at 00:12. | Guide ready by 00:08.25; 8 visible of 8; rail says `0 saved · 0 started`; lower view shows the complete brief and fast-create control. | “The shared handoff rail will preserve each verified step across the workflow.” |
+| 00:06–00:18 | Tab to Guide, show the clean 0-of-5 rail and upper scope, then press PageDown on the page body at 00:12. | Guide ready by 00:08.25; 8 visible of 8; rail says `0 saved · 0 started`; lower view shows the complete brief and fast-create control. | “The shared handoff rail will preserve each verified step across the workflow.” |
 | 00:18–00:25 | Tab to Priority and hold the single recommendation. | Priority ready by 00:20.25; one exact title, reason, and Next destination. | “Priority contributes one read-only recommendation—nothing more.” |
 | 00:25–00:30 | Tab back to Guide, activate **Use fast-create brief**, and let the side-panel reader inspect it. | Guide ready by 00:27.25; fast brief selected only now; workspace remains 8. | “The page-owned brief permits Draft staging but still forbids Save and Start.” |
 | 00:30–00:46 | Tab to Work; read the 8-item view and show `Garage reset`. | Larger Step 1 `WebMCP · show_work_search` receipt; 4 matching of 8; 2 blocked; rail advances to 1 of 5; agent authority remains 0 saved / 0 started. | “Work narrows the visible list and records the first verified step.” |
