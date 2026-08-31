@@ -25,5 +25,5 @@ The public Git history begins during the official submission period and is inten
 - Complete source, deterministic sample data, locked dependencies, and build instructions.
 - Text description covering WebMCP fit, shared person-agent capability, and implementation.
 - Public demonstration video under three minutes with audio.
-- Edge recording follows the checked-in 2:45 cue sheet and passes its keyboard preflight.
+- The hybrid recording follows the checked-in 2:35 Edge + ChatGPT in-app cue sheet, passes its keyboard preflight, and uses one explicit cut without speeding or hiding failed transitions.
 - Dated public commits and `SOURCE_PROVENANCE.md` distinguishing prior work from the challenge extension.
