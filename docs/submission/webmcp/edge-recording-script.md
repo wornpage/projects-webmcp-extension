@@ -32,7 +32,8 @@ Complete this exact path once immediately before recording. Any mismatch cancels
 5. Fast brief → Work: press Tab once on the page body to reclaim page focus from the completed reader, then use five visible Tab moves and Enter on **1 Work**.
 6. Work receipt → Review: seven Shift+Tab presses, then Enter on **Review in queue**.
 7. Review receipt → Next: one Shift+Tab press, then Enter on **3 Next**.
-8. Confirm **Reader API detected**, exact 8-item state, visible focus at every destination, and no browser error or warning.
+8. Prepared Next receipt → Work: four Shift+Tab presses, then Enter on **1 Work**.
+9. Confirm **Reader API detected**, exact 8-item state, visible focus at every destination, and no browser error or warning.
 
 Use a fixed **2.25-second settle window** after every route activation. Abort instead of retrying, double-activating, clicking, or relaxing a checkpoint.
 
@@ -47,7 +48,7 @@ Use a fixed **2.25-second settle window** after every route activation. Abort in
 | 00:34–00:54 | Tab to Work; read the 8-item view and show the `Garage reset` search. | `WebMCP · show_work_search`; 4 matching of 8 workspace; 2 blocked; Decision Workspace; Not saved. | “Work narrows the visible list and explains the decision context without changing workspace data.” |
 | 00:54–01:12 | Shift+Tab to Review and apply `Garage reset` + Blocked. | `WebMCP · set_review_scope`; 2 shown, 2 filtered, 3 search matches, 5 total review; Not saved. | “Review keeps every denominator visible and shows the two blocker facts behind the queue.” |
 | 01:12–01:36 | Shift+Tab to Next and prepare `Confirm storage bin delivery`. | `WebMCP · prepare_next_action`; exact Blocked and Waiting on storage bins evidence; Not saved; human approval required. | “Next accepts exact live facts, generates the evidence note, and stops at an unsaved proposal.” |
-| 01:36–01:44 | Shift+Tab to Work and invoke `get_current_work_view`. | Workspace is still exactly 8 before creation; no work was started or saved. | “The agent rereads the live denominator before creating anything.” |
+| 01:36–01:44 | Use four Shift+Tab presses and Enter to return to Work, then invoke `get_current_work_view`. | Workspace is still exactly 8 before creation; no work was started or saved. | “The agent rereads the live denominator before creating anything.” |
 | 01:44–02:00 | Invoke one `create_work_drafts` call and hold the receipt. | Exact titles `Confirm donation pickup window`, `Print shelf labels`, and `Prepare bike rack checklist`; `3 · Draft`; `8 → 11`; Human Start required; no Start activated. | “One atomic WebMCP call records three Drafts. Create fast; start deliberately.” |
 
 Stop the recorder at 02:00. Do not activate **Approve and save**, **Start**, or **Discard** during capture.
