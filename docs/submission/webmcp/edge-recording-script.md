@@ -4,7 +4,7 @@ Target final length: **2:35**. Hard stop: **2:45**. Use exactly two independentl
 
 ## Fixed setup
 
-- Edge primary clip: Microsoft Edge at 1440 × 900, 100% zoom, one clean profile window, silent capture through the installed recording extension.
+- Edge primary clip: Microsoft Edge at 100% zoom, one clean profile window, silent capture through the installed recording extension. Keep the laptop's native Edge viewport; do not apply a viewport override. Record its observed dimensions and require zero horizontal overflow before T0.
 - In-app insert: ChatGPT in-app browser on the production Work page, recorded separately without microphone audio.
 - Production URL: `https://projects-webmcp-extension.pages.dev/`.
 - Before each clip, reset that browser's live sample; Guide or Work must show exactly 8 workspace items and no Pending link.
@@ -16,7 +16,8 @@ Target final length: **2:35**. Hard stop: **2:45**. Use exactly two independentl
 
 ## Browser-control ownership
 
-- Tab control owns the Edge viewport, monotonic timeline, route navigation, fixed holds, DOM checkpoints, focus checks, and abort decision.
+- Tab control observes—but does not override—the Edge viewport and owns the monotonic timeline, route navigation, fixed holds, DOM checkpoints, focus checks, and abort decision.
+- Timed route changes focus the existing visible landing/workflow links and activate them with Enter. Do not use full-document `goto`, address-bar navigation, browser Back, pointer-only activation, or retries inside the timed clip; the Edge control path measured full-document operations at about 10 seconds while visible SPA links settled within 1.1 seconds.
 - The user manually starts and stops the Edge recorder and submits the single Edge side-panel prompt.
 - The Edge page must report **Reader API detected** before rehearsal. Tab control does not invoke Edge WebMCP directly; the side-panel agent owns those calls.
 - The in-app browser insert is directly repeatable: the agent reads Work, invokes the bounded Draft tool once, and stops on the exact receipt.
@@ -81,5 +82,5 @@ The final video is accepted only when both source clips pass independently, the 
 1. In Edge, discard the pending Next proposal or use Guide **Reset live sample**; confirm no Pending link and exactly 8 workspace items.
 2. In the in-app browser, use Guide **Reset live sample**; confirm the three recording Drafts are absent and the exact 8-item sample is restored.
 3. Trim only the four-second Edge setup pad and any setup pad before the in-app prompt. Use one hard cut at final time 02:05; do not speed either clip.
-4. Add the narration track against the final timeline and export MP4 with H.264 video, AAC audio, 1440 × 900 at 30 fps, approximately -16 LUFS integrated audio, and a peak no higher than -1.5 dB.
+4. Add the narration track against the final timeline and export MP4 with H.264 video and AAC audio on a 1920 × 1080, 30 fps canvas. Preserve each source clip's aspect ratio without cropping; use letterboxing when needed. Target approximately -16 LUFS integrated audio and a peak no higher than -1.5 dB.
 5. Watch the complete export twice. Confirm intelligible audio, readable URL and receipts, no private tabs or notifications, and a final duration under three minutes before public YouTube upload.
