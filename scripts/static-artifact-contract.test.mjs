@@ -203,7 +203,8 @@ test('static mode identifies its bounded routes without production fallbacks', (
 	assert.match(submissionReadme, /\[edge-recording-script\.md\]\(edge-recording-script\.md\)/u);
 	assert.match(recordingScript, /Target final length: \*\*2:35\*\*\. Hard stop: \*\*2:45\*\*[\s\S]*?exactly two independently accepted source clips[\s\S]*?one visible hard cut at 02:05/u);
 	assert.match(recordingScript, /Keep the laptop's native Edge viewport; do not apply a viewport override[\s\S]*?require zero horizontal overflow before T0/u);
-	assert.match(recordingScript, /Timed route changes focus the existing visible landing\/workflow links and activate them with Enter[\s\S]*?Do not use full-document `goto`, address-bar navigation, browser Back, pointer-only activation, or retries[\s\S]*?visible SPA links settled within 1\.1 seconds/u);
+	assert.match(recordingScript, /park the pointer in the bottom-right corner of the page and leave it there for the entire clip/u);
+	assert.match(recordingScript, /Every timed route change—including Guide → Work → Review → Next—uses real Tab or Shift\+Tab focus movement[\s\S]*?followed by Enter[\s\S]*?Do not click route links, use full-document `goto`, address-bar navigation, browser Back, pointer activation, or retries[\s\S]*?visible SPA links settled within 1\.1 seconds/u);
 	assert.match(recordingScript, /fixed \*\*2\.25-second settle window\*\*/u);
 	assert.match(recordingScript, /Complete this three times before recording[\s\S]*?press `N`[\s\S]*?press `Enter`[\s\S]*?get_projects_handoff_guide[\s\S]*?Reader API detected/u);
 	assert.match(recordingScript, /Open and pin the Edge browser-agent panel before recording[\s\S]*?user manually starts and stops the Edge recorder and submits the single Edge side-panel prompt/u);

@@ -17,7 +17,8 @@ Target final length: **2:35**. Hard stop: **2:45**. Use exactly two independentl
 ## Browser-control ownership
 
 - Tab control observes—but does not override—the Edge viewport and owns the monotonic timeline, route navigation, fixed holds, DOM checkpoints, focus checks, and abort decision.
-- Timed route changes focus the existing visible landing/workflow links and activate them with Enter. Do not use full-document `goto`, address-bar navigation, browser Back, pointer-only activation, or retries inside the timed clip; the Edge control path measured full-document operations at about 10 seconds while visible SPA links settled within 1.1 seconds.
+- Before T0, park the pointer in the bottom-right corner of the page and leave it there for the entire clip.
+- Every timed route change—including Guide → Work → Review → Next—uses real Tab or Shift+Tab focus movement to an existing visible link, followed by Enter. Do not click route links, use full-document `goto`, address-bar navigation, browser Back, pointer activation, or retries inside the timed clip; the Edge control path measured full-document operations at about 10 seconds while visible SPA links settled within 1.1 seconds.
 - The user manually starts and stops the Edge recorder and submits the single Edge side-panel prompt.
 - The Edge page must report **Reader API detected** before rehearsal. Tab control does not invoke Edge WebMCP directly; the side-panel agent owns those calls.
 - The in-app browser insert is directly repeatable: the agent reads Work, invokes the bounded Draft tool once, and stops on the exact receipt.
