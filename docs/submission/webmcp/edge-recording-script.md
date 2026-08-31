@@ -1,6 +1,6 @@
 # Edge-only WebMCP recording cue sheet
 
-Target final length: **2:00**. Hard stop: **2:15**. Record one continuous Microsoft Edge clip. Do not speed up footage, remove pauses inside the accepted take, or hide a failed state transition with an edit.
+Target final length: **2:10**. Hard stop: **2:20**. Record one continuous Microsoft Edge clip. Do not speed up footage, remove pauses inside the accepted take, or hide a failed state transition with an edit.
 
 ## Fixed setup
 
@@ -33,11 +33,12 @@ Complete this exact path once immediately before recording. Any mismatch cancels
 6. Work receipt → Review: seven Shift+Tab presses, then Enter on **Review in queue**.
 7. Review receipt → Next: one Shift+Tab press, then Enter on **3 Next**.
 8. Prepared Next receipt → Work: four Shift+Tab presses, then Enter on **1 Work**.
-9. Confirm **Reader API detected**, exact 8-item state, visible focus at every destination, and no browser error or warning.
+9. Work Draft receipt → pending decision: nine Shift+Tab presses, then Enter on **Pending 1**.
+10. Confirm **Reader API detected**, exact 8-item state, visible focus at every destination, and no browser error or warning.
 
 Use a fixed **2.25-second settle window** after every route activation. Abort instead of retrying, double-activating, clicking, or relaxing a checkpoint.
 
-## One continuous Edge clip — 00:00–02:00
+## One continuous Edge clip — 00:00–02:10
 
 | Final time | Keyboard/WebMCP action | Required visible checkpoint | Narration track |
 | --- | --- | --- | --- |
@@ -49,9 +50,10 @@ Use a fixed **2.25-second settle window** after every route activation. Abort in
 | 00:54–01:12 | Shift+Tab to Review and apply `Garage reset` + Blocked. | `WebMCP · set_review_scope`; 2 shown, 2 filtered, 3 search matches, 5 total review; Not saved. | “Review keeps every denominator visible and shows the two blocker facts behind the queue.” |
 | 01:12–01:36 | Shift+Tab to Next and prepare `Confirm storage bin delivery`. | `WebMCP · prepare_next_action`; exact Blocked and Waiting on storage bins evidence; Not saved; human approval required. | “Next accepts exact live facts, generates the evidence note, and stops at an unsaved proposal.” |
 | 01:36–01:44 | Use four Shift+Tab presses and Enter to return to Work, then invoke `get_current_work_view`. | Workspace is still exactly 8 before creation; no work was started or saved. | “The agent rereads the live denominator before creating anything.” |
-| 01:44–02:00 | Invoke one `create_work_drafts` call and hold the receipt. | Exact titles `Confirm donation pickup window`, `Print shelf labels`, and `Prepare bike rack checklist`; `3 · Draft`; `8 → 11`; Human Start required; no Start activated. | “One atomic WebMCP call records three Drafts. Create fast; start deliberately.” |
+| 01:44–01:54 | Invoke one `create_work_drafts` call and hold the receipt. | Exact titles `Confirm donation pickup window`, `Print shelf labels`, and `Prepare bike rack checklist`; `3 · Draft`; `8 → 11`; Human Start required; no Start activated. | “One atomic WebMCP call records three Drafts. Create fast; start deliberately.” |
+| 01:54–02:10 | Use nine Shift+Tab presses and Enter on **Pending 1**, then hold the restored Next decision receipt. | `Review the proposed next action`; exact blocker and proposal; `Draft: pending approval`; `Workspace: unchanged`; `only you can approve Save`; **Discard draft** and **Approve and save** visible and untouched. | “Automation can prepare and record the work, but the consequential decision still returns to a person. Nothing is saved until they approve it.” |
 
-Stop the recorder at 02:00. Do not activate **Approve and save**, **Start**, or **Discard** during capture.
+Stop the recorder at 02:10 on the human approval frame. Do not activate **Approve and save**, **Start**, or **Discard** during capture.
 
 ## Abort conditions
 
@@ -63,10 +65,11 @@ Abort the take immediately if any of these occurs:
 - Work, Review, or Next names a different item, fact, query, filter, or denominator than the visible receipt.
 - Next Save or any Draft Start is activated.
 - Draft creation does not reread workspace 8, creates anything other than the three exact titles, reports a partial batch, or performs a server write.
+- The final Pending navigation does not restore the exact verified Next receipt, unchanged-workspace statement, and visible human Save/Discard controls.
 - Focus is not visible at a required receipt or destination.
 - A browser error, warning, CSP violation, duplicate tool, unexpected request, or horizontal overflow appears.
 
-The video is accepted only when this one continuous Edge clip passes every checkpoint, ends no later than 02:15, and remains below the official three-minute limit after narration.
+The video is accepted only when this one continuous Edge clip passes every checkpoint, ends no later than 02:20 on the human approval frame, and remains below the official three-minute limit after narration.
 
 ## Post-capture cleanup and edit
 

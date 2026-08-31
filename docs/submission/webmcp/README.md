@@ -25,5 +25,5 @@ The public Git history begins during the official submission period and is inten
 - Complete source, deterministic sample data, locked dependencies, and build instructions.
 - Text description covering WebMCP fit, shared person-agent capability, and implementation.
 - Public demonstration video under three minutes with audio.
-- The recording follows the checked-in 2:00 Edge-only cue sheet, passes its keyboard preflight, and uses one continuous take without route cuts, speeding, or hidden failed transitions.
+- The recording follows the checked-in 2:10 Edge-only cue sheet, passes its keyboard preflight, and ends on the visible human approval boundary in one continuous take without route cuts, speeding, or hidden failed transitions.
 - Dated public commits and `SOURCE_PROVENANCE.md` distinguishing prior work from the challenge extension.
