@@ -35,7 +35,7 @@ Complete this exact path once immediately before recording. Any mismatch cancels
 7. Review receipt → Next: one Shift+Tab press, then Enter on **3 Next**.
 8. Prepared Next receipt → Work: four Shift+Tab presses, then Enter on **1 Work**.
 9. Work Draft receipt → pending decision: nine Shift+Tab presses, then Enter on **Pending 1**.
-10. Guide: one PageDown must show the counted scope, complete brief, and fast-brief control together.
+10. Guide: the upper view must first show the counted scope; one PageDown must then reveal the complete brief and fast-brief control.
 11. Next: two PageDown presses must keep the WebMCP receipt visible while bringing **Discard draft** and **Approve and save** fully into view.
 12. Confirm **Reader API detected**, exact 8-item state, visible focus at every destination, and no browser error or warning.
 
@@ -46,7 +46,7 @@ Use a fixed **2.25-second settle window** after every route activation. Abort in
 | Final time | Keyboard/WebMCP action | Required visible checkpoint | Narration track |
 | --- | --- | --- | --- |
 | 00:00–00:07 | Hold the canonical landing hero. | `Let an agent find the next move. Keep the final say.`; 9 tools; 4 bounded actions; No automatic starts. | “Projects gives a browser agent the same bounded work a person can see, while the person keeps the final say.” |
-| 00:07–00:20 | Tab to Guide, hold the upper context, then press PageDown once at 00:13. | Guide ready by 00:09.25; after the scroll, the counted scope, complete safe brief, and fast-brief control are simultaneously visible. | “The Guide publishes the exact denominator and authority boundary the agent must follow.” |
+| 00:07–00:20 | Tab to Guide, hold the upper counted scope, then press PageDown once at 00:13 to reveal the lower editor. | Guide ready by 00:09.25; upper view shows 8 visible of 8, then the lower view shows the complete safe brief and fast-brief control. | “The Guide publishes the exact denominator and authority boundary the agent must follow.” |
 | 00:20–00:29 | Tab to Priority and hold the single recommendation. | Priority ready by 00:22.25; one exact title, reason, and Next destination. | “Priority is deliberately smaller: one read-only recommendation from the canonical selector.” |
 | 00:29–00:34 | Tab back to Guide, activate **Use fast-create brief**, and let the side-panel reader inspect it. | Guide ready by 00:31.25; fast brief selected only now; workspace remains 8. | “The handoff can now finish with bounded Draft creation, while Start and Save remain human-owned.” |
 | 00:34–00:54 | Tab to Work; read the 8-item view and show the `Garage reset` search. | `WebMCP · show_work_search`; 4 matching of 8 workspace; 2 blocked; Decision Workspace; Not saved. | “Work narrows the visible list and explains the decision context without changing workspace data.” |
