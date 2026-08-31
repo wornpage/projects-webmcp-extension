@@ -18,6 +18,7 @@ Target final length: **2:10**. Hard stop: **2:20**. Record one continuous Micros
 - Tab control observes—but does not override—the native Edge viewport and owns the monotonic timeline, route navigation, fixed holds, DOM checkpoints, focus checks, and abort decision.
 - Every timed route change—including Guide → Work → Review → Next → Work—uses real Tab or Shift+Tab focus movement to an existing visible link, followed by Enter.
 - Vertical reveals use keyboard PageDown only. The pointer stays parked; do not use the wheel, drag a scrollbar, or add scrolling where the WebMCP focus owner already presents the receipt and focused evidence together.
+- Visible focus is required when each WebMCP receipt first appears. PageDown may then transfer focus to the page while scrolling; acceptance depends on the named receipt and controls remaining simultaneously visible, not on claiming the receipt retained focus after the scroll.
 - Do not click route links, use full-document `goto`, address-bar navigation, browser Back, pointer activation, retry a transition, or extend a hold to hide late execution.
 - The side-panel agent owns every WebMCP call. Tab control never substitutes a direct workspace API, server request, or second mutation path.
 - Record a four-second setup pad on the settled landing hero. Remove only that setup pad afterward; all timestamps below are final-video timestamps after the trim.
@@ -64,7 +65,7 @@ Abort the take immediately if any of these occurs:
 
 - A route misses its 2.25-second settle window or any section crosses its hard timestamp.
 - The pointer leaves its corner, a route uses a click, or the expected Tab/Shift+Tab destination differs.
-- A PageDown changes the focused receipt, hides required evidence, overshoots the named controls, or causes horizontal overflow.
+- A PageDown hides the required receipt, overshoots the named controls, or causes horizontal overflow.
 - Guide does not begin at 8, the fast brief is loaded before the final Guide return, or the side-panel reader sees a different brief.
 - Work, Review, or Next names a different item, fact, query, filter, or denominator than the visible receipt.
 - Next Save or any Draft Start is activated.
