@@ -27,7 +27,7 @@ Target final length: **1:50**. Hard stop: **2:00**. Record one continuous Micros
 
 Complete this exact path once immediately before recording. Any mismatch cancels the take.
 
-1. Landing → Guide: six Tab presses, then Enter on **Open the handoff workflow**.
+1. Landing → Guide: press Tab on the page body to reclaim focus, then advance visibly with Tab until **Open the handoff workflow** receives focus. Require the target within five additional moves, then press Enter.
 2. Guide → Priority: four Tab presses, then Enter.
 3. Priority → Guide: three Tab presses, then Enter.
 4. Returned Guide → fast brief: five Shift+Tab presses, then Enter on **Use fast-create brief**.
