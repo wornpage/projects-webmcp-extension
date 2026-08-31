@@ -28,8 +28,8 @@ Complete this exact path once immediately before recording. Any mismatch cancels
 1. Landing → Guide: six Tab presses, then Enter on **Open the handoff workflow**.
 2. Guide → Priority: four Tab presses, then Enter.
 3. Priority → Guide: three Tab presses, then Enter.
-4. Returned Guide → fast brief: two Shift+Tab presses, then Enter on **Use fast-create brief**.
-5. Fast brief → Work: six Tab presses, then Enter on **1 Work**.
+4. Returned Guide → fast brief: five Shift+Tab presses, then Enter on **Use fast-create brief**.
+5. Fast brief → Work: press Tab once on the page body to reclaim page focus from the completed reader, then use five visible Tab moves and Enter on **1 Work**.
 6. Work receipt → Review: seven Shift+Tab presses, then Enter on **Review in queue**.
 7. Review receipt → Next: one Shift+Tab press, then Enter on **3 Next**.
 8. Confirm **Reader API detected**, exact 8-item state, visible focus at every destination, and no browser error or warning.
