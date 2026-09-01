@@ -48,7 +48,7 @@
 		decisionWorkspaceContextPackId
 	} from '$lib/decision-workspace-navigation.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
-	import { recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
+	import { recordWebMcpDraftDecision, recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import NextCandidatePicker from './NextCandidatePicker.svelte';
 	import NextWorkContext from './NextWorkContext.svelte';
@@ -58,10 +58,14 @@
 		NEXT_PREPARATION_RECEIPT_ID,
 		NEXT_PREPARATION_SUMMARY,
 		PREPARE_NEXT_ACTION_TOOL_NAME,
+		createNextDraftRevisionState,
 		createCurrentNextEditorTool,
 		createPrepareNextActionTool,
 		evidenceMatchesReferences,
+		nextDraftTerminalAvailable,
 		nextEditorPageView,
+		reviseNextDraft,
+		runSettledNextDraftAction,
 		verifiedNextEvidenceNote,
 		verifyNextPreparationEvidence,
 		shouldHydratePendingDraft
@@ -113,6 +117,14 @@
 		invocationWorkId: string;
 		preparationInFlight: boolean;
 	};
+	type HumanRevisionSnapshot = {
+		choice: string;
+		customValue: string;
+		showingCustom: boolean;
+		preparationReceipt: PreparationReceipt | null;
+		preparationPreviousEditor: EditorSnapshot | null;
+		savedNextReceipt: SavedNextReceipt | null;
+	};
 
 	let chosenPackId = $state('');
 	let choice = $state('');
@@ -122,6 +134,7 @@
 	let errorText = $state('');
 	let preparationReceipt = $state<PreparationReceipt | null>(null);
 	let preparationInFlight = $state(false);
+	let draftRevision = $state(createNextDraftRevisionState());
 	let preparationPreviousEditor = $state<EditorSnapshot | null>(null);
 	let savedNextReceipt = $state<SavedNextReceipt | null>(null);
 	let editorPackId = $state('');
@@ -174,6 +187,14 @@
 			? 'custom'
 			: 'preset'
 	);
+	let routeBusy = $derived(busy || preparationInFlight || draftRevision.pending);
+	let terminalDraftAvailable = $derived(nextDraftTerminalAvailable(draftRevision, {
+		busy: busy || preparationInFlight,
+		stale: pendingDraftStale,
+		choice: effectiveChoice,
+		mode: effectiveMode,
+		draft: pendingDraft
+	}));
 	let previewChoice = $derived(effectiveChoice || defaultChoiceFor(pack));
 	let preview = $derived(
 		pack ? ({ ...pack, ...nextChoiceForwardPath(pack, previewChoice) } as DemoPack) : null
@@ -190,9 +211,15 @@
 				nextAction: effectiveChoice || 'Not set'
 			},
 			preparationReceipt: preparationReceipt && pendingDraft?.source === 'webmcp' ? preparationReceipt : null,
-			canSave: Boolean(effectiveChoice) && !busy && Boolean(pendingDraft) && !pendingDraftStale,
-			staleReason: pendingDraftStale ? 'Draft is stale. Refresh the evidence and prepare it again before approval.' : pendingDraft ? null : 'No pending draft. Choose an action to create one before approval.',
-			busy
+			canSave: terminalDraftAvailable,
+			staleReason: pendingDraftStale
+				? 'Draft is stale. Refresh the evidence and prepare it again before approval.'
+				: draftRevision.pending
+					? 'The visible draft change is still being saved.'
+					: pendingDraft && !terminalDraftAvailable
+						? 'The visible editor does not match the settled pending draft.'
+						: pendingDraft ? null : 'No pending draft. Choose an action to create one before approval.',
+			busy: routeBusy
 		});
 	});
 	let preparationCells = $derived(preparationReceipt ? [
@@ -213,6 +240,8 @@
 		if (!effectiveChoice) return 'Type a custom next action.';
 		if (!pendingDraft) return `Choose or confirm an action to create a draft for ${workTitle(pack)}.`;
 		if (pendingDraftStale) return 'This draft is stale. Refresh the evidence before approval.';
+		if (draftRevision.pending) return 'Wait for the visible draft change to finish saving.';
+		if (!terminalDraftAvailable) return 'Finish saving the visible draft before approval.';
 		return `Save "${effectiveChoice}" as the next action for ${workTitle(pack)}.`;
 	});
 
@@ -349,6 +378,26 @@
 		if (snapshot.invocationWorkId) await restorePendingNextActionDraft(snapshot.invocationWorkId, snapshot.pendingDraft);
 	}
 
+	function captureHumanRevisionSnapshot(): HumanRevisionSnapshot {
+		return {
+			choice,
+			customValue,
+			showingCustom,
+			preparationReceipt: clonePreparationReceipt(preparationReceipt),
+			preparationPreviousEditor: preparationPreviousEditor ? { ...preparationPreviousEditor } : null,
+			savedNextReceipt
+		};
+	}
+
+	function restoreHumanRevisionSnapshot(snapshot: HumanRevisionSnapshot) {
+		choice = snapshot.choice;
+		customValue = snapshot.customValue;
+		showingCustom = snapshot.showingCustom;
+		preparationReceipt = clonePreparationReceipt(snapshot.preparationReceipt);
+		preparationPreviousEditor = snapshot.preparationPreviousEditor ? { ...snapshot.preparationPreviousEditor } : null;
+		savedNextReceipt = snapshot.savedNextReceipt;
+	}
+
 	function setNextEditorChoice(nextChoice: string, mode: NextEditorMode, clearAgentPreparation = true) {
 		if (clearAgentPreparation) clearPreparation();
 		savedNextReceipt = null;
@@ -357,13 +406,42 @@
 		if (mode === 'custom') customValue = nextChoice;
 	}
 
-	function setHumanNextEditorChoice(nextChoice: string, mode: NextEditorMode) {
+	async function setHumanNextEditorChoice(nextChoice: string, mode: NextEditorMode): Promise<boolean> {
+		if (busy || preparationInFlight || draftRevision.pending || !pack?.id) return false;
 		const boundedChoice = nextChoice.slice(0, NEXT_ACTION_MAX_LENGTH);
 		const pendingChoice = boundedChoice.trim();
-		setNextEditorChoice(boundedChoice, mode);
-		preparationPreviousEditor = savedEditorBaseline(pack);
-		if (!pack?.id || !pendingChoice) return;
-		void revisePendingNextActionDraftChoice(pack.id, pendingChoice, mode);
+		if (!pendingChoice) {
+			if (!preparationPreviousEditor) preparationPreviousEditor = savedEditorBaseline(pack);
+			setNextEditorChoice(boundedChoice, mode, false);
+			errorText = '';
+			return false;
+		}
+		const workId = pack.id;
+		const outcome = await reviseNextDraft(draftRevision, {
+			capture: captureHumanRevisionSnapshot,
+			preview: () => {
+				if (!preparationPreviousEditor) preparationPreviousEditor = savedEditorBaseline(pack);
+				setNextEditorChoice(boundedChoice, mode, false);
+				errorText = '';
+			},
+			persist: async () => {
+				const state = await revisePendingNextActionDraftChoice(workId, pendingChoice, mode);
+				const revisedDraft = pendingNextActionDraftFor(state, workId);
+				if (!revisedDraft || revisedDraft.choice !== pendingChoice || revisedDraft.mode !== mode) {
+					throw new ChallengeStateError('The pending draft change did not settle.');
+				}
+				return revisedDraft;
+			},
+			settle: (revisedDraft) => {
+				setNextEditorChoice(boundedChoice, mode, false);
+				preparationReceipt = preparationFromPending(revisedDraft);
+			},
+			rollback: restoreHumanRevisionSnapshot,
+			reject: () => {
+				errorText = 'The draft change was not saved. Your previous draft is still pending.';
+			}
+		});
+		return outcome.status === 'settled';
 	}
 
 	$effect(() => {
@@ -380,7 +458,7 @@
 
 	$effect(() => {
 		const draft = pendingDraft;
-		if (!draft || !shouldHydratePendingDraft({ preparationInFlight, pendingDraft: draft, visibleWorkId: pack?.id || '', preparationReceipt })) return;
+		if (!draft || !shouldHydratePendingDraft({ preparationInFlight: preparationInFlight || draftRevision.pending, pendingDraft: draft, visibleWorkId: pack?.id || '', preparationReceipt })) return;
 		preparationPreviousEditor = savedEditorBaseline(pack);
 		preparationReceipt = preparationFromPending(draft);
 		setNextEditorChoice(draft.choice, draft.mode, false);
@@ -390,7 +468,7 @@
 		input: PrepareNextActionInput,
 		invocation: { markMutated: () => void }
 	) {
-		if (busy) throw new Error('Prepare next action is unavailable while Next is saving.');
+		if (routeBusy) throw new Error('Prepare next action is unavailable while Next is updating.');
 		const current = currentNextEditor;
 		if (!current) throw new Error('Prepare next action requires a visible Next editor.');
 		const desiredMode: NextEditorMode = (NEXT_ACTION_CHOICES as readonly string[]).includes(input.choice)
@@ -456,27 +534,38 @@
 	}
 
 	async function discardPreparation() {
-		const consumedDraft = pendingDraft;
-		const previous = preparationPreviousEditor;
-		if (pack?.id) await discardPendingNextActionDraft(pack.id);
-		clearPreparation();
-		if (consumedDraft?.source === 'webmcp') {
-			recordWebMcpHandoffStep({
-				id: 'human-decision',
-				title: 'Human decision',
-				summary: 'Discarded by person',
-				status: 'complete',
-				outcome: 'proposal-discarded'
+		if (!pack?.id) return;
+		const workId = pack.id;
+		try {
+			await runSettledNextDraftAction(draftRevision, {
+				busy: busy || preparationInFlight,
+				stale: pendingDraftStale,
+				choice: effectiveChoice,
+				mode: effectiveMode,
+				draft: pendingDraft,
+				start: () => {
+					busy = true;
+					errorText = '';
+				},
+				finish: () => (busy = false),
+				action: async (consumedDraft) => {
+					const previous = preparationPreviousEditor;
+					await discardPendingNextActionDraft(workId);
+					clearPreparation();
+					recordWebMcpDraftDecision(consumedDraft, 'proposal-discarded');
+					if (previous) {
+						setNextEditorChoice(previous.choice, previous.mode, false);
+						await scheduleEditorFocus(previous.mode === 'custom' ? 'custom' : 'choices');
+					}
+				}
 			});
-		}
-		if (previous) {
-			setNextEditorChoice(previous.choice, previous.mode, false);
-			void scheduleEditorFocus(previous.mode === 'custom' ? 'custom' : 'choices');
+		} catch (error) {
+			errorText = error instanceof ChallengeStateError ? error.message : 'Discarding the pending draft failed.';
 		}
 	}
 
 	function editPack(candidate: DemoPack) {
-		if (!candidate.id) return;
+		if (!candidate.id || routeBusy) return;
 		chosenPackId = candidate.id;
 		choice = '';
 		customValue = '';
@@ -492,46 +581,47 @@
 	}
 
 	async function saveChoice() {
-		if (!pack?.id || busy || !effectiveChoice) return;
+		if (!pack?.id || !effectiveChoice) return;
 		if (pendingDraft && pendingDraftStale) {
 			errorText = 'Draft is stale. Refresh the evidence and prepare it again before approval.';
 			return;
 		}
-		busy = true;
-		errorText = '';
-		if (saveFocusFrame !== null) cancelAnimationFrame(saveFocusFrame);
-		saveFocusFrame = null;
+		const workId = pack.id;
 		try {
-			const consumedDraft = pendingDraft;
-			if (!consumedDraft) throw new ChallengeStateError('Create a pending draft before approval.');
-			const result = await setPackNextAction(pack.id);
-			const summary = result?.receipt?.summary || `Next action saved: ${effectiveChoice}.`;
-			savedNextReceipt = { summary, pack: result.pack };
-			clearPreparation();
-			if (consumedDraft.source === 'webmcp') {
-				recordWebMcpHandoffStep({
-					id: 'human-decision',
-					title: 'Human decision',
-					summary: 'Approved and saved by person',
-					status: 'complete',
-					outcome: 'proposal-approved'
-				});
-			}
-			displayToast(summary, 'success');
-			// Land focus on the preview so keyboard users land on the updated
-			// state — the /next analogue of the pack page's afterSave receipt
-			// focus. The save button itself would keep focus with no move.
-			saveFocusFrame = requestAnimationFrame(() => {
-				saveFocusFrame = null;
-				const el = document.querySelector('[data-next-preview]') as HTMLElement | null;
-				if (!el) return;
-				focusAndPulse(el, { behavior: 'smooth', block: 'center' });
+			await runSettledNextDraftAction(draftRevision, {
+				busy: busy || preparationInFlight,
+				stale: pendingDraftStale,
+				choice: effectiveChoice,
+				mode: effectiveMode,
+				draft: pendingDraft,
+				start: () => {
+					busy = true;
+					errorText = '';
+					if (saveFocusFrame !== null) cancelAnimationFrame(saveFocusFrame);
+					saveFocusFrame = null;
+				},
+				finish: () => (busy = false),
+				action: async (consumedDraft) => {
+					const result = await setPackNextAction(workId);
+					const summary = result?.receipt?.summary || `Next action saved: ${consumedDraft.choice}.`;
+					savedNextReceipt = { summary, pack: result.pack };
+					clearPreparation();
+					recordWebMcpDraftDecision(consumedDraft, 'proposal-approved');
+					displayToast(summary, 'success');
+					// Land focus on the preview so keyboard users land on the updated
+					// state — the /next analogue of the pack page's afterSave receipt
+					// focus. The save button itself would keep focus with no move.
+					saveFocusFrame = requestAnimationFrame(() => {
+						saveFocusFrame = null;
+						const el = document.querySelector('[data-next-preview]') as HTMLElement | null;
+						if (!el) return;
+						focusAndPulse(el, { behavior: 'smooth', block: 'center' });
+					});
+				}
 			});
 		} catch (error) {
 			errorText =
 				error instanceof ChallengeStateError ? error.message : 'Saving the next action failed.';
-		} finally {
-			busy = false;
 		}
 	}
 
@@ -602,13 +692,13 @@
 
 		<div class="demo-inline-form next-action-editor">
 			<div class="demo-field">
-				<div class="demo-chip-row" role="group" aria-label="Next action choices" data-next-choices>
+				<div class="demo-chip-row" role="group" aria-label="Next action choices" aria-busy={routeBusy} data-next-choices>
 					{#each NEXT_ACTION_CHOICES as act}
 						<WornChip label={act} size="sm" pressed={!showingCustom && effectiveChoice === act}
-							onclick={() => setHumanNextEditorChoice(act, 'preset')} />
+							onclick={async () => { await setHumanNextEditorChoice(act, 'preset'); }} />
 					{/each}
 					<WornChip label="Custom…" size="sm" pressed={effectiveMode === 'custom'}
-						onclick={() => { setHumanNextEditorChoice(customValue, 'custom'); scheduleEditorFocus('custom'); }} />
+						onclick={async () => { await setHumanNextEditorChoice(customValue, 'custom'); await scheduleEditorFocus('custom'); }} />
 				</div>
 				{#if effectiveMode === 'custom'}
 					<WornInput
@@ -616,17 +706,18 @@
 						aria-label="Custom next action"
 						placeholder="Type a custom next action…"
 						maxlength={NEXT_ACTION_MAX_LENGTH}
-						bind:value={choice}
-						oninput={() => { customValue = choice; setHumanNextEditorChoice(choice, 'custom'); savedNextReceipt = null; }} />
+						value={choice}
+						disabled={routeBusy}
+						oninput={async (event) => { await setHumanNextEditorChoice((event.currentTarget as HTMLInputElement).value, 'custom'); }} />
 				{/if}
 			</div>
 			<span id="apply-next-action-help" class="next-save-help">{saveNextHelp}</span>
 			<div class="next-save-actions">
 				{#if preparationReceipt}
-					<WornButton type="button" onclick={() => void discardPreparation()}>Discard draft</WornButton>
+					<WornButton type="button" disabled={!terminalDraftAvailable} onclick={discardPreparation}>Discard draft</WornButton>
 				{/if}
-				<WornButton variant="primary" disabled={busy || !effectiveChoice || !pendingDraft || pendingDraftStale} aria-describedby="apply-next-action-help" onclick={saveChoice}>
-					{busy ? 'Saving…' : preparationReceipt ? 'Approve and save' : 'Save next action'}
+				<WornButton variant="primary" disabled={!terminalDraftAvailable} aria-describedby="apply-next-action-help" onclick={saveChoice}>
+					{draftRevision.pending ? 'Updating draft…' : busy ? 'Saving…' : preparationReceipt ? 'Approve and save' : 'Save next action'}
 				</WornButton>
 			</div>
 		</div>

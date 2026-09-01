@@ -43,6 +43,32 @@ export function recordWebMcpHandoffStepState(session, input) {
 }
 
 /**
+ * Terminalize only a consumed WebMCP-origin draft. Human-origin drafts leave
+ * the verified handoff trail unchanged.
+ *
+ * @param {{ steps?: unknown }} session
+ * @param {{ source?: unknown }} draft
+ * @param {'proposal-approved' | 'proposal-discarded'} outcome
+ */
+export function recordWebMcpDraftDecisionState(session, draft, outcome) {
+	const current = webMcpHandoffSessionView(session);
+	if (!draft || (draft.source !== 'human' && draft.source !== 'webmcp')) {
+		throw new TypeError('Pending next-action draft source is not recognized.');
+	}
+	if (outcome !== 'proposal-approved' && outcome !== 'proposal-discarded') {
+		throw new TypeError('Pending next-action draft outcome is not recognized.');
+	}
+	if (draft.source === 'human') return current;
+	return recordWebMcpHandoffStepState(current, {
+		id: 'human-decision',
+		title: 'Human decision',
+		summary: outcome === 'proposal-approved' ? 'Approved and saved by person' : 'Discarded by person',
+		status: 'complete',
+		outcome
+	});
+}
+
+/**
  * @param {{ steps?: unknown }} session
  * @returns {{ steps: WebMcpHandoffStep[], completedCount: number, pendingCount: number, currentStep: WebMcpHandoffStep | null, outcomeSummary: string }}
  */

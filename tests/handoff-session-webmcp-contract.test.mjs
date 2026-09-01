@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
 	emptyWebMcpHandoffSession,
+	recordWebMcpDraftDecisionState,
 	recordWebMcpHandoffStepState,
 	webMcpHandoffTrailView
 } from '../svelte-frontend/src/lib/webmcp-handoff-session.mjs';
@@ -150,15 +151,6 @@ test('human edits preserve durable WebMCP lineage through approve and discard wi
 		recordWebMcpHandoffStepState(emptyWebMcpHandoffSession(), steps.next),
 		steps.decision
 	);
-	const terminalize = (session, draft, outcome) => draft.source === 'webmcp'
-		? recordWebMcpHandoffStepState(session, {
-			...steps.decision,
-			summary: outcome === 'proposal-approved' ? 'Approved and saved by person' : 'Discarded by person',
-			status: 'complete',
-			outcome
-		})
-		: session;
-
 	const approveState = preparedState();
 	const approveOriginal = structuredClone(approveState.pendingNextActionDrafts[0]);
 	const approveRevision = revisePendingDraftChoice(
@@ -174,7 +166,7 @@ test('human edits preserve durable WebMCP lineage through approve and discard wi
 		nextPath: (pack, choice) => ({ ...pack, next: choice })
 	});
 	assert.equal(approved.pack.next, 'Start');
-	assert.equal(webMcpHandoffTrailView(terminalize(pendingSession(), approved.draft, 'proposal-approved')).outcomeSummary, 'Proposal approved');
+	assert.equal(webMcpHandoffTrailView(recordWebMcpDraftDecisionState(pendingSession(), approved.draft, 'proposal-approved')).outcomeSummary, 'Proposal approved');
 
 	const discardState = preparedState();
 	const discardRevision = revisePendingDraftChoice(
@@ -185,7 +177,7 @@ test('human edits preserve durable WebMCP lineage through approve and discard wi
 	const discarded = structuredClone(discardRevision);
 	discardPendingDraft(discardState, 'next-current');
 	assert.deepEqual(discardState.pendingNextActionDrafts, []);
-	assert.equal(webMcpHandoffTrailView(terminalize(pendingSession(), discarded, 'proposal-discarded')).outcomeSummary, 'Proposal discarded');
+	assert.equal(webMcpHandoffTrailView(recordWebMcpDraftDecisionState(pendingSession(), discarded, 'proposal-discarded')).outcomeSummary, 'Proposal discarded');
 
 	const staleState = preparedState();
 	const staleFingerprint = staleState.pendingNextActionDrafts[0].originFingerprint;
@@ -216,7 +208,7 @@ test('human edits preserve durable WebMCP lineage through approve and discard wi
 		projectPack,
 		nextPath: (pack, choice) => ({ ...pack, next: choice })
 	});
-	assert.deepEqual(terminalize(emptyWebMcpHandoffSession(), humanApproved.draft, 'proposal-approved'), emptyWebMcpHandoffSession());
+	assert.deepEqual(recordWebMcpDraftDecisionState(emptyWebMcpHandoffSession(), humanApproved.draft, 'proposal-approved'), emptyWebMcpHandoffSession());
 	const humanDiscardState = {
 		packs: [{ id: 'next-current', title: 'Prepare inventory', status: 'active', blocker: '', next: 'Review' }],
 		pendingNextActionDrafts: []
@@ -227,7 +219,9 @@ test('human edits preserve durable WebMCP lineage through approve and discard wi
 		projectPack
 	);
 	discardPendingDraft(humanDiscardState, 'next-current');
-	assert.deepEqual(terminalize(emptyWebMcpHandoffSession(), humanDiscarded, 'proposal-discarded'), emptyWebMcpHandoffSession());
+	assert.deepEqual(recordWebMcpDraftDecisionState(emptyWebMcpHandoffSession(), humanDiscarded, 'proposal-discarded'), emptyWebMcpHandoffSession());
+	assert.throws(() => recordWebMcpDraftDecisionState(emptyWebMcpHandoffSession(), { source: 'agent' }, 'proposal-approved'), /source is not recognized/u);
+	assert.throws(() => recordWebMcpDraftDecisionState(emptyWebMcpHandoffSession(), humanDiscarded, 'proposal-skipped'), /outcome is not recognized/u);
 });
 
 test('handoff session rejects extra authority, duplicate ids, malformed order, and open input', () => {
@@ -278,6 +272,8 @@ test('one shared rail records only successful scoped receipts and reset clears t
 	assert.match(workSource, /id: 'draft-batch'[\s\S]*?status: 'complete'[\s\S]*?outcome: 'drafts-created'[\s\S]*?count: outcome\.created\.length/u);
 	assert.match(reviewSource, /id: 'review-scope'[\s\S]*?status: 'complete'[\s\S]*?outcome: 'scope-verified'/u);
 	assert.match(nextSource, /id: 'next-proposal'[\s\S]*?status: 'complete'[\s\S]*?outcome: 'proposal-prepared'[\s\S]*?id: 'human-decision'[\s\S]*?status: 'pending'[\s\S]*?outcome: 'proposal-pending'/u);
-	assert.match(nextSource, /const consumedDraft = pendingDraft;[\s\S]*?consumedDraft\?\.source === 'webmcp'[\s\S]*?outcome: 'proposal-discarded'[\s\S]*?const consumedDraft = pendingDraft;[\s\S]*?consumedDraft\.source === 'webmcp'[\s\S]*?outcome: 'proposal-approved'/u);
+	assert.match(reducerSource, /export function recordWebMcpDraftDecisionState[\s\S]*?draft\.source === 'human'\) return current;[\s\S]*?recordWebMcpHandoffStepState\(current,[\s\S]*?outcome === 'proposal-approved'/u);
+	assert.match(storeSource, /export function recordWebMcpDraftDecision[\s\S]*?recordWebMcpDraftDecisionState\(session, draft, outcome\)/u);
+	assert.match(nextSource, /recordWebMcpDraftDecision\(consumedDraft, 'proposal-discarded'\)[\s\S]*?recordWebMcpDraftDecision\(consumedDraft, 'proposal-approved'\)/u);
 	assert.match(guideSource, /await resetDemoSampleState\(\);[\s\S]*?resetWebMcpHandoffSession\(\);[\s\S]*?Live sample reset/u);
 });

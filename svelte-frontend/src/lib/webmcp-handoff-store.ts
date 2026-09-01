@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 import {
 	emptyWebMcpHandoffSession,
+	recordWebMcpDraftDecisionState,
 	recordWebMcpHandoffStepState
 } from './webmcp-handoff-session.mjs';
 
@@ -28,6 +29,15 @@ export const webMcpHandoffSession = writable<WebMcpHandoffSession>(
 export function recordWebMcpHandoffStep(step: WebMcpHandoffStep) {
 	webMcpHandoffSession.update((session) =>
 		recordWebMcpHandoffStepState(session, step) as WebMcpHandoffSession
+	);
+}
+
+export function recordWebMcpDraftDecision(
+	draft: { source: 'human' | 'webmcp' },
+	outcome: 'proposal-approved' | 'proposal-discarded'
+) {
+	webMcpHandoffSession.update((session) =>
+		recordWebMcpDraftDecisionState(session, draft, outcome) as WebMcpHandoffSession
 	);
 }
 
