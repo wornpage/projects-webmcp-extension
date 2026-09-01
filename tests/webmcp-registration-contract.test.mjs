@@ -4,7 +4,11 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
+import {
+	getWebMcpCatalogSnapshot,
+	registerPageTools,
+	webMcpCatalog
+} from '../svelte-frontend/src/lib/webmcp.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -17,18 +21,23 @@ function descriptor(name) {
 	};
 }
 
-test('unsupported browsers retain the ordinary page without reading or registering tools', () => {
-	let reads = 0;
-	const tools = [{
-		get name() {
-			reads += 1;
-			return 'should-not-register';
-		}
-	}];
-	const cleanup = registerPageTools({}, tools);
-	assert.equal(typeof cleanup, 'function');
+test('unsupported browsers retain the ordinary page and publish the passed page catalog without registering', () => {
+	const tool = {
+		...descriptor('read-current-view'),
+		description: 'Exact unsupported-browser descriptor.',
+		annotations: { readOnlyHint: true }
+	};
+	const cleanup = registerPageTools({ modelContext: { registerTool: undefined } }, [tool]);
+	assert.deepEqual(getWebMcpCatalogSnapshot(), {
+		status: 'unavailable',
+		tools: [{
+			name: tool.name,
+			description: tool.description,
+			authority: 'read-only'
+		}]
+	});
 	cleanup();
-	assert.equal(reads, 0);
+	assert.deepEqual(getWebMcpCatalogSnapshot(), { status: 'connecting', tools: [] });
 });
 
 test('one page lifecycle signal owns every route tool registration', async () => {
@@ -228,6 +237,99 @@ test('invalid descriptor collections fail loudly instead of registering a partia
 	assert.throws(() => registerPageTools(documentRef, []), /at least one tool descriptor/u);
 	assert.throws(() => registerPageTools(documentRef, [descriptor('duplicate'), descriptor('duplicate')]), /unique tool names/u);
 	assert.throws(() => registerPageTools(documentRef, [{ name: 'missing-execute' }]), /executable tool descriptor/u);
+	assert.throws(() => registerPageTools(documentRef, [{ ...descriptor('missing-description'), description: '' }]), /require descriptions/u);
 	assert.throws(() => registerPageTools(documentRef, [descriptor('valid')], { onInvocationError: true }), /invocation error handling requires a function/u);
 	assert.throws(() => registerPageTools(documentRef, [descriptor('valid')], { onResult: true }), /result handling requires a function/u);
+});
+
+test('catalog remains connecting until every registration promise resolves', async () => {
+	const resolvers = new Map();
+	const states = [];
+	const unsubscribe = webMcpCatalog.subscribe((state) => states.push(state));
+	const tools = [
+		{ ...descriptor('first-reader'), description: 'Read first.', annotations: { readOnlyHint: true } },
+		{ ...descriptor('second-presenter'), description: 'Present second.', annotations: { readOnlyHint: false } }
+	];
+	const cleanup = registerPageTools({
+		modelContext: {
+			registerTool(tool) {
+				return new Promise((resolve) => resolvers.set(tool.name, resolve));
+			}
+		}
+	}, tools);
+
+	assert.deepEqual(getWebMcpCatalogSnapshot(), {
+		status: 'connecting',
+		tools: [
+			{ name: 'first-reader', description: 'Read first.', authority: 'read-only' },
+			{ name: 'second-presenter', description: 'Present second.', authority: 'page-changing-or-draft' }
+		]
+	});
+	resolvers.get('first-reader')();
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.equal(getWebMcpCatalogSnapshot().status, 'connecting');
+	resolvers.get('second-presenter')();
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.equal(getWebMcpCatalogSnapshot().status, 'ready');
+	assert.ok(states.some(({ status }) => status === 'connecting'));
+	assert.ok(states.some(({ status }) => status === 'ready'));
+
+	unsubscribe();
+	cleanup();
+});
+
+test('any registration rejection publishes error, aborts the catalog, and cannot settle ready later', async () => {
+	let resolveFirst;
+	let rejectSecond;
+	const signals = [];
+	const cleanup = registerPageTools({
+		modelContext: {
+			registerTool(tool, { signal }) {
+				signals.push(signal);
+				return new Promise((resolve, reject) => {
+					if (tool.name === 'first-tool') resolveFirst = resolve;
+					else rejectSecond = reject;
+				});
+			}
+		}
+	}, [descriptor('first-tool'), descriptor('second-tool')], { onError: () => {} });
+
+	rejectSecond(new Error('registration failed'));
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.equal(getWebMcpCatalogSnapshot().status, 'error');
+	assert.ok(signals.every(({ aborted }) => aborted));
+	resolveFirst();
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.equal(getWebMcpCatalogSnapshot().status, 'error');
+	cleanup();
+});
+
+test('teardown prevents stale catalog settlement and cannot clear the next SPA page catalog', async () => {
+	let resolveOld;
+	const cleanupOld = registerPageTools({
+		modelContext: {
+			registerTool() {
+				return new Promise((resolve) => { resolveOld = resolve; });
+			}
+		}
+	}, [{ ...descriptor('old-page-tool'), description: 'Old page.' }]);
+	cleanupOld();
+
+	const cleanupCurrent = registerPageTools({
+		modelContext: { registerTool: () => Promise.resolve() }
+	}, [{ ...descriptor('current-page-tool'), description: 'Current page.' }]);
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.deepEqual(getWebMcpCatalogSnapshot(), {
+		status: 'ready',
+		tools: [{ name: 'current-page-tool', description: 'Current page.', authority: 'page-changing-or-draft' }]
+	});
+
+	resolveOld();
+	await new Promise((resolve) => setImmediate(resolve));
+	cleanupOld();
+	assert.deepEqual(getWebMcpCatalogSnapshot(), {
+		status: 'ready',
+		tools: [{ name: 'current-page-tool', description: 'Current page.', authority: 'page-changing-or-draft' }]
+	});
+	cleanupCurrent();
 });

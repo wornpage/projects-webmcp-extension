@@ -1,5 +1,43 @@
 /** @typedef {{ registerTool?: (tool: object, options?: { signal?: AbortSignal }) => unknown }} WebMcpModelContext */
 /** @typedef {{ modelContext?: WebMcpModelContext }} WebMcpDocument */
+/** @typedef {'connecting' | 'ready' | 'unavailable' | 'error'} WebMcpCatalogStatus */
+/** @typedef {'read-only' | 'page-changing-or-draft'} WebMcpToolAuthority */
+/** @typedef {{ name: string, description: string, authority: WebMcpToolAuthority }} WebMcpCatalogTool */
+/** @typedef {{ status: WebMcpCatalogStatus, tools: readonly WebMcpCatalogTool[] }} WebMcpCatalogState */
+
+const EMPTY_CATALOG = Object.freeze({ status: /** @type {WebMcpCatalogStatus} */ ('connecting'), tools: Object.freeze([]) });
+/** @type {WebMcpCatalogState} */
+let catalogState = EMPTY_CATALOG;
+/** @type {Set<(state: WebMcpCatalogState) => void>} */
+const catalogSubscribers = new Set();
+/** @type {symbol | null} */
+let currentCatalogSession = null;
+
+export const webMcpCatalog = Object.freeze({
+	/** @param {(state: WebMcpCatalogState) => void} subscriber */
+	subscribe(subscriber) {
+		if (typeof subscriber !== 'function') throw new TypeError('WebMCP catalog subscription requires a function.');
+		catalogSubscribers.add(subscriber);
+		subscriber(catalogState);
+		return () => {
+			catalogSubscribers.delete(subscriber);
+		};
+	}
+});
+
+/** @returns {WebMcpCatalogState} */
+export function getWebMcpCatalogSnapshot() {
+	return catalogState;
+}
+
+/** @param {WebMcpCatalogState} nextState */
+function publishCatalog(nextState) {
+	catalogState = Object.freeze({
+		status: nextState.status,
+		tools: Object.freeze(nextState.tools.map((tool) => Object.freeze({ ...tool })))
+	});
+	for (const subscriber of catalogSubscribers) subscriber(catalogState);
+}
 
 /**
  * Register the complete tool set owned by one rendered page. One abort signal
@@ -23,8 +61,6 @@ export function registerPageTools(documentRef, tools, {
 } = {}) {
 	const pageDocument = /** @type {WebMcpDocument | null | undefined} */ (documentRef);
 	const modelContext = pageDocument?.modelContext;
-	if (typeof modelContext?.registerTool !== 'function') return () => {};
-
 	if (!Array.isArray(tools)) throw new TypeError('WebMCP requires an array of tool descriptors.');
 	if (tools.length === 0) throw new TypeError('WebMCP requires at least one tool descriptor.');
 	if (typeof onInvocationError !== 'function') throw new TypeError('WebMCP invocation error handling requires a function.');
@@ -43,14 +79,43 @@ export function registerPageTools(documentRef, tools, {
 	if (new Set(descriptors.map(({ name }) => name)).size !== descriptors.length) {
 		throw new TypeError('WebMCP page tool names must be unique tool names.');
 	}
+	const catalogTools = descriptors.map(({ descriptor, name }) => {
+		if (typeof descriptor.description !== 'string' || !descriptor.description.trim()) {
+			throw new TypeError('WebMCP catalog tools require descriptions.');
+		}
+		const annotations = descriptor.annotations;
+		const readOnly = !!annotations && typeof annotations === 'object' && !Array.isArray(annotations)
+			&& /** @type {Record<string, unknown>} */ (annotations).readOnlyHint === true;
+		return {
+			name,
+			description: descriptor.description,
+			authority: /** @type {WebMcpToolAuthority} */ (readOnly ? 'read-only' : 'page-changing-or-draft')
+		};
+	});
+	const catalogSession = Symbol('webmcp-page-catalog');
+	currentCatalogSession = catalogSession;
+	if (typeof modelContext?.registerTool !== 'function') {
+		publishCatalog({ status: 'unavailable', tools: catalogTools });
+		return () => {
+			if (currentCatalogSession !== catalogSession) return;
+			currentCatalogSession = null;
+			publishCatalog(EMPTY_CATALOG);
+		};
+	}
 
 	const registrationController = new AbortController();
+	publishCatalog({ status: 'connecting', tools: catalogTools });
 	/** @param {unknown} error @param {string} toolName */
 	const failPageRegistration = (error, toolName) => {
 		if (registrationController.signal.aborted) return;
 		registrationController.abort();
+		if (currentCatalogSession === catalogSession) {
+			publishCatalog({ status: 'error', tools: catalogTools });
+		}
 		onError(error, toolName);
 	};
+	/** @type {Promise<unknown>[]} */
+	const registrationPromises = [];
 	for (const { descriptor, name } of descriptors) {
 		const execute = /** @type {(...args: any[]) => unknown} */ (descriptor.execute);
 		const registeredDescriptor = {
@@ -73,14 +138,27 @@ export function registerPageTools(documentRef, tools, {
 			}
 		};
 		try {
-			void Promise.resolve(modelContext.registerTool(registeredDescriptor, {
+			registrationPromises.push(Promise.resolve(modelContext.registerTool(registeredDescriptor, {
 				signal: registrationController.signal
-			})).catch((error) => failPageRegistration(error, name));
+			})).catch((error) => {
+				failPageRegistration(error, name);
+				throw error;
+			}));
 		} catch (error) {
 			failPageRegistration(error, name);
 			break;
 		}
 	}
+	void Promise.all(registrationPromises).then(() => {
+		if (!registrationController.signal.aborted && currentCatalogSession === catalogSession) {
+			publishCatalog({ status: 'ready', tools: catalogTools });
+		}
+	}).catch(() => {});
 
-	return () => registrationController.abort();
+	return () => {
+		registrationController.abort();
+		if (currentCatalogSession !== catalogSession) return;
+		currentCatalogSession = null;
+		publishCatalog(EMPTY_CATALOG);
+	};
 }

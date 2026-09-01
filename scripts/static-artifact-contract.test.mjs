@@ -220,7 +220,7 @@ test('static mode identifies its bounded routes without production fallbacks', (
 	assert.match(recordingScript, /Vertical reveals use keyboard PageDown only[\s\S]*?Guide sends PageDown to the page body[\s\S]*?Next keeps PageDown on its focused receipt[\s\S]*?pointer stays parked[\s\S]*?do not use the wheel or drag a scrollbar/u);
 	assert.match(recordingScript, /Visible focus is required when each WebMCP receipt first appears[\s\S]*?PageDown may then transfer focus to the page[\s\S]*?receipt and controls remaining simultaneously visible[\s\S]*?not on claiming the receipt retained focus after the scroll/u);
 	assert.match(recordingScript, /fixed \*\*2\.25-second settle window\*\*/u);
-	assert.match(recordingScript, /Landing → Guide: press Tab on the page body to reclaim focus[\s\S]*?Open the handoff workflow[\s\S]*?within five additional moves[\s\S]*?Returned Guide → fast brief: five Shift\+Tab presses[\s\S]*?press Tab once on the page body to reclaim page focus[\s\S]*?advance visibly with Tab until \*\*1 Work\*\* receives focus[\s\S]*?within five moves[\s\S]*?fail if focus reaches a later route first[\s\S]*?Work receipt → Review: seven Shift\+Tab presses[\s\S]*?Review receipt → Next: one Shift\+Tab press[\s\S]*?Prepared Next receipt → Work: four Shift\+Tab presses[\s\S]*?Work Draft receipt → pending decision: nine Shift\+Tab presses[\s\S]*?upper view must first show the counted scope[\s\S]*?one PageDown pressed on the page body must then reveal the complete brief and fast-brief control[\s\S]*?Next: two PageDown presses[\s\S]*?Reader API detected/u);
+	assert.match(recordingScript, /Landing → Guide: press Tab on the page body to reclaim focus[\s\S]*?Open the handoff workflow[\s\S]*?within five additional moves[\s\S]*?Returned Guide → fast brief: five Shift\+Tab presses[\s\S]*?press Tab once on the page body to reclaim page focus[\s\S]*?advance visibly with Tab until \*\*1 Work\*\* receives focus[\s\S]*?within five moves[\s\S]*?fail if focus reaches a later route first[\s\S]*?Work receipt → Review: seven Shift\+Tab presses[\s\S]*?Review receipt → Next: one Shift\+Tab press[\s\S]*?Prepared Next receipt → Work: four Shift\+Tab presses[\s\S]*?Work Draft receipt → pending decision: nine Shift\+Tab presses[\s\S]*?upper view must first show the counted scope[\s\S]*?one PageDown pressed on the page body must then reveal the complete brief and fast-brief control[\s\S]*?Next: two PageDown presses[\s\S]*?compact \*\*WebMCP\*\* pill shows `1 tool` and ready only after Guide registration/u);
 	assert.match(recordingScript, /shared rail advances exactly 1 → 2 → 3 → 5 steps[\s\S]*?agent authority stays `0 saved · 0 started`/u);
 	assert.match(recordingScript, /browser-agent side panel[\s\S]*?Side-panel instruction: `Follow the brief on this page\.`[\s\S]*?side-panel agent owns every WebMCP call/u);
 	assert.doesNotMatch(recordingScript, /AGENT_SHORTCUT|replace this|placeholder/iu);
@@ -317,8 +317,8 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	assert.match(guideHtml, /Follow the brief on this page\./u);
 	assert.match(guideHtml, /data-agent-brief-fast-create[^>]*>.*?Use fast-create brief/u);
 	assert.match(guideHtml, /Local draft · not saved · workspace unchanged/u);
-	assert.match(guideHtml, /data-webmcp-guide-reader-status[^>]*data-reader-status="checking"/u);
-	assert.match(guideHtml, /Checking reader API…/u);
+	assert.match(guideHtml, /data-webmcp-status-pill/u);
+	assert.doesNotMatch(guideHtml, /data-webmcp-guide-reader-status|Checking reader API…|Guide reader status/u);
 	assert.match(guideHtml, /Authority boundary/u);
 	assert.doesNotMatch(guideHtml, /Authority and browser status/u);
 	assert.match(guideHtml, /create up to three Draft items through the bounded Work tool/u);

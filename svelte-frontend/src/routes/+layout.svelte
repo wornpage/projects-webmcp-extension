@@ -5,6 +5,7 @@
 	import { pendingDraftNavigation } from '$lib/pending-next-action.mjs';
 	import WornToast from '$lib/components/WornToast.svelte';
 	import WebMcpHandoffRail from '$lib/WebMcpHandoffRail.svelte';
+	import WebMcpStatus from '$lib/WebMcpStatus.svelte';
 
 	type RouteItem = {
 		href: '/webmcp-challenge' | '/priority' | '/work' | '/review' | '/next';
@@ -63,6 +64,8 @@
 				</a>
 			{/if}
 		</nav>
+
+		<WebMcpStatus />
 	</header>
 
 	<WebMcpHandoffRail />

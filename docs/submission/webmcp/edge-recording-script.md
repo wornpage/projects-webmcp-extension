@@ -38,7 +38,7 @@ Complete this exact path once immediately before recording. Any mismatch cancels
 9. Work Draft receipt → pending decision: nine Shift+Tab presses, then Enter on **Pending 1**.
 10. Guide: the upper view must first show the counted scope; one PageDown pressed on the page body must then reveal the complete brief and fast-brief control.
 11. Next: two PageDown presses must keep the WebMCP receipt visible while bringing **Discard draft** and **Approve and save** fully into view.
-12. Confirm **Reader API detected**, exact 8-item state, visible focus at every destination, and no browser error or warning.
+12. Confirm the compact **WebMCP** pill shows `1 tool` and ready only after Guide registration, alongside the exact 8-item state, visible focus at every destination, and no browser error or warning.
 13. Confirm the shared rail advances exactly 1 → 2 → 3 → 5 steps across Work, Review, Next, and Draft creation while agent authority stays `0 saved · 0 started`.
 
 Use a fixed **2.25-second settle window** after every route activation. Abort instead of retrying, double-activating, clicking, or relaxing a checkpoint.

@@ -53,6 +53,7 @@ svelte-frontend/src/lib/webmcp-handoff-store.ts
 svelte-frontend/src/lib/webmcp.mjs
 svelte-frontend/src/lib/WebMcpActivityStrip.svelte
 svelte-frontend/src/lib/WebMcpHandoffRail.svelte
+svelte-frontend/src/lib/WebMcpStatus.svelte
 svelte-frontend/src/lib/work-item-issues.ts
 svelte-frontend/src/lib/work-metadata.mjs
 svelte-frontend/src/lib/WorkDeleteConfirmDialog.svelte
