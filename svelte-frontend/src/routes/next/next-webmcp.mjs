@@ -31,9 +31,9 @@ const MAX_EVIDENCE_REFERENCES = 3;
 /** @typedef {{ mode: NextEditorMode, choice: string }} NextEditorChoice */
 /** @typedef {{ blocker: string | null, nextAction: string }} NextEditorPreview */
 /** @typedef {{ mode: 'decision-workspace', reason: string, decider: string | null }} NextDecisionContext */
-/** @typedef {{ workId: string, field: NextEvidenceField, expectedValue: string }} NextEvidenceReference */
-/** @typedef {{ id: string, title: string, workflow: string, blocker: string }} NextEvidenceWork */
-/** @typedef {{ work: NextEditorWork, field: NextEvidenceField, label: string, value: string }} NextVerifiedEvidence */
+/** @typedef {{ workId: string, field: NextEvidenceField, expectedValue: string | null }} NextEvidenceReference */
+/** @typedef {{ id: string, title: string, workflow: string, blocker: string | null }} NextEvidenceWork */
+/** @typedef {{ work: NextEditorWork, field: NextEvidenceField, label: string, value: string | null }} NextVerifiedEvidence */
 /** @typedef {{ summary: string, work: NextEditorWork, evidenceNote: string, evidence: NextVerifiedEvidence[], preparedAction: string, workspaceChanged: false, requiresHumanSave: true }} NextPreparationReceipt */
 /** @typedef {{ work: NextEditorWork, decisionContext: NextDecisionContext | null, presetChoices: string[], editor: NextEditorChoice, preview: NextEditorPreview, preparationReceipt: NextPreparationReceipt | null, canSave: boolean, busy: boolean, staleReason: string | null }} NextEditorView */
 /** @typedef {{ choice: string, expectedMode: NextEditorMode, expectedChoice: string, evidence: NextEvidenceReference[] }} PrepareNextActionInput */
@@ -142,7 +142,10 @@ export function createPrepareNextActionTool(prepareNextAction, transaction) {
 						properties: {
 							workId: { type: 'string', minLength: 1, description: 'Exact work item id returned by Work or Review.' },
 							field: { type: 'string', enum: EVIDENCE_FIELDS, description: 'Exact projected field being cited.' },
-							expectedValue: { type: 'string', minLength: 1, maxLength: 200, description: 'Exact field value returned by Work or Review.' }
+							expectedValue: {
+								anyOf: [{ type: 'string', minLength: 1, maxLength: 200 }, { type: 'null' }],
+								description: 'Exact field value returned by Work or Review; null is the canonical absent blocker.'
+							}
 						},
 						required: EVIDENCE_INPUT_KEYS,
 						additionalProperties: false
@@ -389,7 +392,7 @@ export function verifyNextPreparationEvidence(references, workspace, currentWork
 export function verifiedNextEvidenceNote(input) {
 	const evidence = nextVerifiedEvidenceList(input);
 	if (!evidence) throw new TypeError('Verified Next evidence note requires one to three exact facts.');
-	return evidence.map((fact) => `${fact.work.title} — ${fact.label}: ${fact.value}.`).join(' ');
+	return evidence.map((fact) => `${fact.work.title} — ${fact.label}: ${fact.value ?? 'None'}.`).join(' ');
 }
 
 /** @param {unknown} input @returns {NextEvidenceReference[] | null} */
@@ -409,9 +412,12 @@ function nextEvidenceReference(input) {
 	const keys = Object.keys(candidate);
 	if (keys.length !== EVIDENCE_INPUT_KEYS.length || keys.some((key) => !EVIDENCE_INPUT_KEYS.includes(key))) return null;
 	const workId = exactWorkId(candidate.workId);
-	const expectedValue = trimmedPageText(candidate.expectedValue, 200);
-	if (!workId || !expectedValue || !EVIDENCE_FIELDS.includes(/** @type {string} */ (candidate.field))) return null;
-	return { workId, field: /** @type {NextEvidenceField} */ (candidate.field), expectedValue };
+	if (!workId || !EVIDENCE_FIELDS.includes(/** @type {string} */ (candidate.field))) return null;
+	const field = /** @type {NextEvidenceField} */ (candidate.field);
+	const absentBlocker = field === 'blocker' && candidate.expectedValue === null;
+	const expectedValue = absentBlocker ? null : pageText(candidate.expectedValue, 200);
+	if (!absentBlocker && expectedValue === null) return null;
+	return { workId, field, expectedValue };
 }
 
 /** @param {unknown} input @returns {NextEvidenceWork | null} */
@@ -421,8 +427,9 @@ function nextEvidenceWork(input) {
 	const id = exactWorkId(candidate.id);
 	const title = pageText(candidate.title, 200);
 	const workflow = pageText(candidate.workflow, 200);
-	const blocker = pageText(candidate.blocker, 200);
-	return id && title && workflow && blocker ? { id, title, workflow, blocker } : null;
+	const absentBlocker = candidate.blocker === null;
+	const blocker = absentBlocker ? null : pageText(candidate.blocker, 200);
+	return id && title && workflow && (absentBlocker || blocker) ? { id, title, workflow, blocker } : null;
 }
 
 /** @param {unknown} input @returns {NextVerifiedEvidence[] | null} */
@@ -440,9 +447,11 @@ function nextVerifiedEvidence(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	const work = nextEditorWork(candidate.work);
-	const value = pageText(candidate.value, 200);
-	if (!work || !value || !EVIDENCE_FIELDS.includes(/** @type {string} */ (candidate.field))) return null;
+	if (!work || !EVIDENCE_FIELDS.includes(/** @type {string} */ (candidate.field))) return null;
 	const field = /** @type {NextEvidenceField} */ (candidate.field);
+	const absentBlocker = field === 'blocker' && candidate.value === null;
+	const value = absentBlocker ? null : pageText(candidate.value, 200);
+	if (!absentBlocker && value === null) return null;
 	if (candidate.label !== EVIDENCE_FIELD_LABELS[field]) return null;
 	return { work, field, label: EVIDENCE_FIELD_LABELS[field], value };
 }
@@ -466,11 +475,4 @@ function pageText(value, limit, allowEmpty = false) {
 	if (typeof value !== 'string' || value.length > limit || SINGLE_LINE_CONTROL.test(value)) return null;
 	if (!allowEmpty && !value) return null;
 	return value;
-}
-
-/** @param {unknown} value @param {number} limit */
-function trimmedPageText(value, limit) {
-	if (typeof value !== 'string' || SINGLE_LINE_CONTROL.test(value)) return null;
-	const normalized = value.trim();
-	return normalized && normalized.length <= limit ? normalized : null;
 }

@@ -39,6 +39,9 @@ const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend
 const decisionNavigationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/decision-workspace-navigation.mjs'), 'utf8');
 const candidatePickerSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/NextCandidatePicker.svelte'), 'utf8');
 const workContextSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/NextWorkContext.svelte'), 'utf8');
+const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
+const workRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
+const reviewRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
 
 const presetChoices = ['Review', 'Open', 'Focus', 'Set Blocker: None', 'Start', 'Finish with proof'];
 const currentEvidenceReference = Object.freeze({
@@ -295,7 +298,10 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 					properties: {
 						workId: { type: 'string', minLength: 1, description: 'Exact work item id returned by Work or Review.' },
 						field: { type: 'string', enum: ['workflow', 'blocker'], description: 'Exact projected field being cited.' },
-						expectedValue: { type: 'string', minLength: 1, maxLength: 200, description: 'Exact field value returned by Work or Review.' }
+					expectedValue: {
+						anyOf: [{ type: 'string', minLength: 1, maxLength: 200 }, { type: 'null' }],
+						description: 'Exact field value returned by Work or Review; null is the canonical absent blocker.'
+					}
 					},
 					required: ['workId', 'field', 'expectedValue'],
 					additionalProperties: false
@@ -317,7 +323,7 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 		choice: '  Call the supplier  ',
 		expectedMode: 'preset',
 		expectedChoice: ' Open ',
-		evidence: [{ workId: 'next-current', field: 'blocker', expectedValue: ' Waiting for labels ' }]
+		evidence: [currentEvidenceReference]
 	}, { signal: new AbortController().signal });
 	assert.deepEqual(calls, [{
 		choice: 'Call the supplier',
@@ -396,6 +402,7 @@ test('the prepare descriptor validates a stale-safe reversible page operation an
 		[validInput({ evidence: Array.from({ length: 4 }, (_, index) => ({ workId: `work-${index}`, field: 'workflow', expectedValue: 'Ready' })) }), /evidence must contain one to 3 unique exact work facts/u],
 		[validInput({ evidence: [currentEvidenceReference, currentEvidenceReference] }), /evidence must contain one to 3 unique exact work facts/u],
 		[validInput({ evidence: [{ ...currentEvidenceReference, field: 'owner' }] }), /evidence must contain one to 3 unique exact work facts/u],
+		[validInput({ evidence: [{ ...currentEvidenceReference, field: 'workflow', expectedValue: null }] }), /evidence must contain one to 3 unique exact work facts/u],
 		[validInput({ evidence: [{ ...currentEvidenceReference, expectedValue: 'Line\nbreak' }] }), /evidence must contain one to 3 unique exact work facts/u],
 		[validInput({ evidence: [{ ...currentEvidenceReference, extra: 'not allowed' }] }), /evidence must contain one to 3 unique exact work facts/u]
 	]) {
@@ -436,12 +443,13 @@ test('Next verifies exact live workspace facts and generates the evidence note i
 			id: 'garage-reset-clear-floor',
 			title: 'Garage reset: clear the floor',
 			workflow: 'Done',
-			blocker: 'None'
+			blocker: null
 		}
 	];
 	const references = [
 		{ workId: 'next-current', field: 'blocker', expectedValue: 'Waiting on storage bins' },
-		{ workId: 'garage-reset-clear-floor', field: 'workflow', expectedValue: 'Done' }
+		{ workId: 'garage-reset-clear-floor', field: 'workflow', expectedValue: 'Done' },
+		{ workId: 'garage-reset-clear-floor', field: 'blocker', expectedValue: null }
 	];
 	const verified = verifyNextPreparationEvidence(references, workspace, 'next-current');
 	assert.deepEqual(verified, [
@@ -456,6 +464,12 @@ test('Next verifies exact live workspace facts and generates the evidence note i
 			field: 'workflow',
 			label: 'Workflow',
 			value: 'Done'
+		},
+		{
+			work: { id: 'garage-reset-clear-floor', title: 'Garage reset: clear the floor' },
+			field: 'blocker',
+			label: 'Blocker',
+			value: null
 		}
 	]);
 	assert.equal(evidenceMatchesReferences(verified, references), true);
@@ -465,13 +479,13 @@ test('Next verifies exact live workspace facts and generates the evidence note i
 	assert.equal(evidenceMatchesReferences(verified, [{ ...references[0], expectedValue: 'Storage bins arrived' }, references[1]]), false);
 	assert.equal(
 		verifiedNextEvidenceNote(verified),
-		'Garage reset: sort shelves — Blocker: Waiting on storage bins. Garage reset: clear the floor — Workflow: Done.'
+		'Garage reset: sort shelves — Blocker: Waiting on storage bins. Garage reset: clear the floor — Workflow: Done. Garage reset: clear the floor — Blocker: None.'
 	);
 	const exactId = ` ${'x'.repeat(201)} `;
 	assert.deepEqual(
 		verifyNextPreparationEvidence(
 			[{ workId: exactId, field: 'workflow', expectedValue: 'Active' }],
-			[{ id: exactId, title: 'Exact identity', workflow: 'Active', blocker: 'None' }],
+			[{ id: exactId, title: 'Exact identity', workflow: 'Active', blocker: null }],
 			exactId
 		),
 		[{ work: { id: exactId, title: 'Exact identity' }, field: 'workflow', label: 'Workflow', value: 'Active' }]
@@ -496,6 +510,13 @@ test('Next verifies exact live workspace facts and generates the evidence note i
 		() => verifiedNextEvidenceNote([{ ...verified[0], value: 'Unverified', label: 'Status' }]),
 		/requires one to three exact facts/u
 	);
+	assert.match(workflowSource, /export function evidenceFacts\(pack: DemoPack\): \{ workflow: string; blocker: string \| null \}/u);
+	for (const source of [workRouteSource, reviewRouteSource, routeSource]) {
+		assert.match(source, /\.\.\.evidenceFacts\([^)]+\)/u);
+	}
+	assert.doesNotMatch(routeSource, /density === 'grid' \? packStatusLabel\(pack\.status\) : workflowLabel\(pack\)/u);
+	assert.doesNotMatch(helperSource, /trimmedPageText\(candidate\.expectedValue/u);
+	assert.match(demoClientSource, /typeof fact\.expectedValue === 'string'[\s\S]*?fact\.expectedValue\.length <= 200[\s\S]*?fact\.field === 'blocker' && fact\.expectedValue === null/u);
 });
 
 test('a failed repeated preparation preserves the immediately preceding valid draft', async () => {
@@ -565,7 +586,7 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /import \{[\s\S]*?createCurrentNextEditorTool,[\s\S]*?createPrepareNextActionTool,[\s\S]*?nextEditorPageView[\s\S]*?\} from '\.\/next-webmcp\.mjs';/u);
 	assert.match(routeSource, /let currentNextEditor = \$derived\.by\(\(\) => \{[\s\S]*?return nextEditorPageView\(\{[\s\S]*?work: \{ id: pack\.id,[\s\S]*?presetChoices: NEXT_ACTION_CHOICES,[\s\S]*?editor:[\s\S]*?preview:[\s\S]*?preparationReceipt: preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME \? preparationReceipt : null,[\s\S]*?canSave:[\s\S]*?busy/u);
 	assert.match(routeSource, /function setNextEditorChoice\(nextChoice: string, mode: NextEditorMode,[\s\S]*?choice = nextChoice;[\s\S]*?showingCustom = mode === 'custom';[\s\S]*?customValue = nextChoice/u);
-	assert.match(routeSource, /async function prepareNextActionFromWebMcp[\s\S]*?if \(busy\)[\s\S]*?currentNextEditor[\s\S]*?verifyNextPreparationEvidence\([\s\S]*?workflowLabel[\s\S]*?blockerText[\s\S]*?verifiedNextEvidenceNote[\s\S]*?expectedMode[\s\S]*?expectedChoice[\s\S]*?stale[\s\S]*?evidenceNote[\s\S]*?workspaceChanged: false[\s\S]*?requiresHumanSave: true[\s\S]*?const focusReceipt = focusAndPulse\([\s\S]*?requireVisibleFocus: true[\s\S]*?focus: \{ id: NEXT_PREPARATION_RECEIPT_ID, \.\.\.focusReceipt \}[\s\S]*?next: currentNextEditor/u);
+	assert.match(routeSource, /async function prepareNextActionFromWebMcp[\s\S]*?if \(busy\)[\s\S]*?currentNextEditor[\s\S]*?verifyNextPreparationEvidence\([\s\S]*?\.\.\.evidenceFacts\(candidate\)[\s\S]*?verifiedNextEvidenceNote[\s\S]*?expectedMode[\s\S]*?expectedChoice[\s\S]*?stale[\s\S]*?evidenceNote[\s\S]*?workspaceChanged: false[\s\S]*?requiresHumanSave: true[\s\S]*?const focusReceipt = focusAndPulse\([\s\S]*?requireVisibleFocus: true[\s\S]*?focus: \{ id: NEXT_PREPARATION_RECEIPT_ID, \.\.\.focusReceipt \}[\s\S]*?next: currentNextEditor/u);
 	assert.match(routeSource, /evidenceMatchesReferences,[\s\S]*?from '\.\/next-webmcp\.mjs';[\s\S]*?const receiptAlreadyDesired[\s\S]*?evidenceMatchesReferences\(preparationReceipt\.evidence, input\.evidence\)/u);
 	assert.match(helperSource, /export function evidenceMatchesReferences\(evidence, references\) \{[\s\S]*?fact\.work\.id === references\[index\]\.workId[\s\S]*?fact\.field === references\[index\]\.field[\s\S]*?fact\.value === references\[index\]\.expectedValue/u);
 	assert.doesNotMatch(routeSource, /function evidenceMatchesReceipt/u);
@@ -648,7 +669,7 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(routeSource, /const draft = pendingDraft;[\s\S]*?if \(!draft \|\| !shouldHydratePendingDraft\(\{ preparationInFlight, pendingDraft: draft, visibleWorkId: pack\?\.id \|\| '', preparationReceipt \}\)\) return;[\s\S]*?preparationPreviousEditor = savedEditorBaseline\(pack\);[\s\S]*?preparationFromPending/u);
 	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?await discardPendingNextActionDraft\(pack\.id\);[\s\S]*?clearPreparation\(\);[\s\S]*?setNextEditorChoice\(previous\.choice, previous\.mode, false\)/u);
 	assert.match(routeSource, /let visiblePackId = \$derived\(pack\?\.id \|\| ''\);[\s\S]*?pendingNextActionDraftFor\(\$demoState, visiblePackId\)/u);
-	assert.match(routeSource, /\{#if preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?\{:else if pendingDraft\?\.source === 'human'\}[\s\S]*?Draft prepared by you\. Workspace unchanged until you approve Save\./u);
+	assert.match(routeSource, /\{#if preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?\{:else if pendingDraft\?\.source === 'human'\}[\s\S]*?Draft prepared by you\. The Next action remains unsaved until you approve Save\./u);
 	assert.match(routeSource, /preparationReceipt: preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME \? preparationReceipt : null/u);
 	assert.match(routeSource, /preparationToolName = PREPARE_NEXT_ACTION_TOOL_NAME;[\s\S]*?await tick\(\);[\s\S]*?NEXT_PREPARATION_RECEIPT_ID/u);
 	assert.match(routeSource, /let preparationInFlight = \$state\(false\);[\s\S]*?shouldHydratePendingDraft\(\{ preparationInFlight/u);
@@ -688,9 +709,9 @@ test('human and WebMCP next-action editors share one explicit choice-length boun
 
 test('pending draft state operation atomically approves, rejects stale drafts, and discards by exact work id', () => {
 	assert.throws(() => pendingDraftFingerprint({}, { workId: 'missing', choice: 'Open', mode: 'preset', evidenceNote: '', evidence: [], originFingerprint: '', source: 'human' }, () => ({})), /find/u);
-	const project = (pack) => ({ title: pack.title, workflow: pack.status, blocker: pack.blocker || 'None', next: pack.next || '' });
+	const project = (pack) => ({ title: pack.title, workflow: pack.status, blocker: pack.blocker || null, next: pack.next || '' });
 	const state = { packs: [{ id: 'a', title: 'A', status: 'active', blocker: '', next: 'Open' }, { id: 'b', title: 'B', status: 'blocked', blocker: 'Waiting', next: 'Review' }], pendingNextActionDrafts: [] };
-	const draft = { workId: 'a', choice: 'Start', mode: 'preset', evidenceNote: 'A', evidence: [{ workId: 'a', field: 'workflow', expectedValue: 'active' }], originFingerprint: '', source: 'human' };
+	const draft = { workId: 'a', choice: 'Start', mode: 'preset', evidenceNote: 'A', evidence: [{ workId: 'a', field: 'blocker', expectedValue: null }], originFingerprint: '', source: 'human' };
 	assert.throws(() => approvePendingDraft(state, 'missing', { projectPack: project, nextPath: () => ({}) }), /Pending approval draft was not found/u);
 	draft.originFingerprint = pendingDraftFingerprint(state, draft, project);
 	state.pendingNextActionDrafts.push(structuredClone(draft));
@@ -700,7 +721,7 @@ test('pending draft state operation atomically approves, rejects stale drafts, a
 	assert.deepEqual(state.pendingNextActionDrafts, []);
 	assert.deepEqual(state.packs[1], beforePrepare[1]);
 	state.pendingNextActionDrafts.push(structuredClone(draft));
-	state.packs[0].status = 'done';
+	state.packs[0].blocker = 'Waiting';
 	const beforeStale = structuredClone(state);
 	assert.throws(() => approvePendingDraft(state, 'a', { projectPack: project, nextPath: () => ({}) }), /Draft is stale/u);
 	assert.deepEqual(state, beforeStale);
@@ -743,7 +764,7 @@ test('pending draft persistence preserves order, hydrates, and resets through pr
 });
 
 test('pending approval transaction compositions persist atomically and restore exact order', () => {
-	const project = (pack) => ({ title: pack.title, workflow: pack.status, blocker: pack.blocker || 'None', next: pack.next || '' });
+	const project = (pack) => ({ title: pack.title, workflow: pack.status, blocker: pack.blocker || null, next: pack.next || '' });
 	const a = { workId: 'a', choice: 'Start', mode: 'preset', evidenceNote: 'A', evidence: [{ workId: 'a', field: 'workflow', expectedValue: 'active' }], originFingerprint: '', source: 'human' };
 	const b = { ...a, workId: 'b', choice: 'Review', evidence: [{ workId: 'b', field: 'workflow', expectedValue: 'active' }], originFingerprint: '' };
 	let original = { packs: [{ id: 'a', title: 'A', status: 'active', blocker: '', next: 'Open' }, { id: 'b', title: 'B', status: 'active', blocker: '', next: 'Open' }], selectedId: 'b', pendingNextActionDrafts: [a, b] };

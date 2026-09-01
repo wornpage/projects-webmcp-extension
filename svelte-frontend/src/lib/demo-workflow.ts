@@ -54,7 +54,7 @@ export interface DemoReceipt {
 
 export interface DemoState {
 	packs: DemoPack[];
-	pendingNextActionDrafts?: Array<{ workId: string; choice: string; mode: 'preset' | 'custom'; evidenceNote: string; evidence: Array<{ workId: string; field: 'workflow' | 'blocker'; expectedValue: string }>; originFingerprint: string; source: 'human' | 'webmcp'; }>;
+	pendingNextActionDrafts?: Array<{ workId: string; choice: string; mode: 'preset' | 'custom'; evidenceNote: string; evidence: Array<{ workId: string; field: 'workflow' | 'blocker'; expectedValue: string | null }>; originFingerprint: string; source: 'human' | 'webmcp'; }>;
 	filter?: string;
 	selectedId?: string;
 	status?: string;
@@ -241,6 +241,13 @@ export function workflowLabel(pack: DemoPack): string {
 	if (primaryCommand(pack).action === 'done') return 'Proof ready';
 	if (pack.status === 'draft') return 'Draft';
 	return 'Ready';
+}
+
+export function evidenceFacts(pack: DemoPack): { workflow: string; blocker: string | null } {
+	return {
+		workflow: workflowLabel(pack),
+		blocker: hasBlocker(pack) ? blockerText(pack) : null
+	};
 }
 
 export function parseDateOnly(value: string | undefined): Date | null {

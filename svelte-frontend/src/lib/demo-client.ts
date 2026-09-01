@@ -12,9 +12,7 @@ import {
 	STATE_FILTERS,
 	VALID_PACK_STATUSES,
 	parseDateOnly,
-	workflowLabel,
-	hasBlocker,
-	blockerText,
+	evidenceFacts,
 	workTitle
 } from '$lib/demo-workflow';
 import {
@@ -91,7 +89,7 @@ export type PendingNextActionDraft = {
 	choice: string;
 	mode: 'preset' | 'custom';
 	evidenceNote: string;
-	evidence: Array<{ workId: string; field: 'workflow' | 'blocker'; expectedValue: string }>;
+	evidence: Array<{ workId: string; field: 'workflow' | 'blocker'; expectedValue: string | null }>;
 	originFingerprint: string;
 	source: 'human' | 'webmcp';
 };
@@ -140,7 +138,9 @@ function isPendingNextActionDraft(value: unknown): value is PendingNextActionDra
 		typeof draft.evidenceNote === 'string' && Array.isArray(draft.evidence) &&
 		typeof draft.originFingerprint === 'string' && Boolean(draft.originFingerprint) &&
 		(draft.source === 'human' || draft.source === 'webmcp') &&
-		draft.evidence.every((fact) => fact && typeof fact.workId === 'string' && (fact.field === 'workflow' || fact.field === 'blocker') && typeof fact.expectedValue === 'string');
+		draft.evidence.every((fact) => fact && typeof fact.workId === 'string' && (fact.field === 'workflow' || fact.field === 'blocker') &&
+			((typeof fact.expectedValue === 'string' && Boolean(fact.expectedValue) && fact.expectedValue.length <= 200 && !/\p{Cc}/u.test(fact.expectedValue)) ||
+				(fact.field === 'blocker' && fact.expectedValue === null)));
 }
 
 export function pendingNextActionDrafts(state: DemoState | null): PendingNextActionDraft[] {
@@ -171,7 +171,11 @@ export async function discardPendingNextActionDraft(workId: string): Promise<Dem
 }
 
 export function pendingDraftFingerprint(state: DemoState, draft: PendingNextActionDraft): string {
-	return fingerprintPendingDraft(state, draft, (pack: DemoPack) => ({ title: workTitle(pack), workflow: workflowLabel(pack), blocker: hasBlocker(pack) ? blockerText(pack) : 'None', next: pack.next || '' }));
+	return fingerprintPendingDraft(state, draft, pendingPackProjection);
+}
+
+function pendingPackProjection(pack: DemoPack) {
+	return { title: workTitle(pack), ...evidenceFacts(pack), next: pack.next || '' };
 }
 
 export async function setPackNextAction(workId: string): Promise<{ saved: true; pack: DemoPack; receipt: DemoReceipt; state: DemoState }> {
@@ -179,7 +183,7 @@ export async function setPackNextAction(workId: string): Promise<{ saved: true; 
 		let approved;
 		try {
 			approved = approvePendingDraft(state, workId, {
-				projectPack: (pack: DemoPack) => ({ title: workTitle(pack), workflow: workflowLabel(pack), blocker: hasBlocker(pack) ? blockerText(pack) : 'None', next: pack.next || '' }),
+				projectPack: pendingPackProjection,
 				nextPath: nextChoiceForwardPath
 			});
 		} catch (error) {

@@ -4,18 +4,18 @@ import {
 	recordWebMcpHandoffStepState
 } from './webmcp-handoff-session.mjs';
 
-type WebMcpHandoffStepId =
-	| 'work-scope'
-	| 'review-scope'
-	| 'next-proposal'
-	| 'draft-batch'
-	| 'human-decision';
-
-type WebMcpHandoffStep = {
-	id: WebMcpHandoffStepId;
+type WebMcpHandoffStepBase = {
 	title: string;
 	summary: string;
 };
+
+type WebMcpHandoffStep = WebMcpHandoffStepBase & (
+	| { id: 'work-scope' | 'review-scope'; status: 'complete'; outcome: 'scope-verified' }
+	| { id: 'next-proposal'; status: 'complete'; outcome: 'proposal-prepared' }
+	| { id: 'draft-batch'; status: 'complete'; outcome: 'drafts-created'; count: number }
+	| { id: 'human-decision'; status: 'pending'; outcome: 'proposal-pending' }
+	| { id: 'human-decision'; status: 'complete'; outcome: 'proposal-approved' | 'proposal-discarded' }
+);
 
 type WebMcpHandoffSession = {
 	steps: WebMcpHandoffStep[];

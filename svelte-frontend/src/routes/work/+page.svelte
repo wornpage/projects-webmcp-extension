@@ -25,10 +25,10 @@
 		PACK_ACTIONS,
 		blockerText,
 		dueDateLabel,
+		evidenceFacts,
 		filterPacks,
 		orderPacks,
 		ownerLabel,
-		packStatusLabel,
 		primaryCommand,
 		primaryCommandNavigation,
 		hasBlocker,
@@ -40,7 +40,6 @@
 		recommendedDecisionWork,
 		receiptCells,
 		workTitle,
-		workflowLabel,
 		type DemoPack
 	} from '$lib/demo-workflow';
 	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAlert, WornPage, WornReceipt } from '$lib/components';
@@ -231,10 +230,9 @@
 		items: renderedVisible.map((pack) => workItemPageView({
 			id: pack.id,
 			title: workTitle(pack),
-			workflow: density === 'grid' ? packStatusLabel(pack.status) : workflowLabel(pack),
+			...evidenceFacts(pack),
 			owner: density === 'grid' ? (pack.owner ? String(pack.owner) : null) : ownerLabel(pack.owner),
-			due: pack.due ? dueDateLabel(pack) : null,
-			blocker: hasBlocker(pack) ? blockerText(pack) : null
+			due: pack.due ? dueDateLabel(pack) : null
 		}))
 	}));
 	let workReceiptScopeKey = $derived(currentWorkView
@@ -268,14 +266,19 @@
 			recordWebMcpHandoffStep({
 				id: 'draft-batch',
 				title: 'Draft work staged',
-				summary: `${outcome.created.length} Drafts · ${outcome.workspaceBefore} → ${outcome.workspaceAfter}`
+				summary: `${outcome.created.length} Drafts · ${outcome.workspaceBefore} → ${outcome.workspaceAfter}`,
+				status: 'complete',
+				outcome: 'drafts-created',
+				count: outcome.created.length
 			});
 			const pendingWebMcpDraft = pendingNextActionDrafts($demoState).find(({ source }) => source === 'webmcp');
 			if (pendingWebMcpDraft) {
 				recordWebMcpHandoffStep({
 					id: 'human-decision',
 					title: 'Human decision',
-					summary: 'Pending approval'
+					summary: 'Pending approval',
+					status: 'pending',
+					outcome: 'proposal-pending'
 				});
 			}
 			return;
@@ -296,7 +299,9 @@
 		recordWebMcpHandoffStep({
 			id: 'work-scope',
 			title: 'Work narrowed',
-			summary: `${outcome.work.counts.matching} matching of ${outcome.work.counts.workspace}`
+			summary: `${outcome.work.counts.matching} matching of ${outcome.work.counts.workspace}`,
+			status: 'complete',
+			outcome: 'scope-verified'
 		});
 	}
 

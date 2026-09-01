@@ -1,8 +1,8 @@
 /** @typedef {{ id: string, title?: string, status?: string, blocker?: string, next?: string, [key: string]: unknown }} PendingPack */
-/** @typedef {{ workId: string, field: 'workflow' | 'blocker', expectedValue: string }} PendingEvidence */
+/** @typedef {{ workId: string, field: 'workflow' | 'blocker', expectedValue: string | null }} PendingEvidence */
 /** @typedef {{ workId: string, choice: string, mode: 'preset' | 'custom', evidenceNote: string, evidence: PendingEvidence[], originFingerprint: string, source: 'human' | 'webmcp', [key: string]: unknown }} PendingDraft */
 /** @typedef {{ pendingNextActionDrafts?: PendingDraft[] }} PendingDraftContainer */
-/** @typedef {{ title?: string, workflow?: string, blocker?: string, next?: string, [key: string]: unknown }} PendingProjection */
+/** @typedef {{ title?: string, workflow?: string, blocker?: string | null, next?: string, [key: string]: unknown }} PendingProjection */
 
 /** @template {{ id: string }} TPack @param {{ packs: TPack[], pendingNextActionDrafts?: PendingDraft[] }} state @param {PendingDraft} draft @param {(pack: TPack) => PendingProjection} projectPack @returns {string} */
 export function pendingDraftFingerprint(state, draft, projectPack) {

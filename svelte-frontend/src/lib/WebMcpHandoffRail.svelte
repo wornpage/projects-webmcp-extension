@@ -1,53 +1,66 @@
 <script lang="ts">
 	import { webMcpHandoffSession } from './webmcp-handoff-store';
+	import { webMcpHandoffTrailView } from './webmcp-handoff-session.mjs';
 
-	const STAGES = [
-		{ id: 'work-scope', number: 1, label: 'Work' },
-		{ id: 'review-scope', number: 2, label: 'Review' },
-		{ id: 'next-proposal', number: 3, label: 'Next' },
-		{ id: 'draft-batch', number: 4, label: 'Drafts' },
-		{ id: 'human-decision', number: 5, label: 'Decide' }
-	] as const;
+	const STEP_LABELS = {
+		'work-scope': 'Work',
+		'review-scope': 'Review',
+		'next-proposal': 'Next',
+		'draft-batch': 'Drafts',
+		'human-decision': 'Decide'
+	} as const;
+	type TrailStep = {
+		id: keyof typeof STEP_LABELS;
+		title: string;
+		summary: string;
+		status: 'complete' | 'pending';
+	};
 
-	let steps = $derived($webMcpHandoffSession.steps);
-	let completedIds = $derived(new Set(steps.map(({ id }) => id)));
-	let currentStep = $derived(steps.at(-1) || null);
-	let currentId = $derived(currentStep?.id || '');
+	let trail = $derived(webMcpHandoffTrailView($webMcpHandoffSession) as {
+		steps: TrailStep[];
+		completedCount: number;
+		pendingCount: number;
+		currentStep: TrailStep | null;
+		outcomeSummary: string;
+	});
+	let steps = $derived(trail.steps);
+	let currentStep = $derived(trail.currentStep);
 </script>
 
 <section
 	class="webmcp-handoff-rail"
 	data-webmcp-handoff-session
-	aria-label="Live WebMCP handoff"
+	aria-label="Verified action trail"
 	aria-live="polite"
 >
 	<div class="webmcp-handoff-summary">
-		<p>Live WebMCP handoff</p>
-		<strong>{currentStep ? `${steps.length} of 5 · ${currentStep.title}` : 'Ready for one bounded run'}</strong>
+		<p>Verified action trail</p>
+		<strong>{currentStep ? `${trail.completedCount} verified${trail.pendingCount ? ` · ${trail.pendingCount} pending` : ''} · ${currentStep.title}` : 'Ready for one bounded run'}</strong>
 		<small title={currentStep?.summary || undefined}>{currentStep?.summary || 'No agent action recorded.'}</small>
 	</div>
 
-	<ol class="webmcp-handoff-steps" aria-label={`${steps.length} of 5 handoff steps complete`}>
-		{#each STAGES as stage (stage.id)}
+	<ol class="webmcp-handoff-steps" aria-label={`${trail.completedCount} verified actions, ${trail.pendingCount} pending`}>
+		{#each steps as step, index (step.id)}
 			<li
-				class:is-complete={completedIds.has(stage.id)}
-				class:is-current={stage.id === currentId}
-				data-webmcp-handoff-step={stage.id}
-				aria-label={`${stage.label}: ${completedIds.has(stage.id) ? 'complete' : 'waiting'}`}
+				class:is-complete={step.status === 'complete'}
+				class:is-pending={step.status === 'pending'}
+				class:is-current={step.id === currentStep?.id}
+				data-webmcp-handoff-step={step.id}
+				aria-label={`${STEP_LABELS[step.id]}: ${step.status}`}
 			>
-				<span aria-hidden="true">{stage.number}</span>
-				<small>{stage.label}</small>
+				<span aria-hidden="true">{index + 1}</span>
+				<small>{STEP_LABELS[step.id]}</small>
 			</li>
 		{/each}
 	</ol>
 
 	<div class="webmcp-handoff-authority">
-		<span>Agent authority</span>
-		<strong>0 saved · 0 started</strong>
-		<small>Human decides</small>
+		<span>Recorded outcomes</span>
+		<strong>{trail.outcomeSummary}</strong>
+		<small>Human-only Start and final Save</small>
 	</div>
 
-	<span class="webmcp-handoff-progress">{steps.length} of 5 steps</span>
+	<span class="webmcp-handoff-progress">{trail.completedCount} verified actions, {trail.pendingCount} pending</span>
 </section>
 
 <style>
@@ -150,6 +163,15 @@
 		background: var(--worn-selected-bg);
 		border-color: var(--worn-accent);
 		color: var(--worn-text);
+	}
+
+	.webmcp-handoff-steps li.is-pending {
+		color: var(--worn-text);
+	}
+
+	.webmcp-handoff-steps li.is-pending > span {
+		border-color: var(--worn-accent);
+		border-style: dashed;
 	}
 
 	.webmcp-handoff-steps li.is-current > span {

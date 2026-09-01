@@ -21,10 +21,10 @@
 		NEXT_ACTION_CHOICES,
 		nextChoiceForwardPath,
 		blockerText,
+		evidenceFacts,
 		isReview,
 		hasBlocker,
 		isOpenDecision,
-		workflowLabel,
 		workTitle,
 		type DemoPack
 	} from '$lib/demo-workflow';
@@ -71,13 +71,13 @@
 	type NextEvidenceReference = {
 		workId: string;
 		field: NextEvidenceField;
-		expectedValue: string;
+		expectedValue: string | null;
 	};
 	type NextVerifiedEvidence = {
 		work: { id: string; title: string };
 		field: NextEvidenceField;
 		label: string;
-		value: string;
+		value: string | null;
 	};
 	type PrepareNextActionInput = {
 		choice: string;
@@ -245,7 +245,16 @@ let showingCustom = $state(false);
 				recordWebMcpHandoffStep({
 					id: 'next-proposal',
 					title: 'Next prepared',
-					summary: `Unsaved · ${outcome.next.preparationReceipt.preparedAction}`
+					summary: `Unsaved · ${outcome.next.preparationReceipt.preparedAction}`,
+					status: 'complete',
+					outcome: 'proposal-prepared'
+				});
+				recordWebMcpHandoffStep({
+					id: 'human-decision',
+					title: 'Human decision',
+					summary: 'Pending approval',
+					status: 'pending',
+					outcome: 'proposal-pending'
 				});
 			}
 		});
@@ -406,8 +415,7 @@ let showingCustom = $state(false);
 			packs.map((candidate) => ({
 				id: candidate.id,
 				title: workTitle(candidate),
-				workflow: workflowLabel(candidate),
-				blocker: hasBlocker(candidate) ? blockerText(candidate) : 'None'
+				...evidenceFacts(candidate)
 			})),
 			current.work.id
 		) as NextVerifiedEvidence[];
@@ -471,7 +479,9 @@ let showingCustom = $state(false);
 			recordWebMcpHandoffStep({
 				id: 'human-decision',
 				title: 'Human decision',
-				summary: 'Discarded by person'
+				summary: 'Discarded by person',
+				status: 'complete',
+				outcome: 'proposal-discarded'
 			});
 		}
 		if (previous) {
@@ -519,7 +529,9 @@ let showingCustom = $state(false);
 				recordWebMcpHandoffStep({
 					id: 'human-decision',
 					title: 'Human decision',
-					summary: 'Approved and saved by person'
+					summary: 'Approved and saved by person',
+					status: 'complete',
+					outcome: 'proposal-approved'
 				});
 			}
 			displayToast(summary, 'success');
@@ -582,7 +594,7 @@ let showingCustom = $state(false);
 				cells={preparationCells}
 			/>
 		{:else if pendingDraft?.source === 'human'}
-			<WornAlert tone="info">Draft prepared by you. Workspace unchanged until you approve Save.</WornAlert>
+			<WornAlert tone="info">Draft prepared by you. The Next action remains unsaved until you approve Save.</WornAlert>
 		{/if}
 		<div class="next-presenter-result">
 			<div class="demo-command-lines compact demo-focus-surface" id={NEXT_EDITOR_PREVIEW_ID} data-next-preview data-next-work-id={pack.id} tabindex="-1">

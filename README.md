@@ -39,7 +39,7 @@ Ordinary browser automation has to infer meaning from layout and scrape a page t
 | Next | `get_current_next_editor` | Read the visible next-action editor and its validated Decision Workspace context when present |
 | Next | `prepare_next_action` | Prepare an unsaved choice from 1–3 exact Work or Review facts; stale or mismatched facts are rejected and the page generates the visible evidence note |
 
-The page owns registration and teardown through `document.modelContext.registerTool`. Every successful presentation-changing or draft-creation invocation leaves a polite, screen-reader-announced receipt naming the tool and its exact effect. Read receipts remain visually silent; search, scope, and Next preparation state that nothing was saved; `create_work_drafts` truthfully reports the browser-local workspace count change and Draft status. On Next, the agent submits exact `workId` / `field` / `expectedValue` references already observed on Work or Review. The page requires a current-item fact, checks every value against the live workspace, and deterministically generates the displayed evidence note; arbitrary agent prose cannot enter that field. Starting work and final saves remain visible, human-owned controls.
+The page owns registration and teardown through `document.modelContext.registerTool`. Every successful presentation-changing or draft-creation invocation leaves a polite, screen-reader-announced receipt naming the tool and its exact effect. Read receipts remain visually silent; search, scope, and Next preparation state that nothing was saved; `create_work_drafts` truthfully reports the browser-local workspace count change and Draft status. On Next, the agent submits exact `workId` / `field` / `expectedValue` references already observed on Work or Review; an absent blocker is consistently represented as `null`. The page requires a current-item fact, checks every value against the live workspace without coercion, and deterministically generates the displayed evidence note; arbitrary agent prose cannot enter that field. Starting work and final saves remain visible, human-owned controls.
 
 Shared WornReceipt dismissal preserves keyboard focus through the immutable `@wornpage/receipt` dependency. Projects keeps only route-specific receipt composition and state removal; it does not duplicate the shared recovery behavior or change the package API.
 
@@ -130,7 +130,7 @@ There is no `server/`, `worker/`, Pages Functions, or hidden compatibility route
 npm run verify
 ```
 
-The gate runs Svelte diagnostics, focused WebMCP contracts, static-artifact contracts, and a production prerender. Current expected denominators are 104/104 public source paths, 106/106 WebMCP contracts, and 7/7 static-artifact contracts. A static contract derives those values from the current manifest and test sources so this reviewer-facing summary cannot silently drift. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
+The gate runs Svelte diagnostics, focused WebMCP contracts, static-artifact contracts, and a production prerender. Current expected denominators are 104/104 public source paths, 107/107 WebMCP contracts, and 7/7 static-artifact contracts. A static contract derives those values from the current manifest and test sources so this reviewer-facing summary cannot silently drift. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
 
 ## License and trademarks
 
