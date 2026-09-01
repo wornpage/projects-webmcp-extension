@@ -42,6 +42,7 @@ const workMetadataSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/work-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
+const activitySource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/activity.ts'), 'utf8');
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 const decisionNavigationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/decision-workspace-navigation.mjs'), 'utf8');
 
@@ -771,6 +772,10 @@ test('Quick Add and the canonical create owner share one explicit title-length b
 });
 
 test('expanded Recent activity follows the Work page heading hierarchy', () => {
+	assert.match(activitySource, /function latestActivityCandidate\([\s\S]*?pack: DemoPack,[\s\S]*?accepts: \(entry: ActivityEntry\) => boolean,[\s\S]*?preferLaterTie = false[\s\S]*?if \(!candidate\.text \|\| !accepts\(candidate\)\) continue;/u);
+	assert.match(activitySource, /const latest = latestActivityCandidate\([\s\S]*?normalizedActivityAt\(entry\.at\)[\s\S]*?entry\.text\.trim\(\)[\s\S]*?activityTextWithoutActor\(entry\)\.trim\(\)\.toLowerCase\(\) !== 'archived\.'[\s\S]*?true[\s\S]*?\);/u);
+	assert.equal(activitySource.match(/latestActivityCandidate\(/gu)?.length, 2);
+	assert.doesNotMatch(activitySource, /acceptsAnyActivity|accepts:\s*\(entry: ActivityEntry\) => boolean\s*=\s*[A-Za-z_$]/u);
 	assert.match(routeSource, /import WorkRecentActivity from '\.\/WorkRecentActivity\.svelte';[\s\S]*?<WorkRecentActivity \{packs\} \/>/u);
 	assert.doesNotMatch(routeSource, /RECENT_ACTIVITY_LIMIT|allRecentActivity|recentActivity|recentTimelineEntries|recentPackActivity|activityEvidenceText|activityActor|demo-work-recent/u);
 	assert.match(workRecentActivitySource, /const RECENT_ACTIVITY_LIMIT = 6;[\s\S]*?recentPackActivity\(packs, Math\.max\(RECENT_ACTIVITY_LIMIT, packs\.length\)\)\.slice\(0, RECENT_ACTIVITY_LIMIT\)/u);

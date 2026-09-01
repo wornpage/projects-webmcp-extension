@@ -28,10 +28,6 @@ function packActivityEntries(pack: DemoPack): unknown[] {
 	return Array.isArray(pack?.activity) ? pack.activity : [];
 }
 
-function acceptsAnyActivity(): boolean {
-	return true;
-}
-
 function activityTime(at: string): number {
 	const normalized = normalizedActivityAt(at);
 	return normalized ? Date.parse(`${normalized.replace(' ', 'T')}Z`) : 0;
@@ -55,7 +51,7 @@ function activityParts(entry: unknown): ActivityEntry {
 
 function latestActivityCandidate(
 	pack: DemoPack,
-	accepts: (entry: ActivityEntry) => boolean = acceptsAnyActivity,
+	accepts: (entry: ActivityEntry) => boolean,
 	preferLaterTie = false
 ): ActivityEntry | null {
 	let latest: ActivityEntry | null = null;
