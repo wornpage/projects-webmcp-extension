@@ -35,6 +35,7 @@ const workShortcutHelpSource = fs.readFileSync(path.join(repoRoot, 'svelte-front
 const workBatchActionsSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkBatchActions.svelte'), 'utf8');
 const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
 const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
+const demoCssSource = fs.readFileSync(path.join(repoRoot, 'assets/demo.css'), 'utf8');
 const workListCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkListCard.svelte'), 'utf8');
 const reviewRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
 const workMetadataSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/work-metadata.mjs'), 'utf8');
@@ -591,6 +592,7 @@ test('Work batch Done excludes completed work, reports skips, and restores durab
 });
 
 test('compact Work grid cards remain readable and contained for fine and coarse pointers', () => {
+	assert.doesNotMatch(`${workGridCardSource}\n${demoCssSource}`, /grid-card-action/u);
 	assert.doesNotMatch(workGridCardSource, /@media \(max-width: 800px\) and \(pointer: coarse\)/u);
 	const compactRules = workGridCardSource.match(/@media \(max-width: 800px\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
 	assert.match(compactRules, /\.demo-grid-card \{ box-sizing: border-box; font-size: 14px; gap: 8px; inline-size: 100%; max-inline-size: 100%; padding: 12px; \}/u);

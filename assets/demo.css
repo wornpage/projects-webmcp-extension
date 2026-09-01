@@ -1562,9 +1562,4 @@ h3,
     background: color-mix(in srgb, var(--worn-warning-bg) 70%, var(--worn-surface));
   }
 
-  .grid-card-action:hover:not(:disabled) {
-    background: var(--worn-accent-50);
-    border-color: var(--worn-accent);
-    color: var(--worn-text);
-  }
 }

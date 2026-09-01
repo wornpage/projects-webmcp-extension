@@ -122,8 +122,6 @@
 	.grid-card-fact-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0;color:var(--worn-text-muted)}
 	.grid-card-fact strong{font-size:12px;font-weight:550;color:var(--worn-text);min-width:0;overflow:visible;overflow-wrap:anywhere;text-overflow:clip;white-space:normal}
 	.grid-card-quick{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;padding-top:2px;border-top:1px solid var(--worn-border);min-width:0;max-width:100%}
-	:global(.grid-card-action){width:100%}
-	:global(.grid-card-action){background:var(--worn-surface);border-color:var(--worn-border-strong);color:var(--worn-text)}
 	@media (max-width: 800px) {
 		.demo-grid-card { box-sizing: border-box; font-size: 14px; gap: 8px; inline-size: 100%; max-inline-size: 100%; padding: 12px; }
 		.demo-grid-card .grid-card-title { box-sizing: border-box; display: block; font-size: 16px; line-height: 1.35; min-height: 44px; max-inline-size: 100%; overflow: visible; overflow-wrap: anywhere; padding: 10px 0; text-overflow: clip; white-space: normal; word-break: break-word; }
