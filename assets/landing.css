@@ -120,6 +120,7 @@ p { text-wrap: pretty; }
 .lp-btn {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px;
   padding: 11px 20px;
   border: 1px solid var(--border-strong); border-radius: var(--radius);
   background: var(--surface); color: var(--ink);

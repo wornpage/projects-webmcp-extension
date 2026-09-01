@@ -136,9 +136,25 @@ test('Projects workflow surfaces keep the Guide compact and product-labeled', ()
 	assert.match(layoutSource, /<nav aria-label="Projects workflow navigation">/u);
 	assert.doesNotMatch(layoutSource, /aria-label="Challenge pages"/u);
 	assert.match(pageSource, /Choose visible work and edit the brief; the browser agent can inspect, prepare, or add bounded Drafts while you control Start and final Save\./u);
-	assert.match(pageSource, /<WornAccordion label="Authority and browser status">/u);
+	assert.match(pageSource, /<WornAccordion label="Authority boundary">/u);
 	assert.doesNotMatch(pageSource, /challenge-facts|Projects workflow capabilities/u);
 	assert.match(editorSource, /All visible work is ready by default; choose a counted scope or Custom, then ask:/u);
+});
+
+test('Guide keeps one truthful reader or fallback status visible beside the brief', () => {
+	assert.match(pageSource, /let webMcpGuideReaderStatus = \$state<'checking' \| 'available' \| 'unavailable'>\('checking'\);/u);
+	assert.match(pageSource, /webMcpGuideReaderStatus = typeof webMcpDocument\.modelContext\?\.registerTool === 'function'\s*\? 'available'\s*:\s*'unavailable';/u);
+	const statusIndex = pageSource.indexOf('data-webmcp-guide-reader-status');
+	const editorIndex = pageSource.indexOf('<AgentBriefEditor');
+	const accordionIndex = pageSource.indexOf('<WornAccordion label="Authority boundary">');
+	assert.ok(editorIndex >= 0 && statusIndex > editorIndex && accordionIndex > statusIndex);
+	assert.match(pageSource, /<div class="challenge-agent-column">[\s\S]*?<AgentBriefEditor[\s\S]*?<section\s+class="challenge-browser-note"\s+data-webmcp-guide-reader-status\s+data-reader-status=\{webMcpGuideReaderStatus\}\s+aria-live="polite"\s+aria-atomic="true"/u);
+	assert.match(pageSource, /webMcpGuideReaderStatus === 'checking'[\s\S]*?<strong>Checking reader API…<\/strong>[\s\S]*?webMcpGuideReaderStatus === 'available'[\s\S]*?<strong>Reader API detected\.<\/strong>[\s\S]*?<strong>Reader API unavailable\.<\/strong>/u);
+	const authorityAccordion = pageSource.match(/<WornAccordion label="Authority boundary">[\s\S]*?<\/WornAccordion>/u)?.[0] ?? '';
+	assert.match(authorityAccordion, /data-webmcp-challenge-safety/u);
+	assert.doesNotMatch(authorityAccordion, /data-webmcp-guide-reader-status|Reader API/u);
+	assert.match(pageSource, /\.challenge-agent-column\s*\{[\s\S]*?display:\s*grid;[\s\S]*?gap:\s*12px;[\s\S]*?min-width:\s*0;/u);
+	assert.match(pageSource, /\.challenge-browser-note\s*\{[\s\S]*?border:\s*1px solid var\(--worn-border\);[\s\S]*?border-left:\s*3px solid var\(--worn-accent\);[\s\S]*?padding:\s*12px;/u);
 });
 
 test('Guide editable fields include their live character bounds in accessible descriptions', () => {
@@ -390,7 +406,7 @@ test('wide Guide layout keeps the existing steps in the left rail beside the edi
 	assert.match(pageSource, /\.challenge-steps \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/u);
 	const layoutCss = pageSource.match(/\.challenge-hero \{[\s\S]*?@media \(max-width: 860px\)/u)?.[0] ?? '';
 	assert.doesNotMatch(layoutCss, /min-height|overflow:\s*(?:hidden|clip)/u);
-	assert.match(pageSource, /@media \(max-width: 860px\) \{[\s\S]*?\.challenge-hero,[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/u);
+	assert.match(pageSource, /@media \(max-width: 860px\) \{[\s\S]*?\.challenge-hero\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/u);
 	assert.match(pageSource, /<WornButton href=\{step\.href\} size="sm">\{step\.action\}<\/WornButton>/u);
 	for (const route of ['/work', '/review', '/next']) {
 		assert.match(pageSource, new RegExp(`href: '${route}'`, 'u'), `${route} remains one of the usable Guide steps`);

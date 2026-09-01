@@ -663,6 +663,19 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.doesNotMatch(reviewerTests, /reload discarded the proposal|reload removed 1\/1 draft/u);
 });
 
+test('discarding a draft restores focus to the matching saved editor mode', () => {
+	const discardHandler = routeSource.match(/async function discardPreparation\(\)[\s\S]*?(?=\n\tfunction editPack)/u)?.[0] ?? '';
+	assert.match(discardHandler, /const wasWebMcpPreparation = preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME;/u);
+	assert.match(discardHandler, /await discardPendingNextActionDraft\(pack\.id\);/u);
+	assert.match(discardHandler, /clearPreparation\(\);/u);
+	assert.match(discardHandler, /recordWebMcpHandoffStep\(\{[\s\S]*?id: 'human-decision',[\s\S]*?summary: 'Discarded by person'/u);
+	assert.match(
+		discardHandler,
+		/if \(previous\) \{\s*setNextEditorChoice\(previous\.choice, previous\.mode, false\);\s*void scheduleEditorFocus\(previous\.mode === 'custom' \? 'custom' : 'choices'\);\s*\}/u
+	);
+	assert.doesNotMatch(discardHandler, /scheduleEditorFocus\('choices'\)/u);
+});
+
 test('human and WebMCP next-action editors share one explicit choice-length boundary', () => {
 	assert.match(helperSource, /export const NEXT_ACTION_MAX_LENGTH = 200;/u);
 	assert.match(helperSource, /choice: \{ type: 'string', minLength: 1, maxLength: NEXT_ACTION_MAX_LENGTH,/u);
