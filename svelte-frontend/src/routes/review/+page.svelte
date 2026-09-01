@@ -38,6 +38,7 @@
 	} from './review-webmcp.mjs';
 	import {
 		primaryCommand,
+		evidenceFacts,
 		workflowLabel,
 		blockerText,
 		hasBlocker,
@@ -212,7 +213,9 @@
 		recordWebMcpHandoffStep({
 			id: 'review-scope',
 			title: 'Review verified',
-			summary: `${outcome.review.counts.shown} shown of ${outcome.review.counts.totalReview}`
+			summary: `${outcome.review.counts.shown} shown of ${outcome.review.counts.totalReview}`,
+			status: 'complete',
+			outcome: 'scope-verified'
 		});
 	}
 
@@ -226,10 +229,9 @@
 		return reviewItemPageView({
 			id: pack.id,
 			title: workTitle(pack),
-			workflow: workflowLabel(pack),
+			...evidenceFacts(pack),
 			owner: ownerLabel(pack.owner),
 			due: pack.due ? dueDateLabel(pack) : null,
-			blocker: hasBlocker(pack) ? blockerText(pack) : null,
 			attentionReasons: attentionReasons(pack)
 		});
 	}

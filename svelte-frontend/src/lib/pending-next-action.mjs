@@ -1,8 +1,8 @@
 /** @typedef {{ id: string, title?: string, status?: string, blocker?: string, next?: string, [key: string]: unknown }} PendingPack */
-/** @typedef {{ workId: string, field: 'workflow' | 'blocker', expectedValue: string }} PendingEvidence */
+/** @typedef {{ workId: string, field: 'workflow' | 'blocker', expectedValue: string | null }} PendingEvidence */
 /** @typedef {{ workId: string, choice: string, mode: 'preset' | 'custom', evidenceNote: string, evidence: PendingEvidence[], originFingerprint: string, source: 'human' | 'webmcp', [key: string]: unknown }} PendingDraft */
 /** @typedef {{ pendingNextActionDrafts?: PendingDraft[] }} PendingDraftContainer */
-/** @typedef {{ title?: string, workflow?: string, blocker?: string, next?: string, [key: string]: unknown }} PendingProjection */
+/** @typedef {{ title?: string, workflow?: string, blocker?: string | null, next?: string, [key: string]: unknown }} PendingProjection */
 
 /** @template {{ id: string }} TPack @param {{ packs: TPack[], pendingNextActionDrafts?: PendingDraft[] }} state @param {PendingDraft} draft @param {(pack: TPack) => PendingProjection} projectPack @returns {string} */
 export function pendingDraftFingerprint(state, draft, projectPack) {
@@ -29,6 +29,29 @@ export function upsertPendingDraft(state, draft) {
 	state.pendingNextActionDrafts = index < 0
 		? [...pending, structuredClone(draft)]
 		: pending.map((item, itemIndex) => itemIndex === index ? structuredClone(draft) : item);
+}
+
+/**
+ * @template {{ id: string }} TPack
+ * @param {{ packs: TPack[], pendingNextActionDrafts?: PendingDraft[] }} state
+ * @param {{ workId: string, choice: string, mode: 'preset' | 'custom' }} revision
+ * @param {(pack: TPack) => PendingProjection} projectPack
+ * @returns {PendingDraft}
+ */
+export function revisePendingDraftChoice(state, { workId, choice, mode }, projectPack) {
+	const current = (state.pendingNextActionDrafts || []).find((draft) => draft.workId === workId) || null;
+	const draft = {
+		workId,
+		choice,
+		mode,
+		evidenceNote: current ? current.evidenceNote : 'Human-created draft; approval remains human-owned.',
+		evidence: current ? structuredClone(current.evidence) : [],
+		originFingerprint: current ? current.originFingerprint : '',
+		source: current ? current.source : 'human'
+	};
+	if (!current) draft.originFingerprint = pendingDraftFingerprint(state, draft, projectPack);
+	upsertPendingDraft(state, draft);
+	return draft;
 }
 
 /** @param {PendingDraftContainer} state @param {string} workId @param {PendingDraft | null} priorDraft @returns {void} */

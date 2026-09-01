@@ -444,7 +444,7 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /upNext: reviewItemForPageTool\(firstReview\),\s*items: renderedList\.map\(reviewItemForPageTool\)/u);
 	assert.match(routeSource, /function attentionReasons\(pack: DemoPack\): string\[\][\s\S]*?Blocked:[\s\S]*?No next action is set[\s\S]*?Decision needed from/u);
 	assert.doesNotMatch(routeSource, /This item is in the review queue/u);
-	assert.match(routeSource, /function reviewItemForPageTool\([\s\S]*?reviewItemPageView\(\{[\s\S]*?title: workTitle\(pack\)[\s\S]*?workflow: workflowLabel\(pack\)[\s\S]*?owner: ownerLabel\(pack\.owner\)[\s\S]*?blocker: hasBlocker\(pack\) \? blockerText\(pack\) : null,[\s\S]*?attentionReasons: attentionReasons\(pack\)/u);
+	assert.match(routeSource, /function reviewItemForPageTool\([\s\S]*?reviewItemPageView\(\{[\s\S]*?title: workTitle\(pack\)[\s\S]*?\.\.\.evidenceFacts\(pack\)[\s\S]*?owner: ownerLabel\(pack\.owner\)[\s\S]*?attentionReasons: attentionReasons\(pack\)/u);
 	assert.match(routeSource, /class="review-reasons"[\s\S]*?Why this surfaced[\s\S]*?attentionReasons\(firstReview\)/u);
 	assert.match(routeSource, /async function applyReviewScope\([\s\S]*?query = nextQuery;\s*reviewSubFilter = nextFilter;\s*await tick\(\);[\s\S]*?await focusReviewScopeDestination\(requireVisibleFocus\)/u);
 	assert.match(routeSource, /const requestedQueue = summarizeReviewQueue\(packs, nextQuery, 'all'\);[\s\S]*?nextFilter === reviewSubFilter[\s\S]*?const \{ changed, focus \} = await applyReviewScope\(nextQuery, nextFilter, 'results', true\);[\s\S]*?if \(!focus\)[\s\S]*?return \{ changed, focus, review: currentReviewView \};/u);

@@ -158,6 +158,8 @@ test('Work projects only its live scope, explicit denominators, and bounded rend
 	});
 	assert.deepEqual(Object.keys(view).sort(), ['counts', 'items', 'recommendation', 'scope']);
 	assert.doesNotMatch(JSON.stringify(view), /not exposed|secret/u);
+	assert.match(routeSource, /items: renderedVisible\.map\(\(pack\) => workItemPageView\(\{[\s\S]*?\.\.\.evidenceFacts\(pack\)[\s\S]*?owner: density === 'grid'/u);
+	assert.doesNotMatch(routeSource, /workflow: density === 'grid'/u);
 	const pendingSearch = workPageView({ ...view, scope: { ...view.scope, search: 'nee', appliedSearch: '' } });
 	assert.equal(pendingSearch.scope.search, 'nee');
 	assert.equal(pendingSearch.scope.appliedSearch, '');

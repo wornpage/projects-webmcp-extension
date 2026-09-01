@@ -25,8 +25,13 @@ const rootReadme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
 const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
 const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmcp/reviewer-tests.md'), 'utf8');
 const editorSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/AgentBriefEditor.svelte'), 'utf8');
+const webMcpStatusSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpStatus.svelte'), 'utf8');
+const webMcpRegistrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const guideActionSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/guide-work-action.mjs'), 'utf8');
+const priorityRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/priority/+page.svelte'), 'utf8');
 const workRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
+const reviewRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
+const nextRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
 const samplePacks = JSON.parse(fs.readFileSync(path.join(repoRoot, 'data/demo-packs.json'), 'utf8'));
 
 function scopeFixture() {
@@ -141,20 +146,27 @@ test('Projects workflow surfaces keep the Guide compact and product-labeled', ()
 	assert.match(editorSource, /All visible work is ready by default; choose a counted scope or Custom, then ask:/u);
 });
 
-test('Guide keeps one truthful reader or fallback status visible beside the brief', () => {
-	assert.match(pageSource, /let webMcpGuideReaderStatus = \$state<'checking' \| 'available' \| 'unavailable'>\('checking'\);/u);
-	assert.match(pageSource, /webMcpGuideReaderStatus = typeof webMcpDocument\.modelContext\?\.registerTool === 'function'\s*\? 'available'\s*:\s*'unavailable';/u);
-	const statusIndex = pageSource.indexOf('data-webmcp-guide-reader-status');
-	const editorIndex = pageSource.indexOf('<AgentBriefEditor');
-	const accordionIndex = pageSource.indexOf('<WornAccordion label="Authority boundary">');
-	assert.ok(editorIndex >= 0 && statusIndex > editorIndex && accordionIndex > statusIndex);
-	assert.match(pageSource, /<div class="challenge-agent-column">[\s\S]*?<AgentBriefEditor[\s\S]*?<section\s+class="challenge-browser-note"\s+data-webmcp-guide-reader-status\s+data-reader-status=\{webMcpGuideReaderStatus\}\s+aria-live="polite"\s+aria-atomic="true"/u);
-	assert.match(pageSource, /webMcpGuideReaderStatus === 'checking'[\s\S]*?<strong>Checking reader API…<\/strong>[\s\S]*?webMcpGuideReaderStatus === 'available'[\s\S]*?<strong>Reader API detected\.<\/strong>[\s\S]*?<strong>Reader API unavailable\.<\/strong>/u);
-	const authorityAccordion = pageSource.match(/<WornAccordion label="Authority boundary">[\s\S]*?<\/WornAccordion>/u)?.[0] ?? '';
-	assert.match(authorityAccordion, /data-webmcp-challenge-safety/u);
-	assert.doesNotMatch(authorityAccordion, /data-webmcp-guide-reader-status|Reader API/u);
-	assert.match(pageSource, /\.challenge-agent-column\s*\{[\s\S]*?display:\s*grid;[\s\S]*?gap:\s*12px;[\s\S]*?min-width:\s*0;/u);
-	assert.match(pageSource, /\.challenge-browser-note\s*\{[\s\S]*?border:\s*1px solid var\(--worn-border\);[\s\S]*?border-left:\s*3px solid var\(--worn-accent\);[\s\S]*?padding:\s*12px;/u);
+test('one global accessible WebMCP catalog replaces the verbose Guide-only reader panel', () => {
+	assert.doesNotMatch(pageSource, /webMcpGuideReaderStatus|data-webmcp-guide-reader-status|Guide reader status|Reader API/u);
+	assert.match(layoutSource, /import WebMcpStatus from '\$lib\/WebMcpStatus\.svelte';/u);
+	assert.equal(layoutSource.match(/<WebMcpStatus \/>/gu)?.length, 1);
+	assert.match(webMcpStatusSource, /<button[\s\S]*?data-webmcp-status-pill[\s\S]*?aria-haspopup="dialog"[\s\S]*?aria-expanded=\{open\}[\s\S]*?aria-label=\{`WebMCP \$\{statusLabel\}, \$\{toolCountLabel\} on this page`\}/u);
+	assert.match(webMcpStatusSource, /<WornDialog bind:open title="WebMCP tools on this page" size="sm">/u);
+	assert.match(webMcpStatusSource, /<h2 id="webmcp-native-status-heading">Native browser status<\/h2>[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/u);
+	assert.match(webMcpStatusSource, /Current-page tools · \{toolCount\}[\s\S]*?\{#each \$webMcpCatalog\.tools as tool \(tool\.name\)\}[\s\S]*?<code>\{tool\.name\}<\/code>[\s\S]*?<p>\{tool\.description\}<\/p>/u);
+	assert.match(webMcpStatusSource, /tool\.authority === 'read-only' \? 'Read only' : 'Page-changing \/ draft authority'/u);
+	assert.match(webMcpRegistrationSource, /const catalogTools = descriptors\.map\(\(\{ descriptor, name \}\) =>/u);
+	assert.doesNotMatch(`${layoutSource}\n${webMcpStatusSource}`, /get_projects_handoff_guide|get_next_recommendation|get_current_work_view|create_work_drafts|get_current_review_queue|prepare_next_action/u);
+	for (const [label, source, expectedCount] of [
+		['Guide', pageSource, 1],
+		['Priority', priorityRouteSource, 1],
+		['Work', workRouteSource, 3],
+		['Review', reviewRouteSource, 2],
+		['Next', nextRouteSource, 2]
+	]) {
+		const registeredArray = source.match(/registerPageTools\(document, \[([\s\S]*?)\]\s*(?:,\s*\{|\)\s*\))/u)?.[1] ?? '';
+		assert.equal(registeredArray.match(/create[A-Z][A-Za-z]+Tool\(/gu)?.length, expectedCount, `${label} keeps its exact page-local tool count`);
+	}
 });
 
 test('Guide editable fields include their live character bounds in accessible descriptions', () => {
@@ -346,7 +358,7 @@ test('guide reader projects live DOM scope choices, selection, and denominators 
 	assert.equal(noMatch.workQuery, 'Definitely absent');
 	assert.equal(noMatch.workScope.selected.matchingCount, 0);
 	assert.match(pageSource, /<WornButton href=\{step\.href\} size="sm">\{step\.action\}<\/WornButton>/u);
-	assert.match(pageSource, /Reader API unavailable[\s\S]*?Copy brief[\s\S]*?three visible route buttons remain usable/u);
+	assert.doesNotMatch(pageSource, /Reader API unavailable|Guide reader status/u);
 });
 
 test('handoff route owns one data-backed reader without navigation, write, or model authority', () => {
@@ -364,7 +376,8 @@ test('handoff route owns one data-backed reader without navigation, write, or mo
 	assert.match(pageSource, /Agent: change page-local scope, prepare an unsaved next action, or create up to three Draft items through the bounded Work tool\./u);
 	assert.match(pageSource, /Person: control Start, final Save, blocking, completion, and deletion\./u);
 	assert.doesNotMatch(pageSource, /approve, save, or discard every workspace change/u);
-	assert.match(pageSource, /typeof webMcpDocument\.modelContext\?\.registerTool === 'function'/u);
+	assert.doesNotMatch(pageSource, /modelContext|registerTool/u);
+	assert.match(webMcpRegistrationSource, /typeof modelContext\?\.registerTool !== 'function'[\s\S]*?status: 'unavailable'/u);
 	assert.doesNotMatch(pageSource, /fetch\(|apiFetch|localStorage|sessionStorage|\.click\(|goto\(/u);
 	assert.doesNotMatch(editorSource, /fetch\(|apiFetch|localStorage|sessionStorage|modelContext|goto\(/u);
 	assert.doesNotMatch(`${pageSource}\n${editorSource}`, /Garage reset|Garden study|Household|Research/u);

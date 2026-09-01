@@ -39,7 +39,6 @@
 		'Agent: change page-local scope, prepare an unsaved next action, or create up to three Draft items through the bounded Work tool.',
 		'Person: control Start, final Save, blocking, completion, and deletion.'
 	] as const;
-	let webMcpGuideReaderStatus = $state<'checking' | 'available' | 'unavailable'>('checking');
 	let webMcpGuideReceipt = $state<{
 		summary: string;
 		cells: Array<{ label: string; value: string }>;
@@ -75,12 +74,6 @@
 	}
 
 	onMount(() => {
-		// This is intentionally capability detection, not a registration-success claim.
-		// registerPageTools continues to own registration, failure handling, and teardown.
-		const webMcpDocument = document as Document & { modelContext?: { registerTool?: unknown } };
-		webMcpGuideReaderStatus = typeof webMcpDocument.modelContext?.registerTool === 'function'
-			? 'available'
-			: 'unavailable';
 		return registerPageTools(document, [
 			createWebMcpChallengeGuideTool(() => readRenderedWebMcpChallengeGuide(document))
 		], {
@@ -162,23 +155,6 @@
 			</div>
 			<div class="challenge-agent-column">
 				<AgentBriefEditor scopeCatalog={guideScopeCatalog} bind:selectedScopeId bind:workQuery {selectedMatchingCount} />
-				<section
-					class="challenge-browser-note"
-					data-webmcp-guide-reader-status
-					data-reader-status={webMcpGuideReaderStatus}
-					aria-live="polite"
-					aria-atomic="true"
-					aria-labelledby="challenge-browser-note-title"
-				>
-					<h2 id="challenge-browser-note-title">Guide reader status</h2>
-					{#if webMcpGuideReaderStatus === 'checking'}
-						<p><strong>Checking reader API…</strong> Copy brief and the three route buttons remain available.</p>
-					{:else if webMcpGuideReaderStatus === 'available'}
-						<p><strong>Reader API detected.</strong> Read-only access to the visible Guide is available; it cannot navigate, save, or change workspace data. Detection does not confirm registration success.</p>
-					{:else}
-						<p><strong>Reader API unavailable.</strong> Copy brief keeps any nonempty Work scope, and the three visible route buttons remain usable.</p>
-					{/if}
-				</section>
 			</div>
 		</div>
 
@@ -309,24 +285,6 @@
 		line-height: 1.6;
 		margin: 0;
 		padding-left: 20px;
-	}
-	.challenge-browser-note {
-		background: var(--worn-surface);
-		border: 1px solid var(--worn-border);
-		border-left: 3px solid var(--worn-accent);
-		border-radius: var(--worn-radius);
-		min-width: 0;
-		padding: 12px;
-	}
-	.challenge-browser-note h2 {
-		font-size: 14px;
-		margin: 0 0 8px;
-	}
-	.challenge-browser-note p {
-		color: var(--worn-text-secondary);
-		font-size: 13px;
-		line-height: 1.5;
-		margin: 0;
 	}
 	@media (max-width: 860px) {
 		.challenge-hero {
