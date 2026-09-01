@@ -75,6 +75,7 @@ svelte-frontend/src/routes/work/work-webmcp.mjs
 svelte-frontend/src/routes/work/WorkDecisionWorkspace.svelte
 svelte-frontend/src/routes/work/WorkFilterControls.svelte
 svelte-frontend/src/routes/work/WorkQuickAdd.svelte
+svelte-frontend/src/routes/work/WorkShortcutHelp.svelte
 svelte-frontend/static/_headers
 svelte-frontend/static/robots.txt
 svelte-frontend/svelte.check.config.js

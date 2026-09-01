@@ -4,7 +4,6 @@
 	import { page } from '$app/stores';
 	import { SvelteSet } from 'svelte/reactivity';
 	import Focus from '@lucide/svelte/icons/focus';
-	import Keyboard from '@lucide/svelte/icons/keyboard';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import {
 		demoState,
@@ -44,7 +43,7 @@
 		workflowLabel,
 		type DemoPack
 	} from '$lib/demo-workflow';
-	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAccordion, WornDialog, WornAlert, WornKbd, WornTimeline, WornPage, WornReceipt } from '$lib/components';
+	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAccordion, WornAlert, WornTimeline, WornPage, WornReceipt } from '$lib/components';
 	import { buildActionUndoSnapshot, commitActionUndo, receiptUndo, undoReceipt } from '$lib/undo';
 	import { activityActor, activityEvidenceText, recentPackActivity, relativeActivityTime } from '$lib/activity';
 	import { localDateInputValue } from '$lib/local-date.mjs';
@@ -62,6 +61,7 @@
 	import WorkDecisionWorkspace from './WorkDecisionWorkspace.svelte';
 	import WorkFilterControls from './WorkFilterControls.svelte';
 	import WorkQuickAdd from './WorkQuickAdd.svelte';
+	import WorkShortcutHelp from './WorkShortcutHelp.svelte';
 	import {
 		WORK_SEARCH_TOOL_NAME,
 		WORK_DRAFT_TOOL_NAME,
@@ -521,7 +521,7 @@
 	// In batch mode a tap anywhere on the card toggles selection; inner
 	// controls (buttons, links, the details toggle) keep their own behavior.
 let focusedIndex = $state(0);
-let showShortcutHelp = $state(false);
+let shortcutHelpOpen = $state(false);
 
 function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
   if (e.target !== e.currentTarget) return;
@@ -671,18 +671,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	}
 	function handleWindowKeys(e: KeyboardEvent) {
 		const tag = (e.target as HTMLElement)?.tagName;
-		if (showShortcutHelp) {
-			if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-				e.preventDefault();
-				showShortcutHelp = false;
-			}
-			return;
-		}
-		if (e.key === '?' && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-			e.preventDefault();
-			showShortcutHelp = true;
-			return;
-		}
+		if (shortcutHelpOpen) return;
 		if ((e.key === 'f' || e.key === 'F') && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !(e.target as HTMLElement)?.isContentEditable && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat) {
 			e.preventDefault();
 			toggleFocusMode();
@@ -694,7 +683,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			focusedIndex = -1;
 			return;
 		}
-		if (e.key === 'Escape') { filterInput()?.blur(); focusedIndex = -1; showShortcutHelp = false; }
+		if (e.key === 'Escape') { filterInput()?.blur(); focusedIndex = -1; }
 		// n / c: focus the local quick-create input when that view exposes it.
 		if ((e.key === 'n' || e.key === 'c') && tag !== 'INPUT' && tag !== 'TEXTAREA') {
 			const input = document.querySelector<HTMLInputElement>('.quick-create-input');
@@ -1036,9 +1025,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 
 	{#snippet headActions()}
 		<div class="work-head-actions">
-			<WornIconButton size="sm" label="Shortcuts" title="Keyboard shortcuts (?)" aria-haspopup="dialog" data-action="work-shortcuts" onclick={() => (showShortcutHelp = true)}>
-				<Keyboard aria-hidden="true" />
-			</WornIconButton>
+			<WorkShortcutHelp bind:open={shortcutHelpOpen} />
 			{#if packs.length > 1 || batchMode}
 				<WornIconButton class={batchMode ? 'work-mode-active' : undefined} size="sm" label="Batch" title="Toggle batch select mode" data-action="batch-mode" aria-pressed={batchMode} disabled={busyId === 'batch'} onclick={toggleBatchMode}>
 					<ListChecks aria-hidden="true" />
@@ -1134,24 +1121,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	{#if errorText}
 		<WornAlert tone="danger" dismissible dismissLabel="Dismiss work-list error">{errorText}</WornAlert>
 	{/if}
-
-	<WornDialog bind:open={showShortcutHelp} title="Keyboard shortcuts" size="sm">
-		<dl class="shortcut-grid">
-			<dt><WornKbd keys={['↑ / ↓']} /></dt><dd>Navigate</dd>
-			<dt><WornKbd keys={['D']} /></dt><dd>Mark done</dd>
-			<dt><WornKbd keys={['B']} /></dt><dd>Mark blocked</dd>
-			<dt><WornKbd keys={['O']} /></dt><dd>Open next-action editor</dd>
-			<dt><WornKbd keys={['Space']} /></dt><dd>Run action</dd>
-			<dt><WornKbd keys={['F']} /></dt><dd>Toggle focus mode</dd>
-			<dt><WornKbd keys={['/']} /></dt><dd>Search</dd>
-			<dt><WornKbd keys={['C / N']} /></dt><dd>Focus quick-add when available</dd>
-			<dt><WornKbd keys={['Esc']} /></dt><dd>Close / blur search</dd>
-			<dt><WornKbd keys={['?']} /></dt><dd>Toggle help</dd>
-		</dl>
-		<div class="shortcut-actions">
-			<WornButton variant="primary" type="button" onclick={() => (showShortcutHelp = false)}>Close</WornButton>
-		</div>
-	</WornDialog>
 
 	{#if webMcpActivityReceipt}
 		<WebMcpActivityStrip
@@ -1335,30 +1304,4 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		--worn-timeline-max-inline-size: 100%;
 		margin-top: 6px;
 	}
-	.shortcut-grid {
-		display: grid;
-		grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
-		gap: 8px 16px;
-		font-size: 13px;
-		line-height: 1.5;
-		align-items: center;
-		margin-bottom: 18px;
-	}
-	.shortcut-grid dt,
-	.shortcut-grid dd {
-		margin: 0;
-		min-width: 0;
-		overflow-wrap: anywhere;
-	}
-	.shortcut-grid dt {
-		text-align: right;
-	}
-	.shortcut-actions {
-		display: flex;
-		justify-content: flex-end;
-	}
-	.shortcut-actions :global(.worn-btn) {
-		min-height: 44px;
-	}
-
 </style>

@@ -30,6 +30,7 @@ const workDeleteDialogSource = fs.readFileSync(path.join(repoRoot, 'svelte-front
 const workFilterControlsSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkFilterControls.svelte'), 'utf8');
 const workDecisionWorkspaceSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkDecisionWorkspace.svelte'), 'utf8');
 const workQuickAddSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkQuickAdd.svelte'), 'utf8');
+const workShortcutHelpSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkShortcutHelp.svelte'), 'utf8');
 const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
 const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
 const workListCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkListCard.svelte'), 'utf8');
@@ -106,10 +107,18 @@ test('Work focus mode implements and documents its advertised F shortcut', () =>
 	assert.match(routeSource, /displayToast\('Focus on\. Press F to exit\.', 'info'\)/u);
 	assert.match(
 		windowKeys,
-		/if \(\(e\.key === 'f' \|\| e\.key === 'F'\) && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !\(e\.target as HTMLElement\)\?\.isContentEditable && !e\.ctrlKey && !e\.metaKey && !e\.altKey && !e\.repeat\) \{\s*e\.preventDefault\(\);\s*toggleFocusMode\(\);\s*return;\s*\}/u
+		/if \(shortcutHelpOpen\) return;[\s\S]*?if \(\(e\.key === 'f' \|\| e\.key === 'F'\) && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !\(e\.target as HTMLElement\)\?\.isContentEditable && !e\.ctrlKey && !e\.metaKey && !e\.altKey && !e\.repeat\) \{\s*e\.preventDefault\(\);\s*toggleFocusMode\(\);\s*return;\s*\}/u
 	);
 	assert.equal(windowKeys.match(/e\.key === 'f'/gu)?.length, 1);
-	assert.match(routeSource, /<WornKbd keys=\{\['F'\]\} \/><\/dt><dd>Toggle focus mode<\/dd>/u);
+	assert.doesNotMatch(windowKeys, /e\.key === '\?'/u);
+	assert.match(routeSource, /import WorkShortcutHelp from '\.\/WorkShortcutHelp\.svelte';[\s\S]*?let shortcutHelpOpen = \$state\(false\);[\s\S]*?<WorkShortcutHelp bind:open=\{shortcutHelpOpen\} \/>/u);
+	assert.doesNotMatch(routeSource, /showShortcutHelp|Keyboard shortcuts \(\?\)|shortcut-grid|shortcut-actions|data-action="work-shortcuts"/u);
+	assert.match(workShortcutHelpSource, /let \{ open = \$bindable\(false\) \}[\s\S]*?event\.key !== '\?'[\s\S]*?!open && \(tag === 'INPUT' \|\| tag === 'TEXTAREA' \|\| tag === 'SELECT' \|\| target\?\.isContentEditable\)[\s\S]*?open = !open;/u);
+	assert.match(workShortcutHelpSource, /<svelte:window onkeydown=\{handleShortcutKey\} \/>[\s\S]*?data-action="work-shortcuts"[\s\S]*?<WornDialog bind:open title="Keyboard shortcuts" size="sm">/u);
+	assert.match(workShortcutHelpSource, /<WornKbd keys=\{\['F'\]\} \/><\/dt><dd>Toggle focus mode<\/dd>/u);
+	assert.match(workShortcutHelpSource, /<WornKbd keys=\{\['C \/ N'\]\} \/><\/dt><dd>Focus quick-add when available<\/dd>[\s\S]*?<WornKbd keys=\{\['\?'\]\} \/><\/dt><dd>Toggle help<\/dd>/u);
+	assert.match(workShortcutHelpSource, /\.shortcut-actions :global\(\.worn-btn\)\{min-height:44px\}/u);
+	assert.doesNotMatch(workShortcutHelpSource, /fetch\(|localStorage|sessionStorage|saveBrowserState|createPack|runPackAction/u);
 });
 
 test('Work O shortcut names its exact Next editor destination', () => {
@@ -123,8 +132,8 @@ test('Work O shortcut names its exact Next editor destination', () => {
 	);
 	assert.match(cardKeys, /if \(\(e\.key === 'o' \|\| e\.key === 'O'\)[\s\S]*?selectPack\(pack\);/u);
 	assert.match(selectionOwner, /goto\(`\/next\?pack=\$\{encodeURIComponent\(pack\.id\)\}`\);/u);
-	assert.match(routeSource, /<WornKbd keys=\{\['O'\]\} \/><\/dt><dd>Open next-action editor<\/dd>/u);
-	assert.doesNotMatch(routeSource, /<WornKbd keys=\{\['O'\]\} \/><\/dt><dd>Open details<\/dd>/u);
+	assert.match(workShortcutHelpSource, /<WornKbd keys=\{\['O'\]\} \/><\/dt><dd>Open next-action editor<\/dd>/u);
+	assert.doesNotMatch(workShortcutHelpSource, /<WornKbd keys=\{\['O'\]\} \/><\/dt><dd>Open details<\/dd>/u);
 });
 
 test('Work projects only its live scope, explicit denominators, and bounded rendered items', () => {
