@@ -1,0 +1,133 @@
+<script lang="ts">
+	import {
+		createPack,
+		DEMO_WORK_TITLE_MAX_LENGTH,
+		displayToast
+	} from '$lib/demo-client';
+	import { ENERGY_OPTIONS, PACK_ENERGIES } from '$lib/demo-workflow';
+	import { WornButton, WornInput, WornSelect } from '$lib/components';
+
+	type WorkQuickAddFilters = {
+		owner: string;
+		area: string;
+		energy: string;
+		recurrence: string;
+	};
+
+	let {
+		filters,
+		busy = $bindable(false)
+	}: {
+		filters: WorkQuickAddFilters;
+		busy?: boolean;
+	} = $props();
+
+	const QUICK_METADATA_MAX_LENGTH = 120;
+	let form: HTMLFormElement | null = null;
+	let title = $state('');
+	let proofTarget = $state('');
+	let owner = $state('');
+	let area = $state('');
+	let type = $state('');
+	let due = $state('');
+	let energy = $state('');
+	let recurrence = $state('');
+
+	function setHumanQuickTitle(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const nextTitle = input.value.slice(0, DEMO_WORK_TITLE_MAX_LENGTH);
+		input.value = nextTitle;
+		title = nextTitle;
+	}
+
+	async function quickCreate() {
+		const normalizedTitle = title.trim();
+		const normalizedProofTarget = proofTarget.trim();
+		const normalizedOwner = owner.trim() || (filters.owner !== 'all' && filters.owner !== '_unassigned' ? filters.owner : '');
+		const normalizedArea = area.trim() || (filters.area !== 'all' && filters.area !== '_none' ? filters.area : '');
+		const normalizedType = type.trim();
+		const normalizedDue = due.trim();
+		const normalizedEnergy = PACK_ENERGIES.includes(energy)
+			? energy
+			: filters.energy !== 'all' && PACK_ENERGIES.includes(filters.energy) ? filters.energy : '';
+		const normalizedRecurrence = recurrence.trim() || (filters.recurrence !== 'all' ? filters.recurrence : '');
+		if (!normalizedTitle || busy) return;
+		busy = true;
+		try {
+			await createPack({
+				title: normalizedTitle,
+				status: 'active',
+				next: 'Open',
+				doneWhen: normalizedProofTarget || undefined,
+				owner: normalizedOwner || undefined,
+				area: normalizedArea || undefined,
+				type: normalizedType || undefined,
+				due: normalizedDue || undefined,
+				energy: normalizedEnergy || undefined,
+				recurrence: normalizedRecurrence || undefined
+			});
+			title = '';
+			proofTarget = '';
+			owner = '';
+			area = '';
+			type = '';
+			due = '';
+			energy = '';
+			recurrence = '';
+		} catch {
+			displayToast('Quick create failed', 'error');
+		} finally {
+			busy = false;
+			setTimeout(() => form?.querySelector<HTMLInputElement>('.quick-create-input')?.focus(), 0);
+		}
+	}
+</script>
+
+<form bind:this={form} class="quick-create-row" aria-label="Quick add a work item" onsubmit={(event) => { event.preventDefault(); quickCreate(); }}>
+	<WornInput
+		class="quick-create-input"
+		maxlength={DEMO_WORK_TITLE_MAX_LENGTH}
+		bind:value={title}
+		oninput={setHumanQuickTitle}
+		placeholder="Quick-add a work item…"
+		aria-label="Quick-add a work item"
+		disabled={busy}
+	/>
+	<WornButton class="quick-create-submit" data-work-quick-create-submit type="submit" variant="primary" size="sm" disabled={busy || !title.trim()}>{busy ? 'Adding…' : 'Add'}</WornButton>
+	<details class="quick-create-options">
+		<summary>Work details <span>Optional</span></summary>
+		<p class="quick-create-details-help" id="quick-create-details-help">Blank owner, area, energy, and recurrence fields inherit active Work filters when possible.</p>
+		<div class="quick-create-details-grid">
+			<WornInput id="work-quick-owner" bind:value={owner} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Owner" aria-label="Quick-add owner" aria-describedby="quick-create-details-help" disabled={busy} />
+			<WornInput id="work-quick-area" bind:value={area} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Area" aria-label="Quick-add area" aria-describedby="quick-create-details-help" disabled={busy} />
+			<WornInput id="work-quick-type" bind:value={type} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Type" aria-label="Quick-add type" disabled={busy} />
+			<WornInput id="work-quick-due" type="date" bind:value={due} aria-label="Quick-add due date" disabled={busy} />
+			<WornSelect id="work-quick-energy" bind:value={energy} aria-label="Quick-add energy" options={[{ value: '', label: 'Energy' }, ...ENERGY_OPTIONS]} disabled={busy} />
+			<WornInput id="work-quick-recurrence" bind:value={recurrence} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Recurrence" aria-label="Quick-add recurrence" aria-describedby="quick-create-details-help" disabled={busy} />
+			<WornInput id="work-quick-proof-target" class="quick-proof-input" bind:value={proofTarget} maxlength={1000} placeholder="What will prove this is done?" aria-label="Quick-add proof target" disabled={busy} />
+		</div>
+	</details>
+</form>
+
+<style>
+	.quick-create-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-block:8px 6px}
+	:global(.quick-create-input){flex:1;min-width:0}
+	.quick-create-row :global(.quick-create-submit){flex:0 0 auto;min-inline-size:max-content;white-space:nowrap}
+	.quick-create-options{grid-column:1 / -1;min-width:0}
+	.quick-create-options summary{align-items:center;color:var(--worn-text-secondary);cursor:pointer;display:flex;font-size:13px;font-weight:700;gap:8px;min-block-size:36px;width:max-content}
+	.quick-create-options summary span{color:var(--worn-text-muted);font-family:var(--font-typewriter);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+	.quick-create-details-help{color:var(--worn-text-muted);font-size:12px;margin:0 0 8px}
+	.quick-create-details-grid{display:grid;gap:8px;grid-template-columns:repeat(3,minmax(0,1fr))}
+	.quick-create-details-grid :global(.worn-input),.quick-create-details-grid :global(.worn-select){min-width:0;width:100%}
+	.quick-create-details-grid :global(.quick-proof-input){grid-column:1 / -1}
+	@media(max-width:500px){
+		.quick-create-row{margin-inline:4px}
+	}
+	@media(max-width:420px){
+		.quick-create-row{align-items:stretch}
+		.quick-create-row :global(.quick-create-submit){min-block-size:44px}
+		.quick-create-options summary{min-block-size:44px}
+		.quick-create-details-grid{grid-template-columns:minmax(0,1fr)}
+		.quick-create-details-grid :global(.quick-proof-input){grid-column:auto}
+	}
+</style>

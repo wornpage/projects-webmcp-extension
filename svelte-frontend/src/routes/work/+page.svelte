@@ -20,8 +20,6 @@
 		displayToast,
 		actionBusy,
 		pendingNextActionDrafts,
-		DEMO_WORK_TITLE_MAX_LENGTH,
-		createPack,
 		createDraftPacks
 	} from '$lib/demo-client';
 	import {
@@ -40,14 +38,13 @@
 		dueUrgency,
 		parseDateOnly,
 		PACK_ENERGIES,
-		ENERGY_OPTIONS,
 		recommendedDecisionWork,
 		receiptCells,
 		workTitle,
 		workflowLabel,
 		type DemoPack
 	} from '$lib/demo-workflow';
-	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAccordion, WornDialog, WornInput, WornSelect, WornAlert, WornKbd, WornTimeline, WornPage, WornReceipt } from '$lib/components';
+	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAccordion, WornDialog, WornAlert, WornKbd, WornTimeline, WornPage, WornReceipt } from '$lib/components';
 	import { buildActionUndoSnapshot, commitActionUndo, receiptUndo, undoReceipt } from '$lib/undo';
 	import { activityActor, activityEvidenceText, recentPackActivity, relativeActivityTime } from '$lib/activity';
 	import { localDateInputValue } from '$lib/local-date.mjs';
@@ -64,6 +61,7 @@
 	import WorkListCard from '$lib/components/WorkListCard.svelte';
 	import WorkDecisionWorkspace from './WorkDecisionWorkspace.svelte';
 	import WorkFilterControls from './WorkFilterControls.svelte';
+	import WorkQuickAdd from './WorkQuickAdd.svelte';
 	import {
 		WORK_SEARCH_TOOL_NAME,
 		WORK_DRAFT_TOOL_NAME,
@@ -155,16 +153,7 @@
 		.map((id) => packs.find((pack) => pack.id === id))
 		.filter((pack): pack is DemoPack => Boolean(pack)));
 	let snoozeDays = $state<Record<string, string>>({});
-	let quickTitle = $state('');
-	let quickProofTarget = $state('');
-	let quickOwner = $state('');
-	let quickArea = $state('');
-	let quickType = $state('');
-	let quickDue = $state('');
-	let quickEnergy = $state('');
-	let quickRecurrence = $state('');
-	let quickCreating = $state(false);
-	const QUICK_METADATA_MAX_LENGTH = 120;
+	let quickAddBusy = $state(false);
 	let sortBy = $state('urgency');
 	let renderLimit = $state(WORK_RENDER_LIMIT);
 
@@ -608,7 +597,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		}>;
 	};
 	async function createWorkerDraftsFromWebMcp(input: WorkerDraftInput) {
-		if (quickCreating || busyId) throw new Error('Worker draft creation is unavailable while Work is busy.');
+		if (quickAddBusy || busyId) throw new Error('Worker draft creation is unavailable while Work is busy.');
 		if (input.expectedWorkspaceCount !== packs.length) {
 			throw new Error('Workspace changed after the worker read it. Refresh Work and try again.');
 		}
@@ -827,56 +816,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			return;
 		}
 		goto(primaryCommandNavigation(pack));
-	}
-
-	function setHumanQuickTitle(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const nextTitle = input.value.slice(0, DEMO_WORK_TITLE_MAX_LENGTH);
-		input.value = nextTitle;
-		quickTitle = nextTitle;
-	}
-
-	async function quickCreate() {
-		const title = quickTitle.trim();
-		const proofTarget = quickProofTarget.trim();
-		const owner = quickOwner.trim() || (ownerFilter !== 'all' && ownerFilter !== '_unassigned' ? ownerFilter : '');
-		const area = quickArea.trim() || (areaFilter !== 'all' && areaFilter !== '_none' ? areaFilter : '');
-		const type = quickType.trim();
-		const due = quickDue.trim();
-		const energy = PACK_ENERGIES.includes(quickEnergy)
-			? quickEnergy
-			: energyFilter !== 'all' && PACK_ENERGIES.includes(energyFilter) ? energyFilter : '';
-		const recurrence = quickRecurrence.trim() || (recurrenceFilter !== 'all' ? recurrenceFilter : '');
-		if (!title || quickCreating) return;
-		quickCreating = true;
-		try {
-			await createPack({
-				title,
-				status: 'active',
-				next: 'Open',
-				doneWhen: proofTarget || undefined,
-				owner: owner || undefined,
-				area: area || undefined,
-				type: type || undefined,
-				due: due || undefined,
-				energy: energy || undefined,
-				recurrence: recurrence || undefined
-			});
-			quickTitle = '';
-			quickProofTarget = '';
-			quickOwner = '';
-			quickArea = '';
-			quickType = '';
-			quickDue = '';
-			quickEnergy = '';
-			quickRecurrence = '';
-		} catch (e) {
-			displayToast('Quick create failed', 'error');
-		} finally {
-			quickCreating = false;
-			// Re-focus the input after creation
-			setTimeout(() => document.querySelector<HTMLInputElement>('.quick-create-input')?.focus(), 0);
-		}
 	}
 
 	// A focus query scrolls to the card and focuses its title once.
@@ -1224,31 +1163,10 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		/>
 	{/if}
 
-	<form class="quick-create-row" aria-label="Quick add a work item" onsubmit={(e) => { e.preventDefault(); quickCreate(); }}>
-		<WornInput
-			class="quick-create-input"
-			maxlength={DEMO_WORK_TITLE_MAX_LENGTH}
-			bind:value={quickTitle}
-			oninput={setHumanQuickTitle}
-			placeholder="Quick-add a work item…"
-			aria-label="Quick-add a work item"
-			disabled={quickCreating}
-		/>
-		<WornButton class="quick-create-submit" data-work-quick-create-submit type="submit" variant="primary" size="sm" disabled={quickCreating || !quickTitle.trim()}>{quickCreating ? 'Adding…' : 'Add'}</WornButton>
-		<details class="quick-create-options">
-			<summary>Work details <span>Optional</span></summary>
-			<p class="quick-create-details-help" id="quick-create-details-help">Blank owner, area, energy, and recurrence fields inherit active Work filters when possible.</p>
-			<div class="quick-create-details-grid">
-				<WornInput id="work-quick-owner" bind:value={quickOwner} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Owner" aria-label="Quick-add owner" aria-describedby="quick-create-details-help" disabled={quickCreating} />
-				<WornInput id="work-quick-area" bind:value={quickArea} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Area" aria-label="Quick-add area" aria-describedby="quick-create-details-help" disabled={quickCreating} />
-				<WornInput id="work-quick-type" bind:value={quickType} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Type" aria-label="Quick-add type" disabled={quickCreating} />
-				<WornInput id="work-quick-due" type="date" bind:value={quickDue} aria-label="Quick-add due date" disabled={quickCreating} />
-				<WornSelect id="work-quick-energy" bind:value={quickEnergy} aria-label="Quick-add energy" options={[{ value: '', label: 'Energy' }, ...ENERGY_OPTIONS]} disabled={quickCreating} />
-				<WornInput id="work-quick-recurrence" bind:value={quickRecurrence} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Recurrence" aria-label="Quick-add recurrence" aria-describedby="quick-create-details-help" disabled={quickCreating} />
-				<WornInput id="work-quick-proof-target" class="quick-proof-input" bind:value={quickProofTarget} maxlength={1000} placeholder="What will prove this is done?" aria-label="Quick-add proof target" disabled={quickCreating} />
-			</div>
-		</details>
-	</form>
+	<WorkQuickAdd
+		filters={{ owner: ownerFilter, area: areaFilter, energy: energyFilter, recurrence: recurrenceFilter }}
+		bind:busy={quickAddBusy}
+	/>
 
 	{#each densityPanelTabs as densityTab (densityTab.id)}
 	<div
@@ -1373,16 +1291,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		border-color: var(--worn-accent) !important;
 		color: var(--worn-accent-text) !important;
 	}
-	.quick-create-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-block:8px 6px}
-	:global(.quick-create-input){flex:1;min-width:0}
-	.quick-create-row :global(.quick-create-submit){flex:0 0 auto;min-inline-size:max-content;white-space:nowrap}
-	.quick-create-options{grid-column:1 / -1;min-width:0}
-	.quick-create-options summary{align-items:center;color:var(--worn-text-secondary);cursor:pointer;display:flex;font-size:13px;font-weight:700;gap:8px;min-block-size:36px;width:max-content}
-	.quick-create-options summary span{color:var(--worn-text-muted);font-family:var(--font-typewriter);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
-	.quick-create-details-help{color:var(--worn-text-muted);font-size:12px;margin:0 0 8px}
-	.quick-create-details-grid{display:grid;gap:8px;grid-template-columns:repeat(3,minmax(0,1fr))}
-	.quick-create-details-grid :global(.worn-input),.quick-create-details-grid :global(.worn-select){min-width:0;width:100%}
-	.quick-create-details-grid :global(.quick-proof-input){grid-column:1 / -1}
 	@media(min-width:421px){
 		.demo-batch-bar {
 			align-items: center;
@@ -1399,14 +1307,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		.demo-batch-bar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-width:0}
 		.demo-batch-count{grid-column:1 / -1}
 		.demo-batch-bar :global(.worn-btn){min-width:0;width:100%}
-		.quick-create-row{align-items:stretch}
-		.quick-create-row :global(.quick-create-submit){min-block-size:44px}
-		.quick-create-options summary{min-block-size:44px}
-		.quick-create-details-grid{grid-template-columns:minmax(0,1fr)}
-		.quick-create-details-grid :global(.quick-proof-input){grid-column:auto}
-	}
-	@media(max-width:500px){
-		.quick-create-row{margin-inline:4px}
 	}
 	@media(max-width:700px){
 		:global(.demo-panel-head:has(.work-head-actions)){gap:8px;padding-block:7px}

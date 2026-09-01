@@ -29,6 +29,7 @@ const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/rou
 const workDeleteDialogSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WorkDeleteConfirmDialog.svelte'), 'utf8');
 const workFilterControlsSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkFilterControls.svelte'), 'utf8');
 const workDecisionWorkspaceSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkDecisionWorkspace.svelte'), 'utf8');
+const workQuickAddSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkQuickAdd.svelte'), 'utf8');
 const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
 const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
 const workListCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkListCard.svelte'), 'utf8');
@@ -668,26 +669,37 @@ test('custom workers create only bounded Draft-status work with visible human au
 });
 
 test('Quick Add stays available through the one createPack path in both Work densities', () => {
-	const formPattern = /<form class="quick-create-row"/gu;
-	assert.equal([...routeSource.matchAll(formPattern)].length, 1, 'Work renders one Quick Add form');
-	assert.match(routeSource, /<form\s+class="quick-create-row"[^>]*aria-label="Quick add a work item"/u);
-	const quickAddIndex = routeSource.indexOf('<form class="quick-create-row"');
+	assert.equal((routeSource.match(/<WorkQuickAdd/gu) ?? []).length, 1, 'Work renders one route-local Quick Add owner');
+	assert.equal((workQuickAddSource.match(/<form[\s\S]*?class="quick-create-row"/gu) ?? []).length, 1, 'Quick Add owns one form');
+	assert.match(workQuickAddSource, /<form[\s\S]*?class="quick-create-row"[^>]*aria-label="Quick add a work item"/u);
+	const quickAddIndex = routeSource.indexOf('<WorkQuickAdd');
 	const densityPanelsIndex = routeSource.indexOf('{#each densityPanelTabs');
 	assert.ok(quickAddIndex >= 0 && quickAddIndex < densityPanelsIndex, 'Quick Add is owned once outside the density panels');
-	assert.doesNotMatch(routeSource, /@media\(max-width:420px\)\{[\s\S]*?\.quick-create-row\{display:none\}/u);
-	const quickCreateSource = routeSource.match(/async function quickCreate\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	for (const field of ['quickProofTarget', 'quickOwner', 'quickArea', 'quickType', 'quickDue', 'quickEnergy', 'quickRecurrence']) {
-		assert.match(routeSource, new RegExp(`let ${field} = \\$state\\(''\\);`, 'u'));
+	assert.match(routeSource, /import WorkQuickAdd from '\.\/WorkQuickAdd\.svelte';[\s\S]*?let quickAddBusy = \$state\(false\);[\s\S]*?if \(quickAddBusy \|\| busyId\)[\s\S]*?<WorkQuickAdd[\s\S]*?filters=\{\{ owner: ownerFilter, area: areaFilter, energy: energyFilter, recurrence: recurrenceFilter \}\}[\s\S]*?bind:busy=\{quickAddBusy\}/u);
+	assert.match(routeSource, /\(e\.key === 'n' \|\| e\.key === 'c'\)[\s\S]*?document\.querySelector<HTMLInputElement>\('\.quick-create-input'\)[\s\S]*?input\.focus\(\)/u);
+	assert.doesNotMatch(workQuickAddSource, /@media\(max-width:420px\)\{[\s\S]*?\.quick-create-row\{display:none\}/u);
+	const quickCreateSource = workQuickAddSource.match(/async function quickCreate\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	for (const field of ['proofTarget', 'owner', 'area', 'type', 'due', 'energy', 'recurrence']) {
+		assert.match(workQuickAddSource, new RegExp(`let ${field} = \\$state\\(''\\);`, 'u'));
 	}
-	assert.match(quickCreateSource, /const proofTarget = quickProofTarget\.trim\(\);[\s\S]*?const owner = quickOwner\.trim\(\)[\s\S]*?const area = quickArea\.trim\(\)[\s\S]*?const type = quickType\.trim\(\);[\s\S]*?const due = quickDue\.trim\(\);[\s\S]*?PACK_ENERGIES\.includes\(quickEnergy\)[\s\S]*?const recurrence = quickRecurrence\.trim\(\)[\s\S]*?await createPack\(\{[\s\S]*?title,[\s\S]*?status: 'active',[\s\S]*?next: 'Open',[\s\S]*?doneWhen: proofTarget \|\| undefined,[\s\S]*?owner: owner \|\| undefined,[\s\S]*?area: area \|\| undefined,[\s\S]*?type: type \|\| undefined,[\s\S]*?due: due \|\| undefined,[\s\S]*?energy: energy \|\| undefined,[\s\S]*?recurrence: recurrence \|\| undefined/u);
-	for (const field of ['quickTitle', 'quickProofTarget', 'quickOwner', 'quickArea', 'quickType', 'quickDue', 'quickEnergy', 'quickRecurrence']) {
+	assert.match(quickCreateSource, /const normalizedProofTarget = proofTarget\.trim\(\);[\s\S]*?const normalizedOwner = owner\.trim\(\)[\s\S]*?const normalizedArea = area\.trim\(\)[\s\S]*?const normalizedType = type\.trim\(\);[\s\S]*?const normalizedDue = due\.trim\(\);[\s\S]*?PACK_ENERGIES\.includes\(energy\)[\s\S]*?const normalizedRecurrence = recurrence\.trim\(\)[\s\S]*?await createPack\(\{[\s\S]*?title: normalizedTitle,[\s\S]*?status: 'active',[\s\S]*?next: 'Open',[\s\S]*?doneWhen: normalizedProofTarget \|\| undefined,[\s\S]*?owner: normalizedOwner \|\| undefined,[\s\S]*?area: normalizedArea \|\| undefined,[\s\S]*?type: normalizedType \|\| undefined,[\s\S]*?due: normalizedDue \|\| undefined,[\s\S]*?energy: normalizedEnergy \|\| undefined,[\s\S]*?recurrence: normalizedRecurrence \|\| undefined/u);
+	assert.match(quickCreateSource, /normalizedOwner = owner\.trim\(\) \|\| \(filters\.owner !== 'all' && filters\.owner !== '_unassigned' \? filters\.owner : ''\)/u);
+	assert.match(quickCreateSource, /normalizedArea = area\.trim\(\) \|\| \(filters\.area !== 'all' && filters\.area !== '_none' \? filters\.area : ''\)/u);
+	assert.match(quickCreateSource, /normalizedEnergy = PACK_ENERGIES\.includes\(energy\)[\s\S]*?filters\.energy !== 'all' && PACK_ENERGIES\.includes\(filters\.energy\) \? filters\.energy : ''/u);
+	assert.match(quickCreateSource, /normalizedRecurrence = recurrence\.trim\(\) \|\| \(filters\.recurrence !== 'all' \? filters\.recurrence : ''\)/u);
+	assert.match(quickCreateSource, /if \(!normalizedTitle \|\| busy\) return;[\s\S]*?busy = true;[\s\S]*?try \{[\s\S]*?await createPack/u);
+	for (const field of ['title', 'proofTarget', 'owner', 'area', 'type', 'due', 'energy', 'recurrence']) {
 		assert.match(quickCreateSource, new RegExp(`${field} = '';`, 'u'));
 	}
-	assert.match(routeSource, /<summary>Work details <span>Optional<\/span><\/summary>[\s\S]*?Quick-add owner[\s\S]*?Quick-add area[\s\S]*?Quick-add type[\s\S]*?Quick-add due date[\s\S]*?Quick-add energy[\s\S]*?Quick-add recurrence[\s\S]*?Quick-add proof target/u);
+	assert.match(quickCreateSource, /await createPack\([\s\S]*?title = '';[\s\S]*?proofTarget = '';[\s\S]*?owner = '';[\s\S]*?area = '';[\s\S]*?type = '';[\s\S]*?due = '';[\s\S]*?energy = '';[\s\S]*?recurrence = '';[\s\S]*?\} catch \{[\s\S]*?displayToast\('Quick create failed', 'error'\);/u);
+	assert.equal((workQuickAddSource.match(/await createPack\(/gu) ?? []).length, 1);
+	assert.match(quickCreateSource, /finally \{[\s\S]*?busy = false;[\s\S]*?setTimeout\(\(\) => form\?\.querySelector<HTMLInputElement>\('\.quick-create-input'\)\?\.focus\(\), 0\);/u);
+	assert.match(workQuickAddSource, /<summary>Work details <span>Optional<\/span><\/summary>[\s\S]*?Quick-add owner[\s\S]*?Quick-add area[\s\S]*?Quick-add type[\s\S]*?Quick-add due date[\s\S]*?Quick-add energy[\s\S]*?Quick-add recurrence[\s\S]*?Quick-add proof target/u);
 	assert.match(workListCardSource, /\{#if pack\.energy \|\| pack\.location \|\| pack\.milestone \|\| pack\.doneWhen\}[\s\S]*?<dt>Proof target<\/dt><dd>\{pack\.doneWhen\}<\/dd>/u);
-	assert.match(routeSource, /\.quick-create-details-grid\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)[\s\S]*?@media\(max-width:420px\)[\s\S]*?\.quick-create-details-grid\{grid-template-columns:minmax\(0,1fr\)\}/u);
-	assert.match(routeSource, /@media\(max-width:500px\)\{\s*\.quick-create-row\{margin-inline:4px\}\s*\}/u);
+	assert.match(workQuickAddSource, /\.quick-create-details-grid\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)[\s\S]*?@media\(max-width:420px\)[\s\S]*?\.quick-create-details-grid\{grid-template-columns:minmax\(0,1fr\)\}/u);
+	assert.match(workQuickAddSource, /@media\(max-width:500px\)\{\s*\.quick-create-row\{margin-inline:4px\}\s*\}/u);
 	assert.doesNotMatch(quickCreateSource, /localStorage|saveBrowserState|fetch\(/u);
+	assert.doesNotMatch(routeSource, /async function quickCreate\(|await createPack\(|let quick(?:Title|ProofTarget|Owner|Area|Type|Due|Energy|Recurrence)\s*=|<form[^>]*quick-create-row|\.quick-create-row\{/u);
 	const createPackSource = demoClientSource.match(/export async function createPack[\s\S]*?\n\}\n\nfunction pathSignature/u)?.[0] ?? '';
 	assert.match(demoClientSource, /const CREATE_PACK_FIELDS = new Set\(\[[\s\S]*?'title',[\s\S]*?'status',[\s\S]*?'next',[\s\S]*?'blocker',[\s\S]*?'owner',[\s\S]*?'area',[\s\S]*?'type',[\s\S]*?'due',[\s\S]*?'energy',[\s\S]*?'recurrence',[\s\S]*?'purpose',[\s\S]*?'doneWhen'[\s\S]*?\]\);/u);
 	assert.match(createPackSource, /Object\.keys\(payload\)\.filter\(\(field\) => !CREATE_PACK_FIELDS\.has\(field\)\)\.sort\(\)[\s\S]*?Work creation does not support field/u);
@@ -713,14 +725,14 @@ test('Quick Add and the canonical create owner share one explicit title-length b
 		demoClientSource,
 		/export async function createPack[\s\S]*?const title = normalizeText\(payload\.title, DEMO_WORK_TITLE_MAX_LENGTH\);/u
 	);
-	assert.match(routeSource, /DEMO_WORK_TITLE_MAX_LENGTH,[\s\S]*?\} from '\$lib\/demo-client';/u);
+	assert.match(workQuickAddSource, /DEMO_WORK_TITLE_MAX_LENGTH,[\s\S]*?\} from '\$lib\/demo-client';/u);
 	assert.match(
-		routeSource,
-		/function setHumanQuickTitle\(event: Event\) \{[\s\S]*?const input = event\.currentTarget as HTMLInputElement;[\s\S]*?const nextTitle = input\.value\.slice\(0, DEMO_WORK_TITLE_MAX_LENGTH\);[\s\S]*?input\.value = nextTitle;[\s\S]*?quickTitle = nextTitle;[\s\S]*?\}/u
+		workQuickAddSource,
+		/function setHumanQuickTitle\(event: Event\) \{[\s\S]*?const input = event\.currentTarget as HTMLInputElement;[\s\S]*?const nextTitle = input\.value\.slice\(0, DEMO_WORK_TITLE_MAX_LENGTH\);[\s\S]*?input\.value = nextTitle;[\s\S]*?title = nextTitle;[\s\S]*?\}/u
 	);
 	assert.match(
-		routeSource,
-		/<WornInput[\s\S]*?class="quick-create-input"[\s\S]*?maxlength=\{DEMO_WORK_TITLE_MAX_LENGTH\}[\s\S]*?bind:value=\{quickTitle\}[\s\S]*?oninput=\{setHumanQuickTitle\}/u
+		workQuickAddSource,
+		/<WornInput[\s\S]*?class="quick-create-input"[\s\S]*?maxlength=\{DEMO_WORK_TITLE_MAX_LENGTH\}[\s\S]*?bind:value=\{title\}[\s\S]*?oninput=\{setHumanQuickTitle\}/u
 	);
 });
 
