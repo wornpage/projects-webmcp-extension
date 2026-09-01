@@ -448,7 +448,7 @@ function nextVerifiedEvidence(input) {
 }
 
 /** @param {NextVerifiedEvidence[]} evidence @param {NextEvidenceReference[]} references */
-function evidenceMatchesReferences(evidence, references) {
+export function evidenceMatchesReferences(evidence, references) {
 	return evidence.length === references.length && evidence.every((fact, index) => (
 		fact.work.id === references[index].workId &&
 		fact.field === references[index].field &&

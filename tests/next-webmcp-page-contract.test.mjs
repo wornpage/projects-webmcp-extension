@@ -12,6 +12,7 @@ import {
 	PREPARE_NEXT_ACTION_TOOL_NAME,
 	createCurrentNextEditorTool,
 	createPrepareNextActionTool,
+	evidenceMatchesReferences,
 	nextEditorPageView,
 	verifiedNextEvidenceNote,
 	verifyNextPreparationEvidence,
@@ -457,6 +458,11 @@ test('Next verifies exact live workspace facts and generates the evidence note i
 			value: 'Done'
 		}
 	]);
+	assert.equal(evidenceMatchesReferences(verified, references), true);
+	assert.equal(evidenceMatchesReferences(verified, references.slice(0, 1)), false);
+	assert.equal(evidenceMatchesReferences(verified, [references[1], references[0]]), false);
+	assert.equal(evidenceMatchesReferences(verified, [{ ...references[0], field: 'workflow' }, references[1]]), false);
+	assert.equal(evidenceMatchesReferences(verified, [{ ...references[0], expectedValue: 'Storage bins arrived' }, references[1]]), false);
 	assert.equal(
 		verifiedNextEvidenceNote(verified),
 		'Garage reset: sort shelves — Blocker: Waiting on storage bins. Garage reset: clear the floor — Workflow: Done.'
@@ -560,6 +566,9 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /let currentNextEditor = \$derived\.by\(\(\) => \{[\s\S]*?return nextEditorPageView\(\{[\s\S]*?work: \{ id: pack\.id,[\s\S]*?presetChoices: NEXT_ACTION_CHOICES,[\s\S]*?editor:[\s\S]*?preview:[\s\S]*?preparationReceipt: preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME \? preparationReceipt : null,[\s\S]*?canSave:[\s\S]*?busy/u);
 	assert.match(routeSource, /function setNextEditorChoice\(nextChoice: string, mode: NextEditorMode,[\s\S]*?choice = nextChoice;[\s\S]*?showingCustom = mode === 'custom';[\s\S]*?customValue = nextChoice/u);
 	assert.match(routeSource, /async function prepareNextActionFromWebMcp[\s\S]*?if \(busy\)[\s\S]*?currentNextEditor[\s\S]*?verifyNextPreparationEvidence\([\s\S]*?workflowLabel[\s\S]*?blockerText[\s\S]*?verifiedNextEvidenceNote[\s\S]*?expectedMode[\s\S]*?expectedChoice[\s\S]*?stale[\s\S]*?evidenceNote[\s\S]*?workspaceChanged: false[\s\S]*?requiresHumanSave: true[\s\S]*?const focusReceipt = focusAndPulse\([\s\S]*?requireVisibleFocus: true[\s\S]*?focus: \{ id: NEXT_PREPARATION_RECEIPT_ID, \.\.\.focusReceipt \}[\s\S]*?next: currentNextEditor/u);
+	assert.match(routeSource, /evidenceMatchesReferences,[\s\S]*?from '\.\/next-webmcp\.mjs';[\s\S]*?const receiptAlreadyDesired[\s\S]*?evidenceMatchesReferences\(preparationReceipt\.evidence, input\.evidence\)/u);
+	assert.match(helperSource, /export function evidenceMatchesReferences\(evidence, references\) \{[\s\S]*?fact\.work\.id === references\[index\]\.workId[\s\S]*?fact\.field === references\[index\]\.field[\s\S]*?fact\.value === references\[index\]\.expectedValue/u);
+	assert.doesNotMatch(routeSource, /function evidenceMatchesReceipt/u);
 	assert.match(routeSource, /stopNextWebMcp = registerPageTools\(document, \[[\s\S]*?createCurrentNextEditorTool\(\(\) => currentNextEditor\),[\s\S]*?createPrepareNextActionTool\(prepareNextActionFromWebMcp, \{[\s\S]*?capture: captureNextPreparationSnapshot,[\s\S]*?restore: restoreNextPreparationSnapshot[\s\S]*?\}\)[\s\S]*?\], \{[\s\S]*?onResult: \(\{ toolName, result \}\)[\s\S]*?toolName !== PREPARE_NEXT_ACTION_TOOL_NAME[\s\S]*?id: 'next-proposal'[\s\S]*?summary: `Unsaved · \$\{outcome\.next\.preparationReceipt\.preparedAction\}`[\s\S]*?\}\);/u);
 	assert.match(routeSource, /return \(\) => \{\s*stopNextWebMcp\?\.\(\);\s*stopNextWebMcp = null;\s*clearPreparation\(\);\s*\};/u);
 	assert.doesNotMatch(routeSource, /webMcpReadReceipt|recordNextWebMcpResult|clearFailedNextWebMcpReceipt/u);

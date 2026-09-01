@@ -59,6 +59,7 @@
 		PREPARE_NEXT_ACTION_TOOL_NAME,
 		createCurrentNextEditorTool,
 		createPrepareNextActionTool,
+		evidenceMatchesReferences,
 		nextEditorPageView,
 		verifiedNextEvidenceNote,
 		verifyNextPreparationEvidence,
@@ -414,7 +415,7 @@ let showingCustom = $state(false);
 		const alreadyDesired = current.editor.mode === desiredMode && current.editor.choice === input.choice;
 		const receiptAlreadyDesired = preparationReceipt?.preparedAction === input.choice &&
 			preparationReceipt.evidenceNote === evidenceNote &&
-			evidenceMatchesReceipt(preparationReceipt.evidence, input.evidence) &&
+			evidenceMatchesReferences(preparationReceipt.evidence, input.evidence) &&
 			preparationReceipt.work.id === current.work.id;
 		const matchesExpected = current.editor.mode === input.expectedMode && current.editor.choice === input.expectedChoice;
 		if (!alreadyDesired && !matchesExpected) {
@@ -459,17 +460,6 @@ let showingCustom = $state(false);
 			focus: { id: NEXT_PREPARATION_RECEIPT_ID, ...focusReceipt },
 			next: currentNextEditor
 		};
-	}
-
-	function evidenceMatchesReceipt(
-		verifiedEvidence: NextVerifiedEvidence[],
-		references: NextEvidenceReference[]
-	) {
-		return verifiedEvidence.length === references.length && verifiedEvidence.every((fact, index) => (
-			fact.work.id === references[index].workId &&
-			fact.field === references[index].field &&
-			fact.value === references[index].expectedValue
-		));
 	}
 
 	async function discardPreparation() {
