@@ -134,6 +134,8 @@ test('Work O shortcut names its exact Next editor destination', () => {
 		routeSource.indexOf('\n\t// Pin and reaction controls')
 	);
 	assert.match(cardKeys, /if \(\(e\.key === 'o' \|\| e\.key === 'O'\)[\s\S]*?selectPack\(pack\);/u);
+	assert.match(cardKeys, /const cards = document\.querySelectorAll\('\[data-work-item\]\[data-pack-id\]'\);/u);
+	assert.doesNotMatch(`${routeSource}\n${demoCssSource}`, /demo-landing-card/u);
 	assert.match(selectionOwner, /goto\(`\/next\?pack=\$\{encodeURIComponent\(pack\.id\)\}`\);/u);
 	assert.match(workShortcutHelpSource, /<WornKbd keys=\{\['O'\]\} \/><\/dt><dd>Open next-action editor<\/dd>/u);
 	assert.doesNotMatch(workShortcutHelpSource, /<WornKbd keys=\{\['O'\]\} \/><\/dt><dd>Open details<\/dd>/u);

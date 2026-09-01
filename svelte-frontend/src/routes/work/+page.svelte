@@ -475,9 +475,8 @@ let shortcutHelpOpen = $state(false);
 
 function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
   if (e.target !== e.currentTarget) return;
-  // Grid is the default density — omitting .demo-grid-card left arrow-nav and
-  // the d/b/o/space shortcuts dead on the view most people actually see.
-  const cards = document.querySelectorAll('.demo-landing-card, .demo-work-card, .demo-grid-card');
+  // Both Work densities expose the same canonical focus and identity selector.
+  const cards = document.querySelectorAll('[data-work-item][data-pack-id]');
   if (!cards.length) return;
   const current = Array.from(cards).indexOf(document.activeElement as Element);
   if (e.key === 'ArrowDown') { e.preventDefault(); const next = (current + 1) % cards.length; (cards[next] as HTMLElement)?.focus(); focusedIndex = next; return; }

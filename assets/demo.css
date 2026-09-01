@@ -326,70 +326,6 @@ h3,
   color: var(--worn-text-muted);
 }
 
-.demo-landing-card {
-  background: var(--worn-surface);
-  border: 1px solid transparent;
-  border-radius: var(--worn-radius);
-  box-shadow: var(--worn-shadow-sm);
-  padding: 16px 18px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  transition:
-    box-shadow 0.12s ease,
-    border-color 0.12s ease;
-}
-.demo-landing-card.is-attention {
-  box-shadow: inset 3px 0 0 var(--worn-warning-text, #c18642);
-  border-color: var(--worn-border);
-}
-.demo-landing-card.is-done {
-  border-color: var(--worn-success-border);
-  box-shadow: inset 3px 0 0 var(--worn-success-border);
-}
-.demo-landing-card .lp-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.demo-landing-card .lp-card-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--worn-text);
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-}
-.demo-landing-card .lp-card-meta {
-  display: flex;
-  font-family: var(--font-typewriter);
-  gap: 8px;
-  font-size: 12px;
-  color: var(--worn-text-muted);
-}
-.demo-landing-card .lp-command {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.demo-landing-card .lp-command span {
-  font-family: var(--font-typewriter);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0;
-  color: var(--worn-text-muted);
-}
-.demo-landing-card .lp-command strong {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--worn-text);
-}
 .lp-pill {
   display: inline-block;
   font-size: 10px;
@@ -825,8 +761,7 @@ h3,
 
 .demo-work-card:active,
 .demo-review-card:active,
-.demo-row:active,
-.demo-landing-card:active {
+.demo-row:active {
   box-shadow: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
   transition-duration: 0.1s;
 }
@@ -1470,7 +1405,7 @@ h3,
 
 
   .demo-main { padding: 0 6px; overflow-x: hidden; max-width: 100%; }
-  .demo-work-card,.demo-landing-card { padding: 8px 10px; max-width: 100%; }
+  .demo-work-card { padding: 8px 10px; max-width: 100%; }
   .demo-card-title {
     align-items: center;
     box-sizing: border-box;
@@ -1539,11 +1474,6 @@ h3,
     text-decoration: underline;
     text-decoration-thickness: 2px;
     text-underline-offset: 4px;
-  }
-
-  .demo-landing-card:hover {
-    border-color: var(--worn-border-strong);
-    box-shadow: var(--worn-shadow-md);
   }
 
   .demo-panel:not(.demo-list-panel):hover {
