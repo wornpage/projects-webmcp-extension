@@ -31,6 +31,29 @@ export function upsertPendingDraft(state, draft) {
 		: pending.map((item, itemIndex) => itemIndex === index ? structuredClone(draft) : item);
 }
 
+/**
+ * @template {{ id: string }} TPack
+ * @param {{ packs: TPack[], pendingNextActionDrafts?: PendingDraft[] }} state
+ * @param {{ workId: string, choice: string, mode: 'preset' | 'custom' }} revision
+ * @param {(pack: TPack) => PendingProjection} projectPack
+ * @returns {PendingDraft}
+ */
+export function revisePendingDraftChoice(state, { workId, choice, mode }, projectPack) {
+	const current = (state.pendingNextActionDrafts || []).find((draft) => draft.workId === workId) || null;
+	const draft = {
+		workId,
+		choice,
+		mode,
+		evidenceNote: current ? current.evidenceNote : 'Human-created draft; approval remains human-owned.',
+		evidence: current ? structuredClone(current.evidence) : [],
+		originFingerprint: current ? current.originFingerprint : '',
+		source: current ? current.source : 'human'
+	};
+	if (!current) draft.originFingerprint = pendingDraftFingerprint(state, draft, projectPack);
+	upsertPendingDraft(state, draft);
+	return draft;
+}
+
 /** @param {PendingDraftContainer} state @param {string} workId @param {PendingDraft | null} priorDraft @returns {void} */
 export function restorePendingDraft(state, workId, priorDraft) {
 	if (priorDraft) upsertPendingDraft(state, priorDraft);

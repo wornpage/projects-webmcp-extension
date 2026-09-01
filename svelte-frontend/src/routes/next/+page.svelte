@@ -8,6 +8,7 @@
 		refreshDemoState,
 		setPackNextAction,
 		savePendingNextActionDraft,
+		revisePendingNextActionDraftChoice,
 		discardPendingNextActionDraft,
 		restorePendingNextActionDraft,
 		pendingNextActionDraftFor,
@@ -106,22 +107,20 @@
 		customValue: string;
 		showingCustom: boolean;
 		preparationReceipt: PreparationReceipt | null;
-	preparationPreviousEditor: EditorSnapshot | null;
-	savedNextReceipt: SavedNextReceipt | null;
-	pendingDraft: PendingNextActionDraft | null;
-	invocationWorkId: string;
-	preparationToolName: string;
-	preparationInFlight: boolean;
+		preparationPreviousEditor: EditorSnapshot | null;
+		savedNextReceipt: SavedNextReceipt | null;
+		pendingDraft: PendingNextActionDraft | null;
+		invocationWorkId: string;
+		preparationInFlight: boolean;
 	};
 
 	let chosenPackId = $state('');
 	let choice = $state('');
-let customValue = $state('');
-let showingCustom = $state(false);
+	let customValue = $state('');
+	let showingCustom = $state(false);
 	let busy = $state(false);
 	let errorText = $state('');
 	let preparationReceipt = $state<PreparationReceipt | null>(null);
-	let preparationToolName = $state('');
 	let preparationInFlight = $state(false);
 	let preparationPreviousEditor = $state<EditorSnapshot | null>(null);
 	let savedNextReceipt = $state<SavedNextReceipt | null>(null);
@@ -190,7 +189,7 @@ let showingCustom = $state(false);
 				blocker: hasBlocker(preview) ? blockerText(preview) : null,
 				nextAction: effectiveChoice || 'Not set'
 			},
-			preparationReceipt: preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME ? preparationReceipt : null,
+			preparationReceipt: preparationReceipt && pendingDraft?.source === 'webmcp' ? preparationReceipt : null,
 			canSave: Boolean(effectiveChoice) && !busy && Boolean(pendingDraft) && !pendingDraftStale,
 			staleReason: pendingDraftStale ? 'Draft is stale. Refresh the evidence and prepare it again before approval.' : pendingDraft ? null : 'No pending draft. Choose an action to create one before approval.',
 			busy
@@ -232,7 +231,6 @@ let showingCustom = $state(false);
 		], {
 			onResult: ({ toolName, result }) => {
 				if (toolName !== PREPARE_NEXT_ACTION_TOOL_NAME) return;
-				preparationToolName = toolName;
 				const outcome = result as {
 					next: {
 						preparationReceipt: {
@@ -306,7 +304,6 @@ let showingCustom = $state(false);
 
 	function clearPreparation() {
 		preparationReceipt = null;
-		preparationToolName = '';
 		preparationPreviousEditor = null;
 	}
 
@@ -337,7 +334,6 @@ let showingCustom = $state(false);
 			savedNextReceipt,
 			pendingDraft: pendingDraft ? structuredClone(pendingDraft) : null,
 			invocationWorkId: pack?.id || '',
-			preparationToolName,
 			preparationInFlight
 		};
 	}
@@ -349,7 +345,6 @@ let showingCustom = $state(false);
 		preparationReceipt = clonePreparationReceipt(snapshot.preparationReceipt);
 		preparationPreviousEditor = snapshot.preparationPreviousEditor ? { ...snapshot.preparationPreviousEditor } : null;
 		savedNextReceipt = snapshot.savedNextReceipt;
-		preparationToolName = snapshot.preparationToolName;
 		preparationInFlight = snapshot.preparationInFlight;
 		if (snapshot.invocationWorkId) await restorePendingNextActionDraft(snapshot.invocationWorkId, snapshot.pendingDraft);
 	}
@@ -368,15 +363,7 @@ let showingCustom = $state(false);
 		setNextEditorChoice(boundedChoice, mode);
 		preparationPreviousEditor = savedEditorBaseline(pack);
 		if (!pack?.id || !pendingChoice) return;
-		void savePendingNextActionDraft({
-			workId: pack.id,
-			choice: pendingChoice,
-			mode,
-			evidenceNote: 'Human-created draft; approval remains human-owned.',
-			evidence: [],
-			originFingerprint: pendingDraftFingerprint($demoState!, { workId: pack.id, choice: pendingChoice, mode, evidenceNote: '', evidence: [], originFingerprint: 'pending', source: 'human' }),
-			source: 'human'
-		});
+		void revisePendingNextActionDraftChoice(pack.id, pendingChoice, mode);
 	}
 
 	$effect(() => {
@@ -396,7 +383,6 @@ let showingCustom = $state(false);
 		if (!draft || !shouldHydratePendingDraft({ preparationInFlight, pendingDraft: draft, visibleWorkId: pack?.id || '', preparationReceipt })) return;
 		preparationPreviousEditor = savedEditorBaseline(pack);
 		preparationReceipt = preparationFromPending(draft);
-		preparationToolName = draft.source === 'webmcp' ? PREPARE_NEXT_ACTION_TOOL_NAME : '';
 		setNextEditorChoice(draft.choice, draft.mode, false);
 	});
 
@@ -451,7 +437,7 @@ let showingCustom = $state(false);
 			workspaceChanged: false,
 			requiresHumanSave: true
 		};
-		preparationToolName = PREPARE_NEXT_ACTION_TOOL_NAME;
+		await savePendingNextActionDraft(pending);
 		await tick();
 		const target = document.getElementById(NEXT_PREPARATION_RECEIPT_ID);
 		if (!(target instanceof HTMLElement)) throw new Error('Prepare next action could not find its visible preview.');
@@ -461,7 +447,6 @@ let showingCustom = $state(false);
 			requireVisibleFocus: true
 		});
 		if (!currentNextEditor) throw new Error('Prepare next action could not verify the visible editor.');
-		await savePendingNextActionDraft(pending);
 		preparationInFlight = false;
 		return {
 			changed: !alreadyDesired || !receiptAlreadyDesired,
@@ -471,11 +456,11 @@ let showingCustom = $state(false);
 	}
 
 	async function discardPreparation() {
-		const wasWebMcpPreparation = preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME;
+		const consumedDraft = pendingDraft;
 		const previous = preparationPreviousEditor;
 		if (pack?.id) await discardPendingNextActionDraft(pack.id);
 		clearPreparation();
-		if (wasWebMcpPreparation) {
+		if (consumedDraft?.source === 'webmcp') {
 			recordWebMcpHandoffStep({
 				id: 'human-decision',
 				title: 'Human decision',
@@ -517,15 +502,13 @@ let showingCustom = $state(false);
 		if (saveFocusFrame !== null) cancelAnimationFrame(saveFocusFrame);
 		saveFocusFrame = null;
 		try {
-			const wasWebMcpPreparation = preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME;
-			const result = pendingDraft
-				? await setPackNextAction(pack.id)
-				: null;
-			if (!result) throw new ChallengeStateError('Create a pending draft before approval.');
+			const consumedDraft = pendingDraft;
+			if (!consumedDraft) throw new ChallengeStateError('Create a pending draft before approval.');
+			const result = await setPackNextAction(pack.id);
 			const summary = result?.receipt?.summary || `Next action saved: ${effectiveChoice}.`;
 			savedNextReceipt = { summary, pack: result.pack };
 			clearPreparation();
-			if (wasWebMcpPreparation) {
+			if (consumedDraft.source === 'webmcp') {
 				recordWebMcpHandoffStep({
 					id: 'human-decision',
 					title: 'Human decision',
@@ -585,12 +568,12 @@ let showingCustom = $state(false);
 		{#if errorText}
 			<WornAlert tone="danger" dismissible dismissLabel="Dismiss next-action error">{errorText}</WornAlert>
 		{/if}
-		{#if preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME}
+		{#if preparationReceipt && pendingDraft?.source === 'webmcp'}
 			<WebMcpActivityStrip
 				id={NEXT_PREPARATION_RECEIPT_ID}
 				route="next"
 				outcome="Draft prepared — waiting for your approval."
-				toolName={preparationToolName}
+				toolName={PREPARE_NEXT_ACTION_TOOL_NAME}
 				cells={preparationCells}
 			/>
 		{:else if pendingDraft?.source === 'human'}

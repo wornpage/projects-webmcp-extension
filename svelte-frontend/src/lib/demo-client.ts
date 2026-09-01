@@ -25,7 +25,7 @@ import {
 	unblockPacksBlockedBy,
 	unblockedReceiptSentence
 } from './workflow-rules.mjs';
-import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, hydrateSerializedState, pendingDraftFingerprint as fingerprintPendingDraft, resetPersistedState, restorePendingDraft, upsertPendingDraft } from './pending-next-action.mjs';
+import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, hydrateSerializedState, pendingDraftFingerprint as fingerprintPendingDraft, resetPersistedState, restorePendingDraft, revisePendingDraftChoice, upsertPendingDraft } from './pending-next-action.mjs';
 
 const STORAGE_KEY = 'projects-webmcp-challenge-state-v1';
 const SEED_URL = '/data/demo-packs.json';
@@ -157,6 +157,16 @@ export async function savePendingNextActionDraft(draft: PendingNextActionDraft):
 	if (!isPendingNextActionDraft(draft)) throw new ChallengeStateError('Pending approval draft is invalid.');
 	return saveBrowserState((state) => {
 		upsertPendingDraft(state, draft);
+	});
+}
+
+export async function revisePendingNextActionDraftChoice(
+	workId: string,
+	choice: string,
+	mode: 'preset' | 'custom'
+): Promise<DemoState | null> {
+	return saveBrowserState((state) => {
+		revisePendingDraftChoice(state, { workId, choice, mode }, pendingPackProjection);
 	});
 }
 
