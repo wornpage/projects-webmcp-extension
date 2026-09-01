@@ -169,6 +169,7 @@ test('Svelte prerender validates one static adapter and no server output', () =>
 test('static mode identifies its bounded routes without production fallbacks', () => {
 	const landing = readFileSync(path.join(root, 'landing.html'), 'utf8');
 	const landingScript = readFileSync(path.join(root, 'assets', 'landing.js'), 'utf8');
+	const landingCss = readFileSync(path.join(root, 'assets', 'landing.css'), 'utf8');
 	const demoCss = readFileSync(path.join(root, 'assets', 'demo.css'), 'utf8');
 	const app = readFileSync(path.join(root, 'svelte-frontend', 'src', 'app.html'), 'utf8');
 	const headers = readFileSync(path.join(root, 'svelte-frontend', 'static', '_headers'), 'utf8');
@@ -180,6 +181,11 @@ test('static mode identifies its bounded routes without production fallbacks', (
 		assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive"/u);
 	}
 	assert.match(landing, /href="\/work"/u);
+	assert.match(landing, /href="assets\/landing\.css"/u);
+	assert.doesNotMatch(landing, /href="assets\/demo\.css"/u);
+	assert.match(landing, /lp-pill lp-pill-warn[\s\S]*?lp-pill lp-pill-accent[\s\S]*?lp-pill lp-pill-muted/u);
+	assert.match(landingCss, /\.lp-pill\s*\{[\s\S]*?\.lp-pill-warn[\s\S]*?\.lp-pill-accent[\s\S]*?\.lp-pill-muted/u);
+	assert.doesNotMatch(demoCss, /\.lp-pill/u);
 	assert.match(landing, /href="\/review\?tour=landing"/u);
 	assert.match(landing, /<a class="lp-skip" href="#main-content">Skip to main content<\/a>/u);
 	assert.match(landing, /<main id="main-content" tabindex="-1">/u);

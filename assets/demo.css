@@ -326,14 +326,6 @@ h3,
   color: var(--worn-text-muted);
 }
 
-.lp-pill {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 730;
-  letter-spacing: 0;
-  padding: 2px 8px;
-}
-
 .section-label {
   color: var(--worn-text-muted);
   display: block;
