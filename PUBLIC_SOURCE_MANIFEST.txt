@@ -66,6 +66,7 @@ svelte-frontend/src/routes/next/NextCandidatePicker.svelte
 svelte-frontend/src/routes/priority/+page.svelte
 svelte-frontend/src/routes/priority/priority-webmcp.mjs
 svelte-frontend/src/routes/review/+page.svelte
+svelte-frontend/src/routes/review/review-queue.ts
 svelte-frontend/src/routes/review/review-webmcp.mjs
 svelte-frontend/src/routes/webmcp-challenge/+page.svelte
 svelte-frontend/src/routes/webmcp-challenge/webmcp-challenge-webmcp.mjs

@@ -46,16 +46,18 @@
 		dueUrgency,
 		dueDateLabel,
 		workflowCardClass,
-		buildStandupText as buildReviewSummaryText,
 		receiptCells,
-		preferredReviewPack,
 		isMissingOwnerValue,
 		ownerLabel,
-		summarizeReviewQueue,
 		workTitle,
-		type DemoPack,
-		type ReviewSubFilter
+		type DemoPack
 	} from '$lib/demo-workflow';
+	import {
+		buildStandupText as buildReviewSummaryText,
+		preferredReviewPack,
+		summarizeReviewQueue,
+		type ReviewSubFilter
+	} from './review-queue';
 
 	let query = $state('');
 	let busyId = $state('');

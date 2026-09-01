@@ -23,6 +23,7 @@ const nextRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src
 const nextCandidatePickerSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/NextCandidatePicker.svelte'), 'utf8');
 const workRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
+const reviewQueueSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-queue.ts'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
@@ -80,11 +81,12 @@ test('one Review selector excludes terminal work and includes explicit Review ac
 		seedPacks.filter((pack) => pack.status === 'active' && pack.next === 'Review').map((pack) => pack.id),
 		['garage-reset-choose-bike-rack', 'garden-study-choose-followup-sample']
 	);
-	assert.match(workflowSource, /export function preferredReviewPack[\s\S]*?packs\.find\(isReview\)/u);
+	assert.match(reviewQueueSource, /export function preferredReviewPack[\s\S]*?packs\.find\(isReview\)/u);
 	assert.match(workflowSource, /filter === 'review'\s*\? isReview\(pack\)/u);
-	assert.match(workflowSource, /const reviewTotal = packs\.filter\(isReview\)\.length;[\s\S]*?filterPacks\(packs, 'review', query\)/u);
-	assert.match(workflowSource, /export function buildStandupText[\s\S]*?const review = packs\.filter\(isReview\);/u);
-	assert.match(routeSource, /summarizeReviewQueue\(packs, query, reviewSubFilter\)[\s\S]*?preferredReviewPack\(list\)/u);
+	assert.match(reviewQueueSource, /const reviewTotal = packs\.filter\(isReview\)\.length;[\s\S]*?filterPacks\(packs, 'review', query\)/u);
+	assert.match(reviewQueueSource, /export function buildStandupText[\s\S]*?const review = packs\.filter\(isReview\);/u);
+	assert.match(routeSource, /from '\.\/review-queue';[\s\S]*?summarizeReviewQueue\(packs, query, reviewSubFilter\)[\s\S]*?preferredReviewPack\(list\)/u);
+	assert.doesNotMatch(workflowSource, /ReviewSubFilter|ReviewQueueSummary|preferredReviewPack|summarizeReviewQueue|buildStandupText/u);
 	assert.match(nextCandidatePickerSource, /let candidates = \$derived\(packs\.filter\(isReview\)\.filter\(\(candidate\) => candidate\.id !== currentPackId\)\);/u);
 	assert.match(workRouteSource, /if \(isReview\(pack\)\) next\.review \+= 1;/u);
 	assert.doesNotMatch(`${routeSource}\n${nextRouteSource}\n${nextCandidatePickerSource}\n${workRouteSource}`, /(?:review|candidate)[^\n]*status\s*!==?\s*'done'/u);
