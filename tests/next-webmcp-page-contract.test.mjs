@@ -633,7 +633,8 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(demoClientSource, /export async function discardPendingNextActionDraft[\s\S]*?saveBrowserState[\s\S]*?discardPendingDraft\(state, workId\);/u);
 	assert.match(demoClientSource, /export async function setPackNextAction\(workId: string\)[\s\S]*?const written = await saveBrowserState\([\s\S]*?approvePendingDraft\(state, workId,[\s\S]*?nextPath: nextChoiceForwardPath/u);
 	assert.doesNotMatch(demoClientSource, /approvePendingNextActionDraft/u);
-	assert.match(pendingStateSource, /export function pendingDraftFingerprint[\s\S]*?export function approvePendingDraft[\s\S]*?pendingDraftFingerprint\(state, draft, projectPack\)[\s\S]*?Object\.assign\(pack, nextPath\(pack, draft\.choice\)\);[\s\S]*?discardPendingDraft\(state, workId\);/u);
+	assert.match(pendingStateSource, /export function pendingDraftFingerprint[\s\S]*?export function approvePendingDraft[\s\S]*?const draft = \(state\.pendingNextActionDrafts \|\| \[\]\)\.find\(\(candidate\) => candidate\.workId === workId\) \|\| null;[\s\S]*?if \(!draft\) throw new Error\('Pending approval draft was not found\.'\);[\s\S]*?pendingDraftFingerprint\(state, draft, projectPack\)[\s\S]*?Object\.assign\(pack, nextPath\(pack, draft\.choice\)\);[\s\S]*?discardPendingDraft\(state, workId\);/u);
+	assert.doesNotMatch(pendingStateSource, /export function pendingDraftFor|pendingDraftFor\(/u);
 	assert.match(demoClientSource, /export async function resetDemoSampleState[\s\S]*?resetPersistedState\([\s\S]*?remove: \(\) => localStorage\.removeItem\(STORAGE_KEY\),[\s\S]*?loadSeed: loadSeedState,[\s\S]*?install: replaceDemoState/u);
 	assert.match(routeSource, /pendingNextActionDraftFor\(\$demoState, visiblePackId\)[\s\S]*?pendingDraftFingerprint\(\$demoState!, pendingDraft\)/u);
 	assert.match(routeSource, /invocation\.markMutated\(\);[\s\S]*?if \(!currentNextEditor\)[\s\S]*?await savePendingNextActionDraft\(pending\);/u);
@@ -677,6 +678,7 @@ test('pending draft state operation atomically approves, rejects stale drafts, a
 	const project = (pack) => ({ title: pack.title, workflow: pack.status, blocker: pack.blocker || 'None', next: pack.next || '' });
 	const state = { packs: [{ id: 'a', title: 'A', status: 'active', blocker: '', next: 'Open' }, { id: 'b', title: 'B', status: 'blocked', blocker: 'Waiting', next: 'Review' }], pendingNextActionDrafts: [] };
 	const draft = { workId: 'a', choice: 'Start', mode: 'preset', evidenceNote: 'A', evidence: [{ workId: 'a', field: 'workflow', expectedValue: 'active' }], originFingerprint: '', source: 'human' };
+	assert.throws(() => approvePendingDraft(state, 'missing', { projectPack: project, nextPath: () => ({}) }), /Pending approval draft was not found/u);
 	draft.originFingerprint = pendingDraftFingerprint(state, draft, project);
 	state.pendingNextActionDrafts.push(structuredClone(draft));
 	const beforePrepare = structuredClone(state.packs);

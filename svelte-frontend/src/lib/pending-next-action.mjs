@@ -17,11 +17,6 @@ export function pendingDraftFingerprint(state, draft, projectPack) {
 	});
 }
 
-/** @param {PendingDraftContainer} state @param {string} workId @returns {PendingDraft | null} */
-export function pendingDraftFor(state, workId) {
-	return (state.pendingNextActionDrafts || []).find((draft) => draft.workId === workId) || null;
-}
-
 /** @param {PendingDraftContainer} state @param {string} workId @returns {void} */
 export function discardPendingDraft(state, workId) {
 	state.pendingNextActionDrafts = (state.pendingNextActionDrafts || []).filter((draft) => draft.workId !== workId);
@@ -81,7 +76,7 @@ export async function resetPersistedState({ remove, loadSeed, install }) {
 
 /** @template {{ id: string }} TPack @param {{ packs: TPack[], pendingNextActionDrafts?: PendingDraft[] }} state @param {string} workId @param {{ projectPack: (pack: TPack) => PendingProjection, nextPath: (pack: TPack, choice: string) => Partial<TPack> }} options @returns {{ pack: TPack, draft: PendingDraft }} */
 export function approvePendingDraft(state, workId, { projectPack, nextPath }) {
-	const draft = pendingDraftFor(state, workId);
+	const draft = (state.pendingNextActionDrafts || []).find((candidate) => candidate.workId === workId) || null;
 	if (!draft) throw new Error('Pending approval draft was not found.');
 	if (pendingDraftFingerprint(state, draft, projectPack) !== draft.originFingerprint) {
 		throw new Error('Draft is stale. Refresh the evidence and prepare it again before approval.');
