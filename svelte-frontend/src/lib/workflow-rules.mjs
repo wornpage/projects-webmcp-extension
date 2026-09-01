@@ -119,10 +119,6 @@ function forwardPathStatusForBlocker(status, blocker, next = '') {
 	return isUnblockedBlockerValue(blocker) ? 'active' : 'blocked';
 }
 
-function blockedByBlockerText(targetPack, workTitle) {
-	return normalizeText(`waiting on ${workTitle(targetPack)}`, 200);
-}
-
 function packActionEffect(pack, action) {
 	if (action === 'start') {
 		return {
@@ -243,7 +239,6 @@ export {
 	LOCAL_PACK_ACTIONS,
 	STATE_FILTERS,
 	VALID_PACK_STATUSES,
-	blockedByBlockerText,
 	formatActivityEntry,
 	forwardPathStatusForBlocker,
 	isPlaceholderNext,

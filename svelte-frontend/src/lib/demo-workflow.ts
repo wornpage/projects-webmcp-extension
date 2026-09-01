@@ -10,7 +10,6 @@ import {
 	LOCAL_PACK_ACTIONS as RULE_PACK_ACTIONS,
 	STATE_FILTERS as RULE_STATE_FILTERS,
 	VALID_PACK_STATUSES as RULE_PACK_STATUSES,
-	blockedByBlockerText as deriveBlockedByBlockerText,
 	forwardPathStatusForBlocker,
 	isPlaceholderNext,
 	isUnblockedBlockerValue,
@@ -126,13 +125,6 @@ export function isReview(pack: DemoPack): boolean {
 		|| isMissingNextAction(pack)
 		|| action === 'review'
 		|| action === 'review-work';
-}
-
-export function blockedByBlockerText(
-	targetPack: DemoPack,
-	workTitleFn: (pack: DemoPack) => string
-): string {
-	return deriveBlockedByBlockerText(targetPack, workTitleFn);
 }
 
 export function rebaseSeedPacks(packs: DemoPack[], todayIso?: string): DemoPack[] {

@@ -8,6 +8,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const routePath = path.join(repoRoot, 'svelte-frontend/src/routes/priority/+page.svelte');
 const helperPath = path.join(repoRoot, 'svelte-frontend/src/routes/priority/priority-webmcp.mjs');
 const rulesPath = path.join(repoRoot, 'svelte-frontend/src/lib/workflow-rules.mjs');
+const rulesSource = fs.readFileSync(rulesPath, 'utf8');
+const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 const layoutSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.svelte'), 'utf8');
 const configSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/svelte.config.js'), 'utf8');
 
@@ -21,6 +23,7 @@ async function loadPriorityModules() {
 }
 
 test('canonical recommendation selects only the highest-priority actionable work', async () => {
+	assert.doesNotMatch(`${rulesSource}\n${workflowSource}`, /blockedByBlockerText/u);
 	const [, { selectNextRecommendation }] = await loadPriorityModules();
 	const packs = [
 		{ id: 'blocked', title: 'Blocked', status: 'blocked', blocker: 'Waiting', due: '2026-08-20' },
