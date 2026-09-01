@@ -12,7 +12,7 @@ Priority adds a deliberately smaller read-only checkpoint: one canonical selecto
 
 Work keeps active execution human-owned. Its single Quick Add form is available in both density modes and can disclose optional owner, area, type, due, energy, recurrence, and proof-target fields; every value travels through the existing `createPack` state owner. The bounded `create_work_drafts` tool reuses that normalization through one atomic state transaction to add at most three browser-local items in Draft status. Its one visible activity receipt names every created Draft even when the current Work filter hides those cards. It cannot start, block, complete, or delete them; a person must use the existing visible controls. No second storage path, request, or compatibility route is added.
 
-The exact under-three-minute Edge choreography, keyboard preflight, narration, settle windows, and abort conditions are in [edge-recording-script.md](edge-recording-script.md).
+The exact under-three-minute Edge choreography, keyboard preflight, narration, settle windows, and abort conditions are in [edge-recording-script.md](edge-recording-script.md). Run `npm run preflight:recording` before capture to execute that same cue in a temporary isolated Edge profile; the focused contract deep-compares the human instructions with the frozen executable specification.
 
 ## Eligibility record
 
@@ -27,5 +27,5 @@ The public Git history begins during the official submission period and is inten
 - Complete source, deterministic sample data, locked dependencies, and build instructions.
 - Text description covering WebMCP fit, shared person-agent capability, and implementation.
 - Public demonstration video under three minutes with audio.
-- The recording follows the checked-in 1:50 Edge-only cue sheet, uses the persistent handoff rail to preserve context, passes its keyboard preflight, and ends on the visible human approval boundary in one continuous take without route cuts, speeding, or hidden failed transitions.
+- The recording follows the checked-in 1:50 Edge-only cue sheet, passes `npm run preflight:recording`, uses the persistent handoff rail to preserve context, and ends on the visible human approval boundary in one continuous take without route cuts, speeding, or hidden failed transitions.
 - Dated public commits and `SOURCE_PROVENANCE.md` distinguishing prior work from the challenge extension.

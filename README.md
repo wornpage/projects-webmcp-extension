@@ -88,6 +88,14 @@ npm --prefix svelte-frontend run dev
 
 Open the URL printed by Vite, then visit `/webmcp-challenge` in a compatible browser for WebMCP tool discovery. Open the global **WebMCP** pill for native status and the exact current-page catalog. `Ready` means every page registration resolved; API detection alone remains `Connecting`. If native WebMCP is unavailable, the ordinary page remains usable with browser-local sample data.
 
+Run the focused production recording preflight separately:
+
+```sh
+npm run preflight:recording
+```
+
+It launches installed Edge in a temporary isolated profile, executes the exact 1:50 cue through a test-only native registration probe, prints actual/expected receipts, and removes the isolated 11-item rehearsal state on exit. It does not modify the deployed UI or the normal Edge profile.
+
 `npm run build` creates the complete static deployment in `dist/static-publish`. That directory can be uploaded directly to Cloudflare Pages; no Pages Functions or Worker are required.
 
 For a Cloudflare Pages Git deployment, use:
@@ -130,7 +138,7 @@ There is no `server/`, `worker/`, Pages Functions, or hidden compatibility route
 npm run verify
 ```
 
-The gate runs Svelte diagnostics, focused WebMCP contracts, static-artifact contracts, and a production prerender. Current expected denominators are 104/104 public source paths, 110/110 WebMCP contracts, and 7/7 static-artifact contracts. A static contract derives those values from the current manifest and test sources so this reviewer-facing summary cannot silently drift. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
+The gate runs Svelte diagnostics, focused WebMCP contracts, recording-preflight and static-artifact contracts, and a production prerender. Current expected denominators are 106/106 public source paths, 110/110 WebMCP contracts, 6/6 recording-preflight contracts, and 7/7 static-artifact contracts. A static contract derives those values from the current manifest and test sources so this reviewer-facing summary cannot silently drift. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
 
 ## License and trademarks
 

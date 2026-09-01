@@ -9,12 +9,16 @@
     "build:pages": "npm --prefix svelte-frontend ci --ignore-scripts && npm run build",
     "check": "npm --prefix svelte-frontend run check",
     "manifest:write": "node scripts/generate-public-manifest.mjs --write",
+    "preflight:recording": "node scripts/webmcp-recording-preflight.mjs",
     "test:manifest": "node scripts/generate-public-manifest.mjs",
-    "test:artifact": "node --test scripts/static-artifact-contract.test.mjs",
+    "test:artifact": "node --test scripts/webmcp-recording-preflight-contract.test.mjs scripts/static-artifact-contract.test.mjs",
     "test:webmcp": "node scripts/run-webmcp-contracts.mjs",
     "verify": "npm run test:manifest && npm run check && npm run test:webmcp && npm run build && npm run test:artifact"
   },
   "engines": {
     "node": ">=24"
+  },
+  "devDependencies": {
+    "playwright-core": "1.62.1"
   }
 }

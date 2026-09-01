@@ -115,14 +115,18 @@ test('README verification denominators match the current manifest and contract s
 	const artifactContractCount = countTopLevelTests(
 		readFileSync(path.join(root, 'scripts', 'static-artifact-contract.test.mjs'), 'utf8')
 	);
+	const recordingPreflightContractCount = countTopLevelTests(
+		readFileSync(path.join(root, 'scripts', 'webmcp-recording-preflight-contract.test.mjs'), 'utf8')
+	);
 
 	assert.match(
 		readme,
 		new RegExp(
-			`Current expected denominators are ${manifestCount}/${manifestCount} public source paths, ${webMcpContractCount}/${webMcpContractCount} WebMCP contracts, and ${artifactContractCount}/${artifactContractCount} static-artifact contracts\\.`,
+			`Current expected denominators are ${manifestCount}/${manifestCount} public source paths, ${webMcpContractCount}/${webMcpContractCount} WebMCP contracts, ${recordingPreflightContractCount}/${recordingPreflightContractCount} recording-preflight contracts, and ${artifactContractCount}/${artifactContractCount} static-artifact contracts\\.`,
 			'u'
 		)
 	);
+	assert.match(readme, /npm run preflight:recording[\s\S]*?temporary isolated profile[\s\S]*?test-only native registration probe[\s\S]*?does not modify the deployed UI or the normal Edge profile/u);
 });
 
 test('static artifact publishes the complete challenge input and security metadata', () => {
@@ -179,6 +183,10 @@ test('static mode identifies its bounded routes without production fallbacks', (
 	const submissionReadme = readFileSync(path.join(root, 'docs', 'submission', 'webmcp', 'README.md'), 'utf8');
 	const recordingScript = readFileSync(path.join(root, 'docs', 'submission', 'webmcp', 'edge-recording-script.md'), 'utf8');
 	const reviewerTests = readFileSync(path.join(root, 'docs', 'submission', 'webmcp', 'reviewer-tests.md'), 'utf8');
+	const rootPackage = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+	const rootLock = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+	const publicManifest = readFileSync(path.join(root, 'PUBLIC_SOURCE_MANIFEST.txt'), 'utf8').trim().split(/\r?\n/u);
+	const thirdPartyNotices = readFileSync(path.join(root, 'THIRD_PARTY_NOTICES.md'), 'utf8');
 	const browserAgentPath = reviewerTests.match(/## Browser-agent path[\s\S]*?## Security and scope checks/u)?.[0] ?? '';
 	for (const html of [landing, app]) {
 		assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive"/u);
@@ -213,23 +221,59 @@ test('static mode identifies its bounded routes without production fallbacks', (
 	assert.equal(headers.match(/Content-Security-Policy:/gu)?.length, 1);
 	assert.match(headers, /\/\*[\s\S]*?Content-Security-Policy: default-src 'self';[\s\S]*?script-src 'self' __PROJECTS_SVELTE_SCRIPT_HASHES__; style-src 'self'; style-src-elem 'self'; style-src-attr 'unsafe-inline';[\s\S]*?connect-src 'self'/u);
 	assert.match(submissionReadme, /\[edge-recording-script\.md\]\(edge-recording-script\.md\)/u);
+	assert.match(submissionReadme, /npm run preflight:recording[\s\S]*?temporary isolated Edge profile[\s\S]*?focused contract deep-compares the human instructions with the frozen executable specification/u);
+	assert.equal(rootPackage.scripts['preflight:recording'], 'node scripts/webmcp-recording-preflight.mjs');
+	assert.equal(rootPackage.scripts['test:artifact'], 'node --test scripts/webmcp-recording-preflight-contract.test.mjs scripts/static-artifact-contract.test.mjs');
+	assert.equal(rootPackage.devDependencies['playwright-core'], '1.62.1');
+	assert.equal(rootLock.packages[''].devDependencies['playwright-core'], '1.62.1');
+	assert.equal(rootLock.packages['node_modules/playwright-core'].version, '1.62.1');
+	assert.equal(rootLock.packages['node_modules/playwright-core'].dev, true);
+	assert.equal(rootLock.packages['node_modules/playwright-core'].license, 'Apache-2.0');
+	for (const sourcePath of ['scripts/webmcp-recording-preflight.mjs', 'scripts/webmcp-recording-preflight-contract.test.mjs']) {
+		assert.ok(publicManifest.includes(sourcePath), `${sourcePath} is public source`);
+		assert.ok(existsSync(path.join(root, sourcePath)), `${sourcePath} exists`);
+	}
+	assert.match(thirdPartyNotices, /Playwright Core is used only by the isolated local recording-preflight command and is Apache-2\.0-licensed\. It is not bundled into the deployed browser artifact\./u);
 	assert.match(recordingScript, /Target final length: \*\*1:50\*\*\. Hard stop: \*\*2:00\*\*[\s\S]*?one continuous Microsoft Edge clip[\s\S]*?Do not speed up footage/u);
-	assert.match(recordingScript, /Keep the laptop's native Edge viewport; do not apply a viewport override[\s\S]*?require zero horizontal overflow before T0/u);
+	assert.match(recordingScript, /Put the captured tab in Edge fullscreen so the browser toolbar is hidden[\s\S]*?Keep the laptop's native fullscreen Edge viewport; do not apply a viewport override[\s\S]*?require zero horizontal overflow before T0/u);
+	assert.match(recordingScript, /Codex browser control launches Edge fullscreen[\s\S]*?suppresses the Playwright automation infobar[\s\S]*?requires the toolbar-hidden viewport to remain stable before T0[\s\S]*?observes—but does not override—that native viewport/u);
 	assert.match(recordingScript, /Park the pointer in the bottom-right corner before T0 and leave it there for the entire clip/u);
 	assert.match(recordingScript, /Every timed route change—including Guide → Work → Review → Next → Work—uses real Tab or Shift\+Tab focus movement[\s\S]*?followed by Enter[\s\S]*?Do not click route links, use full-document `goto`, address-bar navigation, browser Back, pointer activation, retry a transition/u);
-	assert.match(recordingScript, /Vertical reveals use keyboard PageDown only[\s\S]*?Guide sends PageDown to the page body[\s\S]*?Next keeps PageDown on its focused receipt[\s\S]*?pointer stays parked[\s\S]*?do not use the wheel or drag a scrollbar/u);
-	assert.match(recordingScript, /Visible focus is required when each WebMCP receipt first appears[\s\S]*?PageDown may then transfer focus to the page[\s\S]*?receipt and controls remaining simultaneously visible[\s\S]*?not on claiming the receipt retained focus after the scroll/u);
+	assert.match(recordingScript, /Vertical reveals are keyboard-only and body-owned[\s\S]*?Guide uses one PageDown[\s\S]*?prepared Next hold uses four ArrowDown presses[\s\S]*?restored final Next hold uses eight ArrowDown presses[\s\S]*?native fullscreen viewport[\s\S]*?pointer stays parked[\s\S]*?do not use the wheel or drag a scrollbar/u);
+	assert.doesNotMatch(recordingScript, /Guide and Next both send PageDown|Next keeps PageDown on its focused receipt/u);
+	assert.match(recordingScript, /Visible focus is required when each presentation-changing or Draft-creation WebMCP receipt first appears[\s\S]*?Guide reader must return the exact brief and render its read-only receipt[\s\S]*?does not invent an action-focus promise[\s\S]*?Only after an action receipt's focus proof may the page body own the reveal keys[\s\S]*?action receipt and controls remaining simultaneously visible[\s\S]*?not on claiming the receipt retained focus during the scroll/u);
 	assert.match(recordingScript, /fixed \*\*2\.25-second settle window\*\*/u);
-	assert.match(recordingScript, /Landing → Guide: press Tab on the page body to reclaim focus[\s\S]*?Open the handoff workflow[\s\S]*?within five additional moves[\s\S]*?Returned Guide → fast brief: five Shift\+Tab presses[\s\S]*?press Tab once on the page body to reclaim page focus[\s\S]*?advance visibly with Tab until \*\*1 Work\*\* receives focus[\s\S]*?within five moves[\s\S]*?fail if focus reaches a later route first[\s\S]*?Work receipt → Review: seven Shift\+Tab presses[\s\S]*?Review receipt → Next: one Shift\+Tab press[\s\S]*?Prepared Next receipt → Work: four Shift\+Tab presses[\s\S]*?Work Draft receipt → pending decision: nine Shift\+Tab presses[\s\S]*?upper view must first show the counted scope[\s\S]*?one PageDown pressed on the page body must then reveal the complete brief and fast-brief control[\s\S]*?Next: two PageDown presses[\s\S]*?compact \*\*WebMCP\*\* pill shows `1 tool` and ready only after Guide registration/u);
+	assert.match(recordingScript, /Measured rehearsal baseline \(September 1, 2026\)[\s\S]*?production app commit `32a4d0ee`[\s\S]*?fullscreen Edge Dev inner viewport 1116 × 698[\s\S]*?document client viewport 1101 × 698 and scroll width 1101[\s\S]*?exact backward counts 7\/3\/7\/3\/5\/10 for Priority→Guide \/ Guide→fast brief \/ Work→Review \/ Review→Next \/ Next→Work \/ Draft→Pending[\s\S]*?command emits the final receipt\/control geometry[\s\S]*?requires both to fit after the eight body-owned ArrowDown presses[\s\S]*?any change to the header, activity receipt, Work controls, or Pending navigation focus order invalidates the counts[\s\S]*?cue plus its static contract to change together/u);
+	assert.match(recordingScript, /After the Guide reader inserts its receipt[\s\S]*?one body-owned Tab[\s\S]*?ten additional Tabs to reach \*\*1 Work\*\*/u);
+	assert.match(recordingScript, /Landing → Guide: press Tab on the page body to reclaim focus[\s\S]*?Open the handoff workflow[\s\S]*?within five additional moves[\s\S]*?Priority → Guide: seven Shift\+Tab presses[\s\S]*?Returned Guide → fast brief: three Shift\+Tab presses[\s\S]*?Fast brief → Work: press Tab once on the page body to reclaim page focus[\s\S]*?advance visibly with Tab until \*\*1 Work\*\* receives focus[\s\S]*?within ten additional moves[\s\S]*?fail if focus reaches a later route first[\s\S]*?Work receipt → Review: seven Shift\+Tab presses[\s\S]*?Review receipt → Next: three Shift\+Tab presses[\s\S]*?Prepared Next receipt → Work: five Shift\+Tab presses[\s\S]*?Work Draft receipt → pending decision: ten Shift\+Tab presses[\s\S]*?upper view must first show the counted scope[\s\S]*?one PageDown pressed on the page body must then reveal the complete brief and fast-brief control[\s\S]*?Next: four ArrowDown presses on the page body[\s\S]*?Pending 1[\s\S]*?eight ArrowDown presses[\s\S]*?compact \*\*WebMCP\*\* pill shows `1 tool` and ready only after Guide registration/u);
+	assert.doesNotMatch(recordingScript, /Priority → Guide: (?:three Tab|eight Shift\+Tab) presses|Returned Guide → fast brief: (?:four|five|six) Shift\+Tab presses|then use five additional Tabs to reach \*\*1 Work\*\*|within five moves[\s\S]*?fail if focus reaches a later route first|Review receipt → Next: one Shift\+Tab press|Prepared Next receipt → Work: four Shift\+Tab presses|Work Draft receipt → pending decision: nine Shift\+Tab presses/u);
 	assert.match(recordingScript, /shared trail advances from 1 verified → 2 verified → 3 verified \+ 1 pending → 4 verified \+ 1 pending[\s\S]*?Drafts appear only after the optional create call[\s\S]*?Decide remains pending/u);
-	assert.match(recordingScript, /browser-agent side panel[\s\S]*?Side-panel instruction: `Follow the brief on this page\.`[\s\S]*?side-panel agent owns every WebMCP call/u);
+	assert.match(recordingScript, /does not assume an Edge browser-agent side panel[\s\S]*?Codex controller instruction: `Follow the brief on this page\.`[\s\S]*?No prompt is typed in Edge during the take[\s\S]*?document\.modelContext\.getTools\(\)[\s\S]*?document\.modelContext\.executeTool\(\.\.\.\)[\s\S]*?native descriptors returned for the current page[\s\S]*?never substitutes a DOM\/state shortcut, direct workspace API, server request, or second mutation path/u);
+	assert.match(recordingScript, /Exact bounded inputs: Work\/Review query `Garage reset`; Review filter `blocked`; Next choice `Confirm storage bin delivery`/u);
+	assert.match(recordingScript, /Executable target timeline: `landing-hold@00:00\.000` → `landing-to-guide@00:06\.000` → `guide-body-page-down@00:12\.000` → `guide-to-priority@00:18\.000` → `priority-to-guide@00:25\.000` → `guide-to-work@00:30\.000` → `work-to-review@00:46\.000` → `review-to-next@01:00\.000` → `next-body-arrow-downs@01:10\.000` → `next-to-work@01:18\.000` → `create-drafts@01:26\.000` → `work-to-pending@01:36\.000` → `final-body-arrow-downs@01:43\.000` → `final-acceptance@01:49\.500`/u);
+	assert.doesNotMatch(recordingScript, /Side-panel instruction|side-panel agent owns/u);
+	assert.equal((recordingScript.match(/side[- ]panel/giu) ?? []).length, 1, 'only the explicit no-side-panel statement may remain');
 	assert.doesNotMatch(recordingScript, /AGENT_SHORTCUT|replace this|placeholder/iu);
 	assert.match(recordingScript, /do not load it before navigating away because this page-local state does not survive Guide → Priority → Guide/u);
-	assert.match(recordingScript, /## One continuous Edge clip — 00:00–01:50[\s\S]*?00:00–00:06[\s\S]*?00:30–00:46[\s\S]*?01:00–01:18[\s\S]*?01:26–01:36[\s\S]*?01:36–01:50/u);
+	const recordingIntervals = [...recordingScript.matchAll(/^\| (\d{2}:\d{2}–\d{2}:\d{2}) \|/gmu)].map((match) => match[1]);
+	assert.deepEqual(recordingIntervals, [
+		'00:00–00:06',
+		'00:06–00:18',
+		'00:18–00:25',
+		'00:25–00:30',
+		'00:30–00:46',
+		'00:46–01:00',
+		'01:00–01:18',
+		'01:18–01:26',
+		'01:26–01:36',
+		'01:36–01:50'
+	]);
+	assert.match(recordingScript, /\| 00:25–00:30 \|[\s\S]*?let Codex invoke the registered Guide reader and follow the returned brief[\s\S]*?\| 01:00–01:18 \| Use three Shift\+Tab presses to open \*\*3 Next\*\*[\s\S]*?hold the receipt, then send ArrowDown to the page body four times at 01:10[\s\S]*?\| 01:18–01:26 \| Use five Shift\+Tab presses to return to Work[\s\S]*?\| 01:36–01:50 \| Use ten Shift\+Tab presses and Enter on \*\*Pending 1\*\*[\s\S]*?hold the restored receipt, then send ArrowDown to the page body eight times at 01:43/u);
+	assert.doesNotMatch(recordingScript, /\| 00:25–00:30 \|[^\n]*?side-panel reader|\| 01:00–01:18 \| Use one Shift\+Tab|\| 01:18–01:26 \| Use four Shift\+Tab|\| 01:36–01:50 \| Use nine Shift\+Tab/u);
 	assert.match(recordingScript, /show_work_search[\s\S]*?set_review_scope[\s\S]*?prepare_next_action[\s\S]*?get_current_work_view[\s\S]*?one `create_work_drafts` call/u);
 	assert.match(recordingScript, /Confirm donation pickup window[\s\S]*?Print shelf labels[\s\S]*?Prepare bike rack checklist[\s\S]*?`3 · Draft`[\s\S]*?`8 → 11`[\s\S]*?Human Start required/u);
 	assert.match(recordingScript, /Review the proposed next action[\s\S]*?Draft: pending approval[\s\S]*?unchanged Next proposal[\s\S]*?human-only final Save[\s\S]*?Discard draft[\s\S]*?Approve and save[\s\S]*?Stop the recorder at 01:50 on the human approval frame/u);
-	assert.match(recordingScript, /press PageDown on the page body at 00:12[\s\S]*?PageDown twice at 01:10[\s\S]*?PageDown twice at 01:43[\s\S]*?final viewport shows the preserved receipt/u);
+	assert.match(recordingScript, /press PageDown on the page body at 00:12[\s\S]*?send ArrowDown to the page body four times at 01:10[\s\S]*?send ArrowDown to the page body eight times at 01:43[\s\S]*?final viewport shows the preserved receipt/u);
 	assert.match(recordingScript, /## Post-capture cleanup and edit[\s\S]*?same Edge profile[\s\S]*?pending Next proposal and all three recording Drafts are absent[\s\S]*?Trim only the four-second setup pad[\s\S]*?Do not add a route cut/u);
 	assert.match(recordingScript, /Abort the take immediately[\s\S]*?Focus is not visible[\s\S]*?CSP violation[\s\S]*?horizontal overflow/u);
 	assert.doesNotMatch(recordingScript, /in-app browser|hybrid|hard cut at 02:05/iu);

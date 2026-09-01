@@ -25,6 +25,8 @@ scripts/build-svelte-frontend.mjs
 scripts/generate-public-manifest.mjs
 scripts/run-webmcp-contracts.mjs
 scripts/static-artifact-contract.test.mjs
+scripts/webmcp-recording-preflight-contract.test.mjs
+scripts/webmcp-recording-preflight.mjs
 SECURITY.md
 SOURCE_PROVENANCE.md
 svelte-frontend/package-lock.json

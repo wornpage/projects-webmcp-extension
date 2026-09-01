@@ -4,40 +4,48 @@ Target final length: **1:50**. Hard stop: **2:00**. Record one continuous Micros
 
 ## Fixed setup
 
-- Use Microsoft Edge at 100% zoom in one clean profile window with the installed recording extension and browser-agent side panel.
-- Keep the laptop's native Edge viewport; do not apply a viewport override. Record its observed dimensions and require zero horizontal overflow before T0.
+- Use Microsoft Edge at 100% zoom in one clean profile window with the installed recording extension. Put the captured tab in Edge fullscreen so the browser toolbar is hidden. Keep the Codex task outside the captured Edge tab; this workflow does not assume an Edge browser-agent side panel.
+- Keep the laptop's native fullscreen Edge viewport; do not apply a viewport override. Record its observed dimensions and require zero horizontal overflow before T0.
 - Production URL: `https://projects-webmcp-extension.pages.dev/`.
 - Before the take, use Guide **Reset live sample**. Require exactly 8 workspace items, no Pending link, and a clean **Verified action trail** showing `Ready for one bounded run` and `No action recorded`.
 - Keep the safe default Guide brief for the opening Guide and Priority shots. After returning from Priority, activate **Use fast-create brief** with Shift+Tab and Enter; do not load it before navigating away because this page-local state does not survive Guide → Priority → Guide.
-- Side-panel instruction: `Follow the brief on this page.` The side-panel agent reads the selected brief and executes the page's WebMCP tools; it must stop without Save or Start.
+- Codex controller instruction: `Follow the brief on this page.` Arm that instruction before T0, but do not invoke the Guide reader until **Use fast-create brief** is visibly active. No prompt is typed in Edge during the take. Codex then uses only the current page's native `RegisteredTool` objects from `document.modelContext.getTools()` and invokes them with serialized input through `document.modelContext.executeTool(...)`; it must stop without Save or Start.
+- Exact current-page catalogs: Guide 1 / Priority 1 / Work 3 / Review 2 / Next 2.
+- Registered tool sequence: `get_projects_handoff_guide` → `get_current_work_view` → `show_work_search` → `get_current_review_queue` → `set_review_scope` → `get_current_next_editor` → `prepare_next_action` → `get_current_work_view` → `create_work_drafts`.
+- Exact bounded inputs: Work/Review query `Garage reset`; Review filter `blocked`; Next choice `Confirm storage bin delivery`.
+- Executable target timeline: `landing-hold@00:00.000` → `landing-to-guide@00:06.000` → `guide-body-page-down@00:12.000` → `guide-to-priority@00:18.000` → `priority-to-guide@00:25.000` → `guide-to-work@00:30.000` → `work-to-review@00:46.000` → `review-to-next@01:00.000` → `next-body-arrow-downs@01:10.000` → `next-to-work@01:18.000` → `create-drafts@01:26.000` → `work-to-pending@01:36.000` → `final-body-arrow-downs@01:43.000` → `final-acceptance@01:49.500`.
 - Park the pointer in the bottom-right corner before T0 and leave it there for the entire clip.
 - Disable unrelated notifications. Keep the URL, keyboard focus rings, activity receipts, denominators, and human-authority copy readable.
 
 ## Browser-control ownership
 
-- Tab control observes—but does not override—the native Edge viewport and owns the monotonic timeline, route navigation, fixed holds, DOM checkpoints, focus checks, and abort decision.
+- Codex browser control launches Edge fullscreen, suppresses the Playwright automation infobar, and requires the toolbar-hidden viewport to remain stable before T0. It observes—but does not override—that native viewport and owns the monotonic timeline, route navigation, fixed holds, DOM checkpoints, focus checks, native WebMCP calls, and abort decision.
 - Every timed route change—including Guide → Work → Review → Next → Work—uses real Tab or Shift+Tab focus movement to an existing visible link, followed by Enter.
-- Vertical reveals use keyboard PageDown only. Guide sends PageDown to the page body so the scroll has one deterministic owner; Next keeps PageDown on its focused receipt. The pointer stays parked; do not use the wheel or drag a scrollbar.
-- Visible focus is required when each WebMCP receipt first appears. PageDown may then transfer focus to the page while scrolling; acceptance depends on the named receipt and controls remaining simultaneously visible, not on claiming the receipt retained focus after the scroll.
+- Vertical reveals are keyboard-only and body-owned: Guide uses one PageDown, the prepared Next hold uses four ArrowDown presses, and the restored final Next hold uses eight ArrowDown presses so the receipt and human controls remain together in the native fullscreen viewport. The pointer stays parked; do not use the wheel or drag a scrollbar.
+- Visible focus is required when each presentation-changing or Draft-creation WebMCP receipt first appears. The Guide reader must return the exact brief and render its read-only receipt, but it does not invent an action-focus promise. Only after an action receipt's focus proof may the page body own the reveal keys; acceptance depends on the named action receipt and controls remaining simultaneously visible, not on claiming the receipt retained focus during the scroll.
 - Do not click route links, use full-document `goto`, address-bar navigation, browser Back, pointer activation, retry a transition, or extend a hold to hide late execution.
-- The side-panel agent owns every WebMCP call. Tab control never substitutes a direct workspace API, server request, or second mutation path.
+- Codex invokes only the native descriptors returned for the current page. Browser control never substitutes a DOM/state shortcut, direct workspace API, server request, or second mutation path.
 - Record a four-second setup pad on the settled landing hero. Remove only that setup pad afterward; all timestamps below are final-video timestamps after the trim.
 
 ## Keyboard preflight
 
 Complete this exact path once immediately before recording. Any mismatch cancels the take.
 
+Measured rehearsal baseline (September 1, 2026): production app commit `32a4d0ee`, fullscreen Edge Dev inner viewport 1116 × 698, document client viewport 1101 × 698 and scroll width 1101, exact backward counts 7/3/7/3/5/10 for Priority→Guide / Guide→fast brief / Work→Review / Review→Next / Next→Work / Draft→Pending, and zero browser warnings or errors. The command emits the final receipt/control geometry and requires both to fit after the eight body-owned ArrowDown presses. This evidence does not replace a fresh preflight: any change to the header, activity receipt, Work controls, or Pending navigation focus order invalidates the counts and requires the cue plus its static contract to change together.
+
+After the Guide reader inserts its receipt, reclaim page focus with one body-owned Tab, then use ten additional Tabs to reach **1 Work**.
+
 1. Landing → Guide: press Tab on the page body to reclaim focus, then advance visibly with Tab until **Open the handoff workflow** receives focus. Require the target within five additional moves, then press Enter.
 2. Guide → Priority: four Tab presses, then Enter.
-3. Priority → Guide: three Tab presses, then Enter.
-4. Returned Guide → fast brief: five Shift+Tab presses, then Enter on **Use fast-create brief**.
-5. Fast brief → Work: press Tab once on the page body to reclaim page focus from the completed reader, then advance visibly with Tab until **1 Work** receives focus. Require the target within five moves and press Enter; fail if focus reaches a later route first.
+3. Priority → Guide: seven Shift+Tab presses, then Enter.
+4. Returned Guide → fast brief: three Shift+Tab presses, then Enter on **Use fast-create brief**.
+5. Fast brief → Work: press Tab once on the page body to reclaim page focus from the completed reader, then advance visibly with Tab until **1 Work** receives focus. Require the target within ten additional moves and press Enter; fail if focus reaches a later route first.
 6. Work receipt → Review: seven Shift+Tab presses, then Enter on **Review in queue**.
-7. Review receipt → Next: one Shift+Tab press, then Enter on **3 Next**.
-8. Prepared Next receipt → Work: four Shift+Tab presses, then Enter on **1 Work**.
-9. Work Draft receipt → pending decision: nine Shift+Tab presses, then Enter on **Pending 1**.
+7. Review receipt → Next: three Shift+Tab presses, then Enter on **3 Next**.
+8. Prepared Next receipt → Work: five Shift+Tab presses, then Enter on **1 Work**.
+9. Work Draft receipt → pending decision: ten Shift+Tab presses, then Enter on **Pending 1**.
 10. Guide: the upper view must first show the counted scope; one PageDown pressed on the page body must then reveal the complete brief and fast-brief control.
-11. Next: two PageDown presses must keep the WebMCP receipt visible while bringing **Discard draft** and **Approve and save** fully into view.
+11. Next: four ArrowDown presses on the page body own the prepared hold; after returning through **Pending 1**, eight ArrowDown presses must keep the WebMCP receipt visible while bringing **Discard draft** and **Approve and save** fully into view.
 12. Confirm the compact **WebMCP** pill shows `1 tool` and ready only after Guide registration, alongside the exact 8-item state, visible focus at every destination, and no browser error or warning.
 13. Confirm the shared trail advances from 1 verified → 2 verified → 3 verified + 1 pending → 4 verified + 1 pending. Drafts appear only after the optional create call, and Decide remains pending.
 
@@ -50,13 +58,13 @@ Use a fixed **2.25-second settle window** after every route activation. Abort in
 | 00:00–00:06 | Hold the canonical landing hero. | `Let an agent find the next move. Keep the final say.`; 9 tools; 4 bounded actions; No automatic starts. | “Projects gives a browser agent bounded access to visible work while the person keeps the final say.” |
 | 00:06–00:18 | Tab to Guide, show the clean action trail and upper scope, then press PageDown on the page body at 00:12. | Guide ready by 00:08.25; 8 visible of 8; trail says `Ready for one bounded run` and `No action recorded`; lower view shows the complete brief and fast-create control. | “The shared action trail will preserve each verified outcome across the workflow.” |
 | 00:18–00:25 | Tab to Priority and hold the single recommendation. | Priority ready by 00:20.25; one exact title, reason, and Next destination. | “Priority contributes one read-only recommendation—nothing more.” |
-| 00:25–00:30 | Tab back to Guide, activate **Use fast-create brief**, and let the side-panel reader inspect it. | Guide ready by 00:27.25; fast brief selected only now; workspace remains 8. | “The page-owned brief permits Draft staging but still forbids Save and Start.” |
+| 00:25–00:30 | Tab back to Guide, activate **Use fast-create brief**, then let Codex invoke the registered Guide reader and follow the returned brief. | Guide ready by 00:27.25; fast brief selected only now; reader returns the exact brief; workspace remains 8. | “The page-owned brief permits Draft staging but still forbids Save and Start.” |
 | 00:30–00:46 | Tab to Work; read the 8-item view and show `Garage reset`. | Larger Step 1 `WebMCP · show_work_search` receipt; 4 matching of 8; 2 blocked; trail reports 1 verified action and `Read-only actions verified`. | “Work narrows the visible list and records the first verified action.” |
-| 00:46–01:00 | Shift+Tab to Review and apply `Garage reset` + Blocked. | Larger Step 2 `WebMCP · set_review_scope` receipt; 2 shown, 2 filtered, 3 search matches, 5 total; trail retains Work and reports 2 verified actions. | “Review verifies the blocker evidence without changing workspace data.” |
-| 01:00–01:18 | Shift+Tab to Next and prepare `Confirm storage bin delivery`; hold the receipt, then PageDown twice at 01:10. | Larger Step 3 `WebMCP · prepare_next_action` receipt; exact evidence; trail reports 3 verified actions, 1 pending decision, and `Proposal pending`; the proposal remains Not saved. | “Next prepares an evidence-backed proposal and stops before Save.” |
-| 01:18–01:26 | Use four Shift+Tab presses to return to Work and invoke `get_current_work_view` for the exact denominator. | Workspace is still 8; no work was started or saved. | “Before creation, the agent rereads the live workspace count.” |
+| 00:46–01:00 | Use seven Shift+Tab presses to open **Review in queue**, then apply `Garage reset` + Blocked. | Larger Step 2 `WebMCP · set_review_scope` receipt; 2 shown, 2 filtered, 3 search matches, 5 total; trail retains Work and reports 2 verified actions. | “Review verifies the blocker evidence without changing workspace data.” |
+| 01:00–01:18 | Use three Shift+Tab presses to open **3 Next** and prepare `Confirm storage bin delivery`; hold the receipt, then send ArrowDown to the page body four times at 01:10. | Larger Step 3 `WebMCP · prepare_next_action` receipt; exact evidence; trail reports 3 verified actions, 1 pending decision, and `Proposal pending`; the proposal remains Not saved. | “Next prepares an evidence-backed proposal and stops before Save.” |
+| 01:18–01:26 | Use five Shift+Tab presses to return to Work and invoke `get_current_work_view` for the exact denominator. | Workspace is still 8; no work was started or saved. | “Before creation, the agent rereads the live workspace count.” |
 | 01:26–01:36 | Invoke one `create_work_drafts` call and hold the Step 4 receipt. | `Confirm donation pickup window`, `Print shelf labels`, and `Prepare bike rack checklist`; `3 · Draft`; `8 → 11`; Human Start required; trail reports `3 Drafts created · none started · Proposal pending`. | “One atomic call stages three Drafts. It cannot start them.” |
-| 01:36–01:50 | Use nine Shift+Tab presses and Enter on **Pending 1**; hold the restored receipt, then PageDown twice at 01:43. | `Review the proposed next action`; trail remains 4 verified + 1 pending; final viewport shows the preserved receipt, `Draft: pending approval`, the unchanged Next proposal, human-only final Save, and untouched **Discard draft** / **Approve and save**. | “The run ends where consequential work should end: with a person deciding.” |
+| 01:36–01:50 | Use ten Shift+Tab presses and Enter on **Pending 1**; hold the restored receipt, then send ArrowDown to the page body eight times at 01:43. | `Review the proposed next action`; trail remains 4 verified + 1 pending; final viewport shows the preserved receipt, `Draft: pending approval`, the unchanged Next proposal, human-only final Save, and untouched **Discard draft** / **Approve and save**. | “The run ends where consequential work should end: with a person deciding.” |
 
 Stop the recorder at 01:50 on the human approval frame. Do not activate **Approve and save**, **Start**, or **Discard** during capture.
 
@@ -66,8 +74,9 @@ Abort the take immediately if any of these occurs:
 
 - A route misses its 2.25-second settle window or any section crosses its hard timestamp.
 - The pointer leaves its corner, a route uses a click, or the expected Tab/Shift+Tab destination differs.
-- A PageDown hides the required receipt, overshoots the named controls, or causes horizontal overflow.
-- Guide does not begin at 8, the fast brief is loaded before the final Guide return, or the side-panel reader sees a different brief.
+- A keyboard reveal hides the required receipt, overshoots the named controls, or causes horizontal overflow.
+- Guide does not begin at 8, the fast brief is loaded before the final Guide return, or the native Guide reader returns a different brief.
+- `getTools()` returns a different current-page catalog, `executeTool(...)` is unavailable or rejects the accepted input, or any step uses a DOM/state shortcut instead of the registered descriptor.
 - Work, Review, or Next names a different item, fact, query, filter, or denominator than the visible receipt.
 - Next Save or any Draft Start is activated.
 - Draft creation does not reread workspace 8, creates anything other than the three exact titles, reports a partial batch, or performs a server write.
