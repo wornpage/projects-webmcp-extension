@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import {
 		demoState,
@@ -30,7 +29,6 @@
 		type DemoPack
 	} from '$lib/demo-workflow';
 	import {
-		WornAccordion,
 		WornAlert,
 		WornButton,
 		WornChip,
@@ -48,10 +46,10 @@
 		decisionWorkspaceContextDecider,
 		decisionWorkspaceContextPackId
 	} from '$lib/decision-workspace-navigation.mjs';
-	import { settleProgressiveReveal } from '$lib/progressive-reveal.mjs';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import { recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
+	import NextCandidatePicker from './NextCandidatePicker.svelte';
 	import {
 		NEXT_ACTION_MAX_LENGTH,
 		NEXT_EDITOR_PREVIEW_ID,
@@ -129,12 +127,6 @@ let showingCustom = $state(false);
 	let editorFocusRequest = 0;
 	let saveFocusFrame: number | null = null;
 	let stopNextWebMcp: (() => void) | null = null;
-	// Keep a large review queue useful without placing every candidate in the
-	// DOM at once. The full list still determines the count and can be expanded
-	// explicitly with the same keyboard-accessible buttons.
-	const NEXT_CANDIDATE_RENDER_LIMIT = 100;
-	let candidateRenderLimit = $state(NEXT_CANDIDATE_RENDER_LIMIT);
-
 	let packs = $derived(
 		(($demoState?.packs ?? []) as DemoPack[]).filter((candidate) => candidate.archived !== true)
 	);
@@ -173,11 +165,6 @@ let showingCustom = $state(false);
 			decider
 		};
 	});
-	let candidates = $derived(packs.filter(isReview));
-	let otherCandidates = $derived(candidates.filter((candidate) => candidate.id !== pack?.id));
-	let renderedOtherCandidates = $derived(otherCandidates.slice(0, candidateRenderLimit));
-	let hasMoreCandidates = $derived(renderedOtherCandidates.length < otherCandidates.length);
-
 	// The editor previews the pack AS IF the current choice were saved, so the
 	// fact lines and help always show what the main button will really run.
 	let effectiveChoice = $derived(showingCustom ? choice.trim() : choice || defaultChoiceFor(pack));
@@ -560,34 +547,6 @@ let showingCustom = $state(false);
 		}
 	}
 
-	async function focusCandidate(candidate: DemoPack) {
-		if (!candidate.id) return;
-		try {
-			await setSelectedWork(candidate.id);
-		} catch {
-			// selection is a nicety; still navigate
-		}
-		goto(`/work?focus=${encodeURIComponent(candidate.id)}`);
-	}
-
-	async function showMoreCandidates(event: MouseEvent) {
-		const trigger = event.currentTarget;
-		if (!(trigger instanceof HTMLElement)) return;
-		const previousCount = renderedOtherCandidates.length;
-		const nextLimit = previousCount + NEXT_CANDIDATE_RENDER_LIMIT;
-		const removesTrigger = nextLimit >= otherCandidates.length;
-		candidateRenderLimit = nextLimit;
-		await settleProgressiveReveal({
-			settled: tick(),
-			removesTrigger,
-			trigger,
-			getDestination: () => {
-				const pulseTarget = document.querySelectorAll<HTMLElement>('[data-pack-id]')[previousCount];
-				const focusTarget = pulseTarget?.querySelector<HTMLElement>('.demo-row-actions button');
-				return pulseTarget && focusTarget ? { focusTarget, pulseTarget } : null;
-			}
-		});
-	}
 </script>
 
 <svelte:head><title>Next — Wornpage Projects™</title></svelte:head>
@@ -709,51 +668,7 @@ let showingCustom = $state(false);
 			</div>
 		{/if}
 
-		{#if otherCandidates.length > 0}
-			<WornAccordion label={`Choose another item (${otherCandidates.length})`}>
-				<div class="demo-list next-other-list">
-				{#each renderedOtherCandidates as candidate (candidate.id)}
-				<div class="demo-row has-row-support" data-pack-id={candidate.id}>
-					<div>
-						<strong>{workTitle(candidate)}</strong>
-						{#if blockerText(candidate) !== 'None'}
-							<span>{blockerText(candidate)}</span>
-						{/if}
-					</div>
-					<div class="demo-row-actions">
-						<WornButton
-							type="button"
-							variant="primary"
-							size="sm"
-							aria-label={`Set next action for ${workTitle(candidate)}`}
-							onclick={() => editPack(candidate)}
-						>
-							Set next action
-						</WornButton>
-						<WornButton
-							type="button"
-							size="sm"
-							aria-label={`Focus ${workTitle(candidate)} in Work`}
-							onclick={() => focusCandidate(candidate)}
-						>
-							Focus
-						</WornButton>
-					</div>
-				</div>
-				{/each}
-				{#if otherCandidates.length > NEXT_CANDIDATE_RENDER_LIMIT}
-				<div class="next-load-more">
-					<span aria-live="polite">{renderedOtherCandidates.length} of {otherCandidates.length} shown</span>
-					{#if hasMoreCandidates}
-						<WornButton type="button" size="sm" data-action="show-more-next-candidates" onclick={showMoreCandidates}>
-							Show {Math.min(NEXT_CANDIDATE_RENDER_LIMIT, otherCandidates.length - renderedOtherCandidates.length)} more
-						</WornButton>
-					{/if}
-				</div>
-				{/if}
-				</div>
-			</WornAccordion>
-		{/if}
+		<NextCandidatePicker {packs} currentPackId={pack.id || ''} onedit={editPack} />
 	</WornPage>
 {:else}
 	<WornPage title="Next actions">
@@ -768,23 +683,6 @@ let showingCustom = $state(false);
 
 <style>
 	/* Inline style attributes are blocked by the shared CSP — scoped classes. */
-	.demo-row.has-row-support {
-		padding: 10px 12px;
-	}
-	.demo-row.has-row-support > div:first-child {
-		min-width: 0;
-		overflow-wrap: anywhere;
-	}
-	.next-load-more {
-		align-items: center;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-		justify-content: flex-end;
-		margin-top: 12px;
-		color: var(--worn-text-muted);
-		font-size: 12px;
-	}
 	.next-work-context {
 		background: var(--worn-bg-secondary);
 		border: 1px solid var(--worn-border-strong);
@@ -844,9 +742,6 @@ let showingCustom = $state(false);
 		min-width: 0;
 		width: 100%;
 	}
-	.next-other-list {
-		margin-top: 8px;
-	}
 	.next-authority,
 	.next-save-help {
 		color: var(--worn-text-secondary);
@@ -885,8 +780,7 @@ let showingCustom = $state(false);
 		.next-action-editor > .demo-field {
 			grid-column: auto;
 		}
-		.demo-inline-form,
-		.demo-row.has-row-support {
+		.demo-inline-form {
 			align-items: stretch;
 			flex-direction: column;
 		}
@@ -900,14 +794,9 @@ let showingCustom = $state(false);
 		}
 		.demo-row-actions :global(.worn-btn),
 		.demo-inline-form > :global(.worn-btn),
-		.next-save-actions :global(.worn-btn),
-		.next-load-more :global(.worn-btn) {
+		.next-save-actions :global(.worn-btn) {
 			min-width: 0;
 			width: 100%;
-		}
-		.next-load-more {
-			align-items: stretch;
-			flex-direction: column;
 		}
 		.next-save-help {
 			flex: 0 0 auto;

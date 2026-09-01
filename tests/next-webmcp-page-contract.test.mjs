@@ -36,6 +36,7 @@ const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/ro
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
 const decisionNavigationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/decision-workspace-navigation.mjs'), 'utf8');
+const candidatePickerSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/NextCandidatePicker.svelte'), 'utf8');
 
 const presetChoices = ['Review', 'Open', 'Focus', 'Set Blocker: None', 'Start', 'Finish with proof'];
 const currentEvidenceReference = Object.freeze({
@@ -568,6 +569,14 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /function restoreNextPreparationSnapshot[\s\S]*?choice = snapshot\.choice;[\s\S]*?customValue = snapshot\.customValue;[\s\S]*?showingCustom = snapshot\.showingCustom;[\s\S]*?preparationReceipt = [\s\S]*?preparationPreviousEditor = [\s\S]*?savedNextReceipt = snapshot\.savedNextReceipt/u);
 	assert.match(routeSource, /id=\{NEXT_EDITOR_PREVIEW_ID\}[^>]*data-next-preview/u);
 	assert.match(routeSource, /import WebMcpActivityStrip from '\$lib\/WebMcpActivityStrip\.svelte';/u);
+	assert.match(routeSource, /import NextCandidatePicker from '\.\/NextCandidatePicker\.svelte';[\s\S]*?<NextCandidatePicker \{packs\} currentPackId=\{pack\.id \|\| ''\} onedit=\{editPack\} \/>/u);
+	assert.doesNotMatch(routeSource, /NEXT_CANDIDATE_RENDER_LIMIT|candidateRenderLimit|renderedOtherCandidates|otherCandidates|showMoreCandidates|focusCandidate|next-other-list|next-load-more/u);
+	assert.match(candidatePickerSource, /const NEXT_CANDIDATE_RENDER_LIMIT = 100;[\s\S]*?packs\.filter\(isReview\)\.filter\(\(candidate\) => candidate\.id !== currentPackId\)[\s\S]*?candidates\.slice\(0, renderLimit\)/u);
+	assert.match(candidatePickerSource, /async function focusCandidate[\s\S]*?await setSelectedWork\(candidate\.id\);[\s\S]*?goto\(`\/work\?focus=\$\{encodeURIComponent\(candidate\.id\)\}`\)/u);
+	assert.match(candidatePickerSource, /async function showMoreCandidates[\s\S]*?const previousCount = renderedCandidates\.length;[\s\S]*?renderLimit = nextLimit;[\s\S]*?settleProgressiveReveal\(\{[\s\S]*?settled: tick\(\),[\s\S]*?listRoot\?\.querySelectorAll<HTMLElement>\('\[data-pack-id\]'\)\[previousCount\][\s\S]*?\.demo-row-actions button/u);
+	assert.match(candidatePickerSource, /Choose another item \(\$\{candidates\.length\}\)[\s\S]*?Set next action for \$\{workTitle\(candidate\)\}[\s\S]*?Focus \$\{workTitle\(candidate\)\} in Work[\s\S]*?candidates\.length > NEXT_CANDIDATE_RENDER_LIMIT[\s\S]*?data-action="show-more-next-candidates"/u);
+	assert.match(candidatePickerSource, /@media\(max-width:500px\)[\s\S]*?\.demo-row-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);width:100%\}[\s\S]*?\.next-load-more\{align-items:stretch;flex-direction:column\}/u);
+	assert.doesNotMatch(candidatePickerSource, /setPackNextAction|savePendingNextActionDraft|registerPageTools|createPack|fetch\(/u);
 	assert.match(routeSource, /Verified evidence[\s\S]*?Status[\s\S]*?Draft — waiting for your approval[\s\S]*?Save[\s\S]*?Not saved/u);
 	const preparationCellSource = routeSource.match(/let preparationCells[\s\S]*?\] : \[\]\);/u)?.[0] ?? '';
 	assert.doesNotMatch(preparationCellSource, /Work item|Prepared action|Browser agent changed/u);
@@ -596,7 +605,7 @@ test('Next owns one projection and one unsaved setter without server or navigati
 
 test('Next approval emits one canonical success notification from the page receipt', () => {
 	const mutation = demoClientSource.match(/export async function setPackNextAction\(workId: string\)[\s\S]*?\n\}\n\nfunction cloneState/u)?.[0] ?? '';
-	const presentation = routeSource.match(/async function saveChoice\(\)[\s\S]*?\n\t\}\n\n\tasync function focusCandidate/u)?.[0] ?? '';
+	const presentation = routeSource.match(/async function saveChoice\(\)[\s\S]*?\n\t\}\n\n<\/script>/u)?.[0] ?? '';
 	assert.ok(mutation);
 	assert.ok(presentation);
 	assert.doesNotMatch(mutation, /displayToast\(/u);

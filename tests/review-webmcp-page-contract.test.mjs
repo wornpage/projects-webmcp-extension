@@ -20,6 +20,7 @@ import { decisionWorkspaceReviewFocusRequest } from '../svelte-frontend/src/lib/
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/+page.svelte'), 'utf8');
 const nextRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
+const nextCandidatePickerSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/NextCandidatePicker.svelte'), 'utf8');
 const workRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-webmcp.mjs'), 'utf8');
@@ -84,9 +85,9 @@ test('one Review selector excludes terminal work and includes explicit Review ac
 	assert.match(workflowSource, /const reviewTotal = packs\.filter\(isReview\)\.length;[\s\S]*?filterPacks\(packs, 'review', query\)/u);
 	assert.match(workflowSource, /export function buildStandupText[\s\S]*?const review = packs\.filter\(isReview\);/u);
 	assert.match(routeSource, /summarizeReviewQueue\(packs, query, reviewSubFilter\)[\s\S]*?preferredReviewPack\(list\)/u);
-	assert.match(nextRouteSource, /let candidates = \$derived\(packs\.filter\(isReview\)\);/u);
+	assert.match(nextCandidatePickerSource, /let candidates = \$derived\(packs\.filter\(isReview\)\.filter\(\(candidate\) => candidate\.id !== currentPackId\)\);/u);
 	assert.match(workRouteSource, /if \(isReview\(pack\)\) next\.review \+= 1;/u);
-	assert.doesNotMatch(`${routeSource}\n${nextRouteSource}\n${workRouteSource}`, /(?:review|candidate)[^\n]*status\s*!==?\s*'done'/u);
+	assert.doesNotMatch(`${routeSource}\n${nextRouteSource}\n${nextCandidatePickerSource}\n${workRouteSource}`, /(?:review|candidate)[^\n]*status\s*!==?\s*'done'/u);
 });
 
 test('Review projects only its explicit rendered queue and denominators', () => {
