@@ -24,6 +24,7 @@ const nextCandidatePickerSource = fs.readFileSync(path.join(repoRoot, 'svelte-fr
 const workRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 const reviewQueueSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-queue.ts'), 'utf8');
+const reviewFilterControlsSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/ReviewFilterControls.svelte'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-webmcp.mjs'), 'utf8');
 const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp.mjs'), 'utf8');
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
@@ -329,15 +330,22 @@ test('Review human and WebMCP search share one explicit query-length boundary', 
 		helperSource,
 		/query: \{ type: 'string', maxLength: REVIEW_SEARCH_MAX_LENGTH,[\s\S]*?query\.length <= REVIEW_SEARCH_MAX_LENGTH \? query : null;/u
 	);
-	assert.match(routeSource, /REVIEW_SEARCH_MAX_LENGTH,[\s\S]*?\} from '\.\/review-webmcp\.mjs';/u);
+	assert.match(reviewFilterControlsSource, /import \{ REVIEW_SEARCH_MAX_LENGTH \} from '\.\/review-webmcp\.mjs';/u);
 	assert.match(
-		routeSource,
+		reviewFilterControlsSource,
 		/function setHumanReviewQuery\(event: Event\) \{[\s\S]*?const input = event\.currentTarget as HTMLInputElement;[\s\S]*?const nextQuery = input\.value\.slice\(0, REVIEW_SEARCH_MAX_LENGTH\);[\s\S]*?input\.value = nextQuery;[\s\S]*?query = nextQuery;[\s\S]*?\}/u
 	);
 	assert.match(
-		routeSource,
+		reviewFilterControlsSource,
 		/id="review-filter-query"[\s\S]*?maxlength=\{REVIEW_SEARCH_MAX_LENGTH\}[\s\S]*?bind:value=\{query\}[\s\S]*?oninput=\{setHumanReviewQuery\}/u
 	);
+	assert.match(routeSource, /import ReviewFilterControls from '\.\/ReviewFilterControls\.svelte';[\s\S]*?<ReviewFilterControls options=\{reviewFilterOptions\} bind:query bind:active=\{reviewSubFilter\} \/>/u);
+	assert.doesNotMatch(routeSource, /setHumanReviewQuery|class="review-filter-controls"|\.review-filter-controls|id="review-filter-query"|REVIEW_SEARCH_MAX_LENGTH|WornSegmentedControl|WornToolbar/u);
+	assert.equal((routeSource.match(/document\.getElementById\('review-filter-query'\)/gu) ?? []).length, 2);
+	assert.match(reviewFilterControlsSource, /options: Array<\{ id: ReviewSubFilter; label: string \}>;[\s\S]*?query: string;[\s\S]*?active: ReviewSubFilter;[\s\S]*?query = \$bindable\(\)[\s\S]*?active = \$bindable\(\)/u);
+	assert.match(reviewFilterControlsSource, /\.review-filter-controls\{display:grid;gap:8px;grid-template-columns:minmax\(0,1fr\) minmax\(200px,\.7fr\);min-width:0;width:100%\}/u);
+	assert.match(reviewFilterControlsSource, /@media\(max-width:500px\)\{\.review-filter-controls\{grid-template-columns:minmax\(0,1fr\)\}\}/u);
+	assert.doesNotMatch(reviewFilterControlsSource, /fetch\(|localStorage|sessionStorage|saveBrowserState|runPackAction|setSelectedWork/u);
 });
 
 test('Work-to-Review retained scroll settles before strict visible-focus proof', async () => {
@@ -457,7 +465,7 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.match(routeSource, /registerPageTools\(document, \[\s*createCurrentReviewTool\(\(\) => currentReviewView\),\s*createSetReviewScopeTool\(setReviewScopeFromWebMcp\)\s*\], \{\s*onInvocationError: clearFailedReviewWebMcpReceipt,\s*onResult: recordReviewWebMcpResult\s*\}\)/u);
 	assert.match(routeSource, /stopReviewWebMcp\?\.\(\);\s*stopReviewWebMcp = null;/u);
 	assert.match(routeSource, /stopReviewWebMcp = null;\s*webMcpScopeReceipt = null;/u);
-	assert.match(routeSource, /id="review-filter-query"[\s\S]*?maxlength=\{REVIEW_SEARCH_MAX_LENGTH\}/u);
+	assert.match(reviewFilterControlsSource, /id="review-filter-query"[\s\S]*?maxlength=\{REVIEW_SEARCH_MAX_LENGTH\}/u);
 	assert.doesNotMatch(routeSource, /document\.modelContext|registerTool\(/u);
 	assert.doesNotMatch(`${routeSource}\n${helperSource}\n${registrationSource}`, /\/api\/mcp-proxy|jsonrpc|tools\/call|unregisterTool/u);
 	assert.doesNotMatch(helperSource, /\.\.\.(?:pack|item|review)|runPackAction|togglePackPinned|setSelectedWork/u);

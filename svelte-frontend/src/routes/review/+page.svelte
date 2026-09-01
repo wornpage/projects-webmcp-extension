@@ -17,7 +17,7 @@
 		displayToast
 	} from '$lib/demo-client';
 	import { buildActionUndoSnapshot, commitActionUndo, receiptUndo, undoReceipt } from '$lib/undo';
-	import { WornButton, WornIconButton, WornContainer, WornAccordion, WornError, WornEmpty, WornBadge, WornInput, WornPage, WornSegmentedControl, WornToolbar, WornReceipt, WornFoldedSurface } from '$lib/components';
+	import { WornButton, WornIconButton, WornContainer, WornAccordion, WornError, WornEmpty, WornBadge, WornPage, WornReceipt, WornFoldedSurface } from '$lib/components';
 	import { workItemIssues } from '$lib/work-item-issues';
 	import { activityTextWithoutActor } from '$lib/activity';
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
@@ -28,7 +28,6 @@
 	import { recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import {
-		REVIEW_SEARCH_MAX_LENGTH,
 		REVIEW_SCOPE_TOOL_NAME,
 		createCurrentReviewTool,
 		createSetReviewScopeTool,
@@ -58,17 +57,11 @@
 		summarizeReviewQueue,
 		type ReviewSubFilter
 	} from './review-queue';
+	import ReviewFilterControls from './ReviewFilterControls.svelte';
 
 	let query = $state('');
 	let busyId = $state('');
 	let busyAction = $state('');
-
-	function setHumanReviewQuery(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const nextQuery = input.value.slice(0, REVIEW_SEARCH_MAX_LENGTH);
-		input.value = nextQuery;
-		query = nextQuery;
-	}
 
 	function livePacks(source: DemoPack[]): DemoPack[] {
 		return source.filter((pack) => pack.archived !== true);
@@ -556,25 +549,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 	{/if}
 
 	{#if reviewTotal > 1 || reviewSubFilter !== 'all'}
-		<WornToolbar label="Review filters">
-			<div class="review-filter-controls" data-review-filter-controls>
-				<WornSegmentedControl
-					options={reviewFilterOptions}
-					bind:active={reviewSubFilter}
-					name="review-subfilter"
-					label="Review queue filter"
-				/>
-				<WornInput
-					id="review-filter-query"
-					type="search"
-					maxlength={REVIEW_SEARCH_MAX_LENGTH}
-					placeholder="Search review…"
-					aria-label="Filter review items by text"
-					bind:value={query}
-					oninput={setHumanReviewQuery}
-				/>
-			</div>
-		</WornToolbar>
+		<ReviewFilterControls options={reviewFilterOptions} bind:query bind:active={reviewSubFilter} />
 	{/if}
 
 	{#if receipt?.summary && receipt?.pack?.id}
@@ -681,18 +656,6 @@ async function handleCardKeys(e: KeyboardEvent) {
 		flex-wrap: wrap;
 		gap: 8px;
 		justify-content: flex-end;
-	}
-	.review-filter-controls {
-		display: grid;
-		gap: 8px;
-		grid-template-columns: minmax(0, 1fr) minmax(200px, 0.7fr);
-		min-width: 0;
-		width: 100%;
-	}
-	@media (max-width: 500px) {
-		.review-filter-controls {
-			grid-template-columns: minmax(0, 1fr);
-		}
 	}
 	@media (max-width: 700px) {
 		.review-head-actions {
