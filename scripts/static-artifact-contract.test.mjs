@@ -329,6 +329,7 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 
 	const css = collectCss(artifactRoot);
 	const rules = parseCssRules(css);
+	assert.equal(rules.filter(({ declarations }) => declarations.size === 0).length, 0, 'built CSS contains no empty rules');
 	const brandRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)?$/u);
 	assert.equal(brandRule.declarations.get('min-height'), '44px');
 	assert.equal(brandRule.declarations.get('padding'), '0 12px');
