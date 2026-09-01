@@ -155,12 +155,15 @@ test('static artifact publishes the complete challenge input and security metada
 test('Svelte prerender validates one static adapter and no server output', () => {
 	const config = readFileSync(path.join(root, 'svelte-frontend', 'svelte.config.js'), 'utf8');
 	const build = readFileSync(path.join(root, 'scripts', 'build-svelte-frontend.mjs'), 'utf8');
+	const staticPublish = readFileSync(path.join(root, 'scripts', 'build-static-publish.mjs'), 'utf8');
 	assert.match(config, /webmcp-challenge-static-adapter/u);
 	assert.match(config, /builder\.writeClient\(output\)/u);
 	assert.match(config, /builder\.writePrerendered\(output\)/u);
 	assert.doesNotMatch(config, /writeServer|cloudflare|worker\/index/iu);
 	assert.match(build, /buildStaticPublish\(stagedPublicDir\)/u);
 	assert.match(build, /PROJECTS_SVELTE_ASSET_DIR: stagedPublicDir/u);
+	assert.match(staticPublish, /export async function buildStaticPublish\(outputDir\)/u);
+	assert.doesNotMatch(staticPublish, /^#!|isMainModule|process\.argv|Built static input/mu);
 });
 
 test('static mode identifies its bounded routes without production fallbacks', () => {

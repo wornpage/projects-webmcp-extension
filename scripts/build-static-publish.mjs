@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,12 +38,6 @@ const STATIC_404_PAGE = `<!DOCTYPE html>
 </html>
 `;
 
-if (isMainModule()) {
-	const outputDir = path.resolve(process.argv[2] || DEFAULT_STATIC_PUBLISH_DIR);
-	await buildStaticPublish(outputDir);
-	console.log(`Built static input: ${path.relative(repoRoot, outputDir)}`);
-}
-
 export async function buildStaticPublish(outputDir) {
 	const resolvedOutputDir = path.resolve(outputDir);
 	assertSafeOutputDir(resolvedOutputDir);
@@ -76,8 +68,4 @@ function assertSafeOutputDir(outputDir) {
 	if (!relativeToDist || relativeToDist.startsWith('..') || path.isAbsolute(relativeToDist)) {
 		throw new Error('Static output must be a child of dist/.');
 	}
-}
-
-function isMainModule() {
-	return process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 }
