@@ -54,9 +54,9 @@
 	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
 	import { recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
-	import WorkDeleteConfirmDialog from '$lib/WorkDeleteConfirmDialog.svelte';
 	import WorkGridCard from '$lib/components/WorkGridCard.svelte';
 	import WorkListCard from '$lib/components/WorkListCard.svelte';
+	import WorkBatchActions from './WorkBatchActions.svelte';
 	import WorkDecisionWorkspace from './WorkDecisionWorkspace.svelte';
 	import WorkFilterControls from './WorkFilterControls.svelte';
 	import WorkQuickAdd from './WorkQuickAdd.svelte';
@@ -122,11 +122,6 @@
 	});
 	let batchMode = $state(false);
 	let batchSelected = new SvelteSet<string>();
-	let batchBusyAction = $state<'done' | 'start' | 'block' | 'delete' | null>(null);
-	let batchDeleteDialogOpen = $state(false);
-	let batchDeleteTarget = $state<{ ids: string[]; count: number } | null>(null);
-	let batchDeleteReturnFocus = $state<HTMLElement | null>(null);
-	let batchDeleteFallbackFocus = $state<HTMLElement | null>(null);
 	let focusMode = $state(false);
 	const DENSITY_TABS: Array<{ id: 'card' | 'grid'; label: string }> = [
 		{ id: 'card', label: 'Cards' },
@@ -463,40 +458,6 @@
 		if (batchMode) displayToast('Select cards to act on them.', 'info');
 	}
 
-	async function focusBatchModeToggle() {
-		await tick();
-		const batchToggle = document.querySelector<HTMLElement>('[data-action="batch-mode"]');
-		if (
-			batchToggle?.isConnected &&
-			batchToggle.getClientRects().length > 0 &&
-			!batchToggle.matches(':disabled, [aria-disabled="true"]')
-		) {
-			batchToggle.focus({ preventScroll: true });
-		}
-	}
-
-	async function clearBatchSelection() {
-		if (busyId === 'batch' || batchSelected.size === 0) return;
-		batchSelected.clear();
-		await focusBatchModeToggle();
-	}
-
-	function requestBatchDelete(event: MouseEvent) {
-		if (busyId || batchSelected.size === 0) return;
-		const ids = [...batchSelected];
-		batchDeleteTarget = { ids, count: ids.length };
-		batchDeleteReturnFocus = event.currentTarget as HTMLElement;
-		batchDeleteFallbackFocus = document.querySelector<HTMLElement>('[data-action="batch-mode"]');
-		batchDeleteDialogOpen = true;
-	}
-
-	async function confirmBatchDelete() {
-		const target = batchDeleteTarget;
-		if (!target) return;
-		await batchAction('delete', target.ids, false);
-		batchDeleteTarget = null;
-	}
-
 	function toggleFocusMode() {
 		if (!focusMode && !$demoState?.selectedId) {
 			displayToast('Select a work item before turning on Focus.', 'info');
@@ -695,57 +656,6 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		if (busyId === 'batch') return;
 		if (batchSelected.has(packId)) batchSelected.delete(packId);
 		else batchSelected.add(packId);
-	}
-
-	// Apply the selected local action to each item in sequence; the final
-	// receipt remains visible. Delete updates the browser-local list once.
-	let hasDraftSelected = $derived(batchSelected.size > 0 && packs.some(p => batchSelected.has(p.id!) && p.status === 'draft'));
-	let hasIncompleteSelected = $derived(batchSelected.size > 0 && packs.some(p => batchSelected.has(p.id!) && p.status !== 'done'));
-
-	async function batchAction(action: 'done' | 'start' | 'block' | 'delete', selectedIds = [...batchSelected], reportError = true) {
-		const requestedIds = [...selectedIds];
-		const alreadyDoneCount = action === 'done'
-			? requestedIds.filter((id) => packs.some((pack) => pack.id === id && pack.status === 'done')).length
-			: 0;
-		const ids = action === 'done'
-			? requestedIds.filter((id) => packs.some((pack) => pack.id === id && pack.status !== 'done'))
-			: requestedIds;
-		if (!ids.length || busyId) return;
-		busyId = 'batch';
-		batchBusyAction = action;
-		errorText = '';
-		let completedBatchAction = false;
-		try {
-			if (action === 'delete') {
-				await saveBrowserState((draft) => {
-					draft.packs = draft.packs.filter((pack) => !ids.includes(pack.id || ''));
-					if (!draft.packs.some((pack) => pack.id === draft.selectedId)) {
-						draft.selectedId = draft.packs[0]?.id || '';
-					}
-				});
-			} else {
-				for (const id of ids) {
-					await runPackAction(id, action);
-				}
-			}
-			const label = { done: 'done', start: 'started', block: 'blocked', delete: 'deleted' }[action];
-			const completed = `${ids.length} ${ids.length === 1 ? 'item' : 'items'} ${label}.`;
-			const skipped = alreadyDoneCount > 0
-				? `${alreadyDoneCount} ${alreadyDoneCount === 1 ? 'item is' : 'items are'} already done.`
-				: '';
-			displayToast([completed, skipped].filter(Boolean).join(' '), 'success');
-			batchSelected.clear();
-			completedBatchAction = true;
-		} catch (error) {
-			const message = describeError(error, 'The batch action failed partway — check the list.');
-			if (reportError) errorText = message;
-			else throw new Error(message);
-		} finally {
-			batchBusyAction = null;
-			busyId = '';
-			actionBusy.set('');
-		}
-		if (completedBatchAction && action !== 'delete') await focusBatchModeToggle();
 	}
 
 	async function doAction(pack: DemoPack, action: string) {
@@ -1077,23 +987,12 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			onDensityChange={handleDensityChange}
 		/>
 	{/if}
-	{#if batchMode}
-		<div class="demo-batch-bar" class:is-active={batchSelected.size > 0} role="toolbar" aria-label="Batch actions">
-			<span class="demo-batch-count" aria-live="polite" aria-atomic="true">{batchSelected.size} selected</span>
-			<WornButton  size="sm" type="button" data-action="batch-done" disabled={!hasIncompleteSelected || busyId === 'batch'} onclick={() => batchAction('done')}>{batchBusyAction === 'done' ? 'Finishing…' : 'Done'}</WornButton>
-			<WornButton  size="sm" type="button" data-action="batch-start" disabled={!hasDraftSelected || busyId === 'batch'} onclick={() => batchAction('start')}>{batchBusyAction === 'start' ? 'Starting…' : 'Start'}</WornButton>
-			<WornButton  size="sm" type="button" data-action="batch-block" disabled={batchSelected.size === 0 || busyId === 'batch'} onclick={() => batchAction('block')}>{batchBusyAction === 'block' ? 'Blocking…' : 'Block'}</WornButton>
-			<WornButton variant="danger" size="sm" type="button" data-action="batch-delete" disabled={batchSelected.size === 0 || busyId === 'batch'} onclick={requestBatchDelete}>Delete</WornButton>
-			<WornButton  size="sm" type="button" data-action="batch-clear" disabled={batchSelected.size === 0 || busyId === 'batch'} onclick={clearBatchSelection}>Deselect</WornButton>
-		</div>
-	{/if}
-
-	<WorkDeleteConfirmDialog
-		bind:open={batchDeleteDialogOpen}
-		selectedCount={batchDeleteTarget?.count || 0}
-		returnFocus={batchDeleteReturnFocus}
-		fallbackFocus={batchDeleteFallbackFocus}
-		onconfirm={confirmBatchDelete}
+	<WorkBatchActions
+		active={batchMode}
+		{packs}
+		selected={batchSelected}
+		bind:busyId
+		bind:errorText
 	/>
 
 	{#if receiptVisible && receipt}
@@ -1236,22 +1135,9 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		border-color: var(--worn-accent) !important;
 		color: var(--worn-accent-text) !important;
 	}
-	@media(min-width:421px){
-		.demo-batch-bar {
-			align-items: center;
-			display: flex;
-			flex-wrap: wrap;
-			gap: 8px;
-			min-width: 0;
-			padding: 8px;
-		}
-	}
 	@media(max-width:420px){
 		:global(.demo-panel-head:has(.work-head-actions)){align-items:flex-start;flex-wrap:wrap}
 		.work-head-actions{flex-wrap:nowrap;gap:4px;justify-content:flex-start;width:100%}
-		.demo-batch-bar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-width:0}
-		.demo-batch-count{grid-column:1 / -1}
-		.demo-batch-bar :global(.worn-btn){min-width:0;width:100%}
 	}
 	@media(max-width:700px){
 		:global(.demo-panel-head:has(.work-head-actions)){gap:8px;padding-block:7px}

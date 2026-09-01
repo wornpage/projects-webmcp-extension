@@ -32,6 +32,7 @@ const workDecisionWorkspaceSource = fs.readFileSync(path.join(repoRoot, 'svelte-
 const workQuickAddSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkQuickAdd.svelte'), 'utf8');
 const workRecentActivitySource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkRecentActivity.svelte'), 'utf8');
 const workShortcutHelpSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkShortcutHelp.svelte'), 'utf8');
+const workBatchActionsSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkBatchActions.svelte'), 'utf8');
 const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
 const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
 const workListCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkListCard.svelte'), 'utf8');
@@ -537,10 +538,18 @@ test('Work active-filter count excludes the separately persisted display density
 });
 
 test('successful Work batch delete restores focus through an enabled durable fallback', () => {
-	assert.match(routeSource, /let batchDeleteFallbackFocus = \$state<HTMLElement \| null>\(null\);/u);
-	const deleteRequest = routeSource.match(/function requestBatchDelete\(event: MouseEvent\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.match(deleteRequest, /batchDeleteReturnFocus = event\.currentTarget as HTMLElement;[\s\S]*?batchDeleteFallbackFocus = document\.querySelector<HTMLElement>\('\[data-action="batch-mode"\]'\);[\s\S]*?batchDeleteDialogOpen = true;/u);
-	assert.match(routeSource, /<WorkDeleteConfirmDialog[\s\S]*?fallbackFocus=\{batchDeleteFallbackFocus\}[\s\S]*?onconfirm=\{confirmBatchDelete\}/u);
+	assert.match(routeSource, /import WorkBatchActions from '\.\/WorkBatchActions\.svelte';[\s\S]*?<WorkBatchActions[\s\S]*?active=\{batchMode\}[\s\S]*?\{packs\}[\s\S]*?selected=\{batchSelected\}[\s\S]*?bind:busyId[\s\S]*?bind:errorText[\s\S]*?\/>/u);
+	assert.match(workBatchActionsSource, /active: boolean;[\s\S]*?packs: DemoPack\[\];[\s\S]*?selected: SvelteSet<string>;[\s\S]*?busyId: string;[\s\S]*?errorText: string;[\s\S]*?busyId = \$bindable\(\)[\s\S]*?errorText = \$bindable\(\)/u);
+	assert.match(routeSource, /let batchMode = \$state\(false\);[\s\S]*?let batchSelected = new SvelteSet<string>\(\);[\s\S]*?function toggleBatchMode\(\)[\s\S]*?function toggleBatchSelection\(packId: string\)[\s\S]*?<WorkBatchActions[\s\S]*?active=\{batchMode\}[\s\S]*?selected=\{batchSelected\}/u);
+	assert.match(routeSource, /\{#snippet batchCheckbox\(pack: DemoPack\)\}[\s\S]*?checked=\{batchSelected\.has\(pack\.id!\)\}[\s\S]*?onchange=\{\(\) => toggleBatchSelection\(pack\.id!\)\}[\s\S]*?<WorkGridCard[\s\S]*?batchSelected=\{batchSelected\.has\(pack\.id!\)\}[\s\S]*?\{batchCheckbox\}[\s\S]*?<WorkListCard[\s\S]*?\{batchMode\}[\s\S]*?\{batchCheckbox\}/u);
+	assert.match(workBatchActionsSource, /actionBusy,[\s\S]*?displayToast,[\s\S]*?runPackAction,[\s\S]*?saveBrowserState,[\s\S]*?ChallengeStateError[\s\S]*?from '\$lib\/demo-client';/u);
+	assert.match(workBatchActionsSource, /let deleteFallbackFocus = \$state<HTMLElement \| null>\(null\);/u);
+	const deleteRequest = workBatchActionsSource.match(/function requestDelete\(event: MouseEvent\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(deleteRequest, /const ids = \[\.\.\.selected\];[\s\S]*?deleteTarget = \{ ids, count: ids\.length \};[\s\S]*?deleteReturnFocus = event\.currentTarget as HTMLElement;[\s\S]*?deleteFallbackFocus = document\.querySelector<HTMLElement>\('\[data-action="batch-mode"\]'\);[\s\S]*?deleteDialogOpen = true;/u);
+	const confirmBatchDelete = workBatchActionsSource.match(/async function confirmDelete\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(confirmBatchDelete, /const target = deleteTarget;[\s\S]*?if \(!target\) return;[\s\S]*?await runBatchAction\('delete', target\.ids, false\);[\s\S]*?deleteTarget = null;/u);
+	assert.match(workBatchActionsSource, /<WorkDeleteConfirmDialog[\s\S]*?fallbackFocus=\{deleteFallbackFocus\}[\s\S]*?onconfirm=\{confirmDelete\}/u);
+	assert.doesNotMatch(routeSource, /WorkDeleteConfirmDialog|batchDeleteDialogOpen|batchDeleteTarget|batchDeleteReturnFocus|batchDeleteFallbackFocus|requestBatchDelete|confirmBatchDelete/u);
 	assert.match(workDeleteDialogSource, /import \{ tick \} from 'svelte';/u);
 	assert.match(workDeleteDialogSource, /fallbackFocus\?: HTMLElement \| null;/u);
 	const restoreFocus = workDeleteDialogSource.match(/async function restoreFocus\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
@@ -550,24 +559,35 @@ test('successful Work batch delete restores focus through an enabled durable fal
 });
 
 test('Work batch toolbar disables empty Deselect and hands completed Deselect focus to Batch', () => {
-	const batchToolbar = routeSource.match(/<div class="demo-batch-bar"[\s\S]*?<\/div>/u)?.[0] ?? '';
-	assert.match(batchToolbar, /data-action="batch-clear" disabled=\{batchSelected\.size === 0 \|\| busyId === 'batch'\}/u);
-	const clearSelection = routeSource.match(/async function clearBatchSelection\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
-	assert.match(clearSelection, /if \(busyId === 'batch' \|\| batchSelected\.size === 0\) return;/u);
-	assert.match(clearSelection, /batchSelected\.clear\(\);[\s\S]*?await focusBatchModeToggle\(\);/u);
+	const batchToolbar = workBatchActionsSource.match(/<div class="demo-batch-bar"[\s\S]*?<\/div>/u)?.[0] ?? '';
+	assert.match(batchToolbar, /data-action="batch-clear" disabled=\{selected\.size === 0 \|\| busyId === 'batch'\}/u);
+	assert.match(batchToolbar, /data-action="batch-done"[\s\S]*?onclick=\{\(\) => runBatchAction\('done'\)\}[\s\S]*?data-action="batch-start"[\s\S]*?onclick=\{\(\) => runBatchAction\('start'\)\}[\s\S]*?data-action="batch-block"[\s\S]*?onclick=\{\(\) => runBatchAction\('block'\)\}[\s\S]*?data-action="batch-delete"[\s\S]*?onclick=\{requestDelete\}/u);
+	const clearSelection = workBatchActionsSource.match(/async function clearSelection\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.match(clearSelection, /if \(busyId === 'batch' \|\| selected\.size === 0\) return;/u);
+	assert.match(clearSelection, /selected\.clear\(\);[\s\S]*?await focusBatchModeToggle\(\);/u);
+	assert.match(workBatchActionsSource, /@media \(min-width: 421px\)[\s\S]*?\.demo-batch-bar[\s\S]*?display: flex;[\s\S]*?@media \(max-width: 420px\)[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/u);
+	assert.doesNotMatch(routeSource, /demo-batch-bar|demo-batch-count|clearBatchSelection|focusBatchModeToggle/u);
 });
 
 test('Work batch Done excludes completed work, reports skips, and restores durable focus', () => {
-	assert.match(routeSource, /let hasIncompleteSelected = \$derived\(batchSelected\.size > 0 && packs\.some\(p => batchSelected\.has\(p\.id!\) && p\.status !== 'done'\)\);/u);
-	const batchToolbar = routeSource.match(/<div class="demo-batch-bar"[\s\S]*?<\/div>/u)?.[0] ?? '';
+	assert.match(workBatchActionsSource, /let hasIncompleteSelected = \$derived\([\s\S]*?selected\.size > 0 && packs\.some\(\(pack\) => selected\.has\(pack\.id!\) && pack\.status !== 'done'\)[\s\S]*?\);/u);
+	const batchToolbar = workBatchActionsSource.match(/<div class="demo-batch-bar"[\s\S]*?<\/div>/u)?.[0] ?? '';
 	assert.match(batchToolbar, /data-action="batch-done" disabled=\{!hasIncompleteSelected \|\| busyId === 'batch'\}/u);
-	const batchAction = routeSource.match(/async function batchAction\([\s\S]*?\n\t\}/u)?.[0] ?? '';
+	const batchAction = workBatchActionsSource.match(/async function runBatchAction\([\s\S]*?\n\t\}/u)?.[0] ?? '';
+	const beforeFirstMutation = batchAction.match(/async function runBatchAction\([\s\S]*?\n\t\ttry \{/u)?.[0] ?? '';
+	assert.match(beforeFirstMutation, /if \(!ids\.length \|\| busyId\) return;[\s\S]*?busyId = 'batch';[\s\S]*?busyAction = action;[\s\S]*?errorText = '';[\s\S]*?try \{/u);
+	assert.doesNotMatch(beforeFirstMutation, /await /u);
+	assert.match(batchAction, /if \(action === 'delete'\) \{[\s\S]*?await saveBrowserState\(\(draft\) => \{[\s\S]*?draft\.packs = draft\.packs\.filter[\s\S]*?draft\.selectedId = draft\.packs\[0\]\?\.id \|\| '';[\s\S]*?\}\);[\s\S]*?\} else \{[\s\S]*?for \(const id of ids\) \{[\s\S]*?await runPackAction\(id, action\);/u);
 	assert.match(batchAction, /const requestedIds = \[\.\.\.selectedIds\];[\s\S]*?const alreadyDoneCount = action === 'done'[\s\S]*?pack\.status === 'done'/u);
 	assert.match(batchAction, /const ids = action === 'done'[\s\S]*?pack\.status !== 'done'[\s\S]*?: requestedIds;/u);
 	assert.match(batchAction, /const skipped = alreadyDoneCount > 0[\s\S]*?already done[\s\S]*?displayToast\(\[completed, skipped\]\.filter\(Boolean\)\.join\(' '\), 'success'\)/u);
+	assert.match(batchAction, /catch \(error\) \{[\s\S]*?error instanceof ChallengeStateError[\s\S]*?\? error\.message[\s\S]*?: 'The batch action failed partway — check the list\.';[\s\S]*?if \(reportError\) errorText = message;[\s\S]*?else throw new Error\(message\);/u);
+	assert.match(batchAction, /finally \{[\s\S]*?busyAction = null;[\s\S]*?busyId = '';[\s\S]*?actionBusy\.set\(''\);/u);
 	assert.match(batchAction, /completedBatchAction = true;[\s\S]*?finally[\s\S]*?busyId = '';[\s\S]*?if \(completedBatchAction && action !== 'delete'\) await focusBatchModeToggle\(\);/u);
-	const focusBatchModeToggle = routeSource.match(/async function focusBatchModeToggle\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	const focusBatchModeToggle = workBatchActionsSource.match(/async function focusBatchModeToggle\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
 	assert.match(focusBatchModeToggle, /await tick\(\);[\s\S]*?\[data-action="batch-mode"\][\s\S]*?isConnected[\s\S]*?getClientRects\(\)\.length > 0[\s\S]*?:disabled[\s\S]*?aria-disabled="true"[\s\S]*?focus\(\{ preventScroll: true \}\)/u);
+	assert.doesNotMatch(routeSource, /batchBusyAction|hasDraftSelected|hasIncompleteSelected|batchAction\(/u);
+	assert.doesNotMatch(workBatchActionsSource, /registerPageTools|modelContext|fetch\(|goto\(|onBatch/u);
 });
 
 test('compact Work grid cards remain readable and contained for fine and coarse pointers', () => {
