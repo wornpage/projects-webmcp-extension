@@ -6,6 +6,7 @@ import test from 'node:test';
 
 const sourceRoot = fileURLToPath(new URL('../svelte-frontend/src/', import.meta.url));
 const toastArchive = 'https://codeload.github.com/wornpage/toast/tar.gz/f8b12dbab5b5072e7a2f009ef52a9417a3cbde64';
+const receiptArchive = 'https://codeload.github.com/wornpage/receipt/tar.gz/d3d71e7b39843745b7822262365ebaf025d38425';
 const frontendPackage = JSON.parse(readFileSync(
 	new URL('../svelte-frontend/package.json', import.meta.url),
 	'utf8'
@@ -38,7 +39,15 @@ const wornToastSource = readFileSync(
 	new URL('../svelte-frontend/src/lib/components/WornToast.svelte', import.meta.url),
 	'utf8'
 );
+const componentIndexSource = readFileSync(
+	new URL('../svelte-frontend/src/lib/components/index.ts', import.meta.url),
+	'utf8'
+);
 const producerRouteSources = ['work', 'review', 'next'].map((route) => readFileSync(
+	new URL(`../svelte-frontend/src/routes/${route}/+page.svelte`, import.meta.url),
+	'utf8'
+));
+const receiptRouteSources = ['next', 'webmcp-challenge', 'work'].map((route) => readFileSync(
 	new URL(`../svelte-frontend/src/routes/${route}/+page.svelte`, import.meta.url),
 	'utf8'
 ));
@@ -80,5 +89,19 @@ test('shared WornToast dismissal is the only toast-removal owner', () => {
 		assert.match(routeSource, /import[\s\S]*?displayToast[\s\S]*?from '\$lib\/demo-client';/u);
 		assert.match(routeSource, /displayToast\(/u);
 		assert.doesNotMatch(routeSource, /\btoasts\b|\.slice\(-4\)|function toast\s*\(/u);
+	}
+});
+
+test('Projects consumes immutable WornReceipt focus recovery without a local fallback', () => {
+	assert.equal(frontendPackage.dependencies['@wornpage/receipt'], receiptArchive);
+	assert.equal(frontendLock.packages[''].dependencies['@wornpage/receipt'], receiptArchive);
+	assert.equal(frontendLock.packages['node_modules/@wornpage/receipt'].resolved, receiptArchive);
+	assert.match(frontendLock.packages['node_modules/@wornpage/receipt'].integrity, /^sha512-/u);
+	assert.match(componentIndexSource, /export \{ WornReceipt \} from '@wornpage\/receipt';/u);
+
+	for (const routeSource of receiptRouteSources) {
+		assert.match(routeSource, /<WornReceipt/u);
+		assert.match(routeSource, /ondone=/u);
+		assert.doesNotMatch(routeSource, /dismissWithFocusRecovery|focus-recovery/u);
 	}
 });

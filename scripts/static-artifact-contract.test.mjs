@@ -317,7 +317,10 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	assert.match(guideHtml, /Follow the brief on this page\./u);
 	assert.match(guideHtml, /data-agent-brief-fast-create[^>]*>.*?Use fast-create brief/u);
 	assert.match(guideHtml, /Local draft · not saved · workspace unchanged/u);
-	assert.match(guideHtml, /Authority and browser status/u);
+	assert.match(guideHtml, /data-webmcp-guide-reader-status[^>]*data-reader-status="checking"/u);
+	assert.match(guideHtml, /Checking reader API…/u);
+	assert.match(guideHtml, /Authority boundary/u);
+	assert.doesNotMatch(guideHtml, /Authority and browser status/u);
 	assert.match(guideHtml, /create up to three Draft items through the bounded Work tool/u);
 	assert.match(guideHtml, /control Start, final Save, blocking, completion, and deletion/u);
 	assert.doesNotMatch(guideHtml, /approve, save, or discard every workspace change/u);
@@ -334,6 +337,10 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	assert.equal(brandRule.declarations.get('min-height'), '44px');
 	assert.equal(brandRule.declarations.get('padding'), '0 12px');
 	assert.equal(brandRule.declarations.get('min-width'), '0');
+
+	const landingRules = parseCssRules(readFileSync(path.join(artifactRoot, 'assets', 'landing.css'), 'utf8'));
+	const landingButtonRule = findRule(landingRules, /\.lp-btn$/u);
+	assert.equal(landingButtonRule.declarations.get('min-height'), '44px');
 
 	const brandTextRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)? span(?::where\([^)]*\))?$/u);
 	assert.equal(brandTextRule.declarations.get('overflow'), 'hidden');

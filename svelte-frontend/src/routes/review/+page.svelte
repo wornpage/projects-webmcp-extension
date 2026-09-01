@@ -132,7 +132,6 @@
 		scopeKey: string;
 		toolName: string;
 	} | null>(null);
-	let reviewSummaryText = $derived(buildReviewSummaryText(visible));
 	let blockedCount = $derived(reviewQueue.blockedCount);
 	let missingNextCount = $derived(reviewQueue.missingNextCount);
 	let ownerGapCount = $derived(reviewQueue.ownerGapCount);
@@ -146,6 +145,7 @@
 	const REVIEW_RENDER_PAGE_SIZE = 8;
 	let reviewRenderLimit = $state(REVIEW_RENDER_PAGE_SIZE);
 	let filteredVisible = $derived(reviewQueue.filteredVisible);
+	let reviewSummaryText = $derived(buildReviewSummaryText(filteredVisible));
 	let reviewTitle = $derived(
 		reviewTotal > 0
 			? reviewSubFilter === 'all'
@@ -492,7 +492,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 <WornPage sectionLabel="Step 2 of 3 · Narrow" title="Review" status={reviewTitle} variant="list" loading={$demoStateLoading && packs.length === 0}>
 	{#snippet headActions()}
 		<div class="review-head-actions">
-			{#if visible.length > 0 && !query.trim() && reviewSubFilter === 'all'}
+			{#if filteredVisible.length > 0}
 				<WornIconButton type="button" id="copy-review-summary" label="Copy review summary" title="Copy review summary" onclick={copyReviewSummary}>
 					<Copy aria-hidden="true" />
 				</WornIconButton>

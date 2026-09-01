@@ -39,7 +39,7 @@
 		'Agent: change page-local scope, prepare an unsaved next action, or create up to three Draft items through the bounded Work tool.',
 		'Person: control Start, final Save, blocking, completion, and deletion.'
 	] as const;
-	let webMcpGuideReaderAvailable = $state(false);
+	let webMcpGuideReaderStatus = $state<'checking' | 'available' | 'unavailable'>('checking');
 	let webMcpGuideReceipt = $state<{
 		summary: string;
 		cells: Array<{ label: string; value: string }>;
@@ -78,7 +78,9 @@
 		// This is intentionally capability detection, not a registration-success claim.
 		// registerPageTools continues to own registration, failure handling, and teardown.
 		const webMcpDocument = document as Document & { modelContext?: { registerTool?: unknown } };
-		webMcpGuideReaderAvailable = typeof webMcpDocument.modelContext?.registerTool === 'function';
+		webMcpGuideReaderStatus = typeof webMcpDocument.modelContext?.registerTool === 'function'
+			? 'available'
+			: 'unavailable';
 		return registerPageTools(document, [
 			createWebMcpChallengeGuideTool(() => readRenderedWebMcpChallengeGuide(document))
 		], {
@@ -158,7 +160,26 @@
 					{/each}
 				</ol>
 			</div>
-			<AgentBriefEditor scopeCatalog={guideScopeCatalog} bind:selectedScopeId bind:workQuery {selectedMatchingCount} />
+			<div class="challenge-agent-column">
+				<AgentBriefEditor scopeCatalog={guideScopeCatalog} bind:selectedScopeId bind:workQuery {selectedMatchingCount} />
+				<section
+					class="challenge-browser-note"
+					data-webmcp-guide-reader-status
+					data-reader-status={webMcpGuideReaderStatus}
+					aria-live="polite"
+					aria-atomic="true"
+					aria-labelledby="challenge-browser-note-title"
+				>
+					<h2 id="challenge-browser-note-title">Guide reader status</h2>
+					{#if webMcpGuideReaderStatus === 'checking'}
+						<p><strong>Checking reader API…</strong> Copy brief and the three route buttons remain available.</p>
+					{:else if webMcpGuideReaderStatus === 'available'}
+						<p><strong>Reader API detected.</strong> Read-only access to the visible Guide is available; it cannot navigate, save, or change workspace data. Detection does not confirm registration success.</p>
+					{:else}
+						<p><strong>Reader API unavailable.</strong> Copy brief keeps any nonempty Work scope, and the three visible route buttons remain usable.</p>
+					{/if}
+				</section>
+			</div>
 		</div>
 
 		{#if webMcpGuideReceipt}
@@ -171,26 +192,15 @@
 			</div>
 		{/if}
 
-		<WornAccordion label="Authority and browser status">
-			<div class="challenge-boundary-grid">
-				<section class="challenge-safety" data-webmcp-challenge-safety aria-labelledby="challenge-safety-title">
-					<h2 id="challenge-safety-title">Authority boundary</h2>
-					<ul>
-						{#each safety as guarantee (guarantee)}
-							<li>{guarantee}</li>
-						{/each}
-					</ul>
-				</section>
-
-				<section class="challenge-browser-note" data-webmcp-guide-reader-status aria-live="polite" aria-labelledby="challenge-browser-note-title">
-					<h2 id="challenge-browser-note-title">Guide reader in this browser</h2>
-					{#if webMcpGuideReaderAvailable}
-						<p><strong>Reader API detected.</strong> The Guide tool reads the visible guide, current brief, scope choices, and exact denominator only; it cannot navigate, save, or change workspace data. Detection does not confirm registration success.</p>
-					{:else}
-						<p><strong>Reader API unavailable.</strong> Copy brief keeps any nonempty Work scope, and the three visible route buttons remain usable.</p>
-					{/if}
-				</section>
-			</div>
+		<WornAccordion label="Authority boundary">
+			<section class="challenge-safety" data-webmcp-challenge-safety aria-labelledby="challenge-safety-title">
+				<h2 id="challenge-safety-title">Who controls changes</h2>
+				<ul>
+					{#each safety as guarantee (guarantee)}
+						<li>{guarantee}</li>
+					{/each}
+				</ul>
+			</section>
 		</WornAccordion>
 	</div>
 </WornPage>
@@ -210,6 +220,11 @@
 	.challenge-guide-rail {
 		display: grid;
 		gap: 24px;
+		min-width: 0;
+	}
+	.challenge-agent-column {
+		display: grid;
+		gap: 12px;
 		min-width: 0;
 	}
 	.challenge-intro {
@@ -288,11 +303,6 @@
 	.challenge-steps :global(.worn-btn) {
 		justify-self: start;
 	}
-	.challenge-boundary-grid {
-		display: grid;
-		gap: 16px;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-	}
 	.challenge-safety ul {
 		color: var(--worn-text-secondary);
 		font-size: 15px;
@@ -301,8 +311,12 @@
 		padding-left: 20px;
 	}
 	.challenge-browser-note {
+		background: var(--worn-surface);
+		border: 1px solid var(--worn-border);
 		border-left: 3px solid var(--worn-accent);
-		padding-left: 12px;
+		border-radius: var(--worn-radius);
+		min-width: 0;
+		padding: 12px;
 	}
 	.challenge-browser-note h2 {
 		font-size: 14px;
@@ -310,13 +324,12 @@
 	}
 	.challenge-browser-note p {
 		color: var(--worn-text-secondary);
-		font-size: 15px;
-		line-height: 1.55;
+		font-size: 13px;
+		line-height: 1.5;
 		margin: 0;
 	}
 	@media (max-width: 860px) {
-		.challenge-hero,
-		.challenge-boundary-grid {
+		.challenge-hero {
 			grid-template-columns: minmax(0, 1fr);
 		}
 		.challenge-steps {

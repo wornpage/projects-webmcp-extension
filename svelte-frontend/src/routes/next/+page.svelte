@@ -474,8 +474,10 @@ let showingCustom = $state(false);
 				summary: 'Discarded by person'
 			});
 		}
-		if (previous) setNextEditorChoice(previous.choice, previous.mode, false);
-		void scheduleEditorFocus('choices');
+		if (previous) {
+			setNextEditorChoice(previous.choice, previous.mode, false);
+			void scheduleEditorFocus(previous.mode === 'custom' ? 'custom' : 'choices');
+		}
 	}
 
 	function editPack(candidate: DemoPack) {

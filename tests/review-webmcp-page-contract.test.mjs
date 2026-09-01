@@ -470,3 +470,9 @@ test('Review owns one canonical rendered projection and scope setter', () => {
 	assert.doesNotMatch(`${routeSource}\n${helperSource}\n${registrationSource}`, /\/api\/mcp-proxy|jsonrpc|tools\/call|unregisterTool/u);
 	assert.doesNotMatch(helperSource, /\.\.\.(?:pack|item|review)|runPackAction|togglePackPinned|setSelectedWork/u);
 });
+
+test('Review copies the exact non-empty scoped queue', () => {
+	assert.match(routeSource, /let reviewSummaryText = \$derived\(buildReviewSummaryText\(filteredVisible\)\);/u);
+	assert.match(routeSource, /\{#if filteredVisible\.length > 0\}[\s\S]*?id="copy-review-summary"[\s\S]*?onclick=\{copyReviewSummary\}[\s\S]*?\{\/if\}/u);
+	assert.doesNotMatch(routeSource, /visible\.length > 0 && !query\.trim\(\) && reviewSubFilter === 'all'/u);
+});
