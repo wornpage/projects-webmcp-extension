@@ -43,7 +43,7 @@
 
 	<div class="webmcp-handoff-authority">
 		<span>Agent authority</span>
-		<strong>{$webMcpHandoffSession.agentSaved} saved · {$webMcpHandoffSession.agentStarted} started</strong>
+		<strong>0 saved · 0 started</strong>
 		<small>Human decides</small>
 	</div>
 

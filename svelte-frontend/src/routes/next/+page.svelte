@@ -256,9 +256,7 @@ let showingCustom = $state(false);
 				recordWebMcpHandoffStep({
 					id: 'next-proposal',
 					title: 'Next prepared',
-					summary: `Unsaved · ${outcome.next.preparationReceipt.preparedAction}`,
-					evidence: `${outcome.next.preparationReceipt.evidence.length} verified facts · Workspace unchanged`,
-					authority: 'Human approval required'
+					summary: `Unsaved · ${outcome.next.preparationReceipt.preparedAction}`
 				});
 			}
 		});
@@ -495,9 +493,7 @@ let showingCustom = $state(false);
 			recordWebMcpHandoffStep({
 				id: 'human-decision',
 				title: 'Human decision',
-				summary: 'Discarded by person',
-				evidence: 'The prepared Next draft was removed. Workspace unchanged.',
-				authority: 'Human decision completed'
+				summary: 'Discarded by person'
 			});
 		}
 		if (previous) setNextEditorChoice(previous.choice, previous.mode, false);
@@ -543,9 +539,7 @@ let showingCustom = $state(false);
 				recordWebMcpHandoffStep({
 					id: 'human-decision',
 					title: 'Human decision',
-					summary: 'Approved and saved by person',
-					evidence: `Next action: ${effectiveChoice}`,
-					authority: 'Human decision completed'
+					summary: 'Approved and saved by person'
 				});
 			}
 			displayToast(summary, 'success');

@@ -217,9 +217,7 @@
 		recordWebMcpHandoffStep({
 			id: 'review-scope',
 			title: 'Review verified',
-			summary: `${outcome.review.counts.shown} shown of ${outcome.review.counts.totalReview}`,
-			evidence: `${outcome.review.counts.blocked} blocked · ${outcome.review.counts.searchMatches} search matches`,
-			authority: 'Page view only · Workspace unchanged'
+			summary: `${outcome.review.counts.shown} shown of ${outcome.review.counts.totalReview}`
 		});
 	}
 

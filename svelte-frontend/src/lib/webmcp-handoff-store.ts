@@ -4,25 +4,21 @@ import {
 	recordWebMcpHandoffStepState
 } from './webmcp-handoff-session.mjs';
 
-export type WebMcpHandoffStepId =
+type WebMcpHandoffStepId =
 	| 'work-scope'
 	| 'review-scope'
 	| 'next-proposal'
 	| 'draft-batch'
 	| 'human-decision';
 
-export type WebMcpHandoffStep = {
+type WebMcpHandoffStep = {
 	id: WebMcpHandoffStepId;
 	title: string;
 	summary: string;
-	evidence: string;
-	authority: string;
 };
 
-export type WebMcpHandoffSession = {
+type WebMcpHandoffSession = {
 	steps: WebMcpHandoffStep[];
-	agentSaved: 0;
-	agentStarted: 0;
 };
 
 export const webMcpHandoffSession = writable<WebMcpHandoffSession>(

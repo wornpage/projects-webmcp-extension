@@ -295,18 +295,14 @@
 			recordWebMcpHandoffStep({
 				id: 'draft-batch',
 				title: 'Draft work staged',
-				summary: `${outcome.created.length} Drafts · ${outcome.workspaceBefore} → ${outcome.workspaceAfter}`,
-				evidence: outcome.created.map(({ title }) => title).join(' · '),
-				authority: 'Draft only · Human Start required'
+				summary: `${outcome.created.length} Drafts · ${outcome.workspaceBefore} → ${outcome.workspaceAfter}`
 			});
 			const pendingWebMcpDraft = pendingNextActionDrafts($demoState).find(({ source }) => source === 'webmcp');
 			if (pendingWebMcpDraft) {
 				recordWebMcpHandoffStep({
 					id: 'human-decision',
 					title: 'Human decision',
-					summary: 'Pending approval',
-					evidence: `Return to Pending 1 to approve or discard the prepared action for ${pendingWebMcpDraft.workId}.`,
-					authority: 'Only a person can Save or Start'
+					summary: 'Pending approval'
 				});
 			}
 			return;
@@ -327,9 +323,7 @@
 		recordWebMcpHandoffStep({
 			id: 'work-scope',
 			title: 'Work narrowed',
-			summary: `${outcome.work.counts.matching} matching of ${outcome.work.counts.workspace}`,
-			evidence: `${outcome.work.counts.blocked} blocked · ${outcome.work.counts.shown} shown`,
-			authority: 'Page view only · Workspace unchanged'
+			summary: `${outcome.work.counts.matching} matching of ${outcome.work.counts.workspace}`
 		});
 	}
 

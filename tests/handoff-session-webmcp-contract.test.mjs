@@ -6,8 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
 	emptyWebMcpHandoffSession,
-	recordWebMcpHandoffStepState,
-	webMcpHandoffSessionView
+	recordWebMcpHandoffStepState
 } from '../svelte-frontend/src/lib/webmcp-handoff-session.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -26,35 +25,29 @@ const steps = {
 	work: {
 		id: 'work-scope',
 		title: 'Work narrowed',
-		summary: '4 matching of 8',
-		evidence: '2 blocked · 4 shown',
-		authority: 'Page view only · Workspace unchanged'
+		summary: '4 matching of 8'
 	},
 	review: {
 		id: 'review-scope',
 		title: 'Review verified',
-		summary: '2 shown of 5',
-		evidence: '2 blocked · 3 search matches',
-		authority: 'Page view only · Workspace unchanged'
+		summary: '2 shown of 5'
 	},
 	next: {
 		id: 'next-proposal',
 		title: 'Next prepared',
-		summary: 'Unsaved · Confirm storage bin delivery',
-		evidence: '2 verified facts · Workspace unchanged',
-		authority: 'Human approval required'
+		summary: 'Unsaved · Confirm storage bin delivery'
 	}
 };
 
 test('handoff session keeps one canonical clone-safe step per successful page action', () => {
 	let session = emptyWebMcpHandoffSession();
-	assert.deepEqual(session, { steps: [], agentSaved: 0, agentStarted: 0 });
+	assert.deepEqual(session, { steps: [] });
 	session = recordWebMcpHandoffStepState(session, steps.review);
 	session = recordWebMcpHandoffStepState(session, steps.work);
 	session = recordWebMcpHandoffStepState(session, steps.next);
 	assert.deepEqual(session.steps.map(({ id }) => id), ['work-scope', 'review-scope', 'next-proposal']);
-	assert.equal(session.agentSaved, 0);
-	assert.equal(session.agentStarted, 0);
+	assert.deepEqual(Object.keys(session.steps[0]), ['id', 'title', 'summary']);
+	assert.deepEqual(Object.keys(session), ['steps']);
 
 	const replaced = recordWebMcpHandoffStepState(session, {
 		...steps.work,
@@ -66,17 +59,17 @@ test('handoff session keeps one canonical clone-safe step per successful page ac
 	assert.equal(session.steps[0].summary, '4 matching of 8');
 });
 
-test('handoff session rejects false authority, duplicate ids, malformed order, and open input', () => {
+test('handoff session rejects extra authority, duplicate ids, malformed order, and open input', () => {
 	assert.throws(
-		() => webMcpHandoffSessionView({ steps: [], agentSaved: 1, agentStarted: 0 }),
-		/cannot claim agent-owned Save or Start authority/u
+		() => recordWebMcpHandoffStepState({ steps: [], agentSaved: 1 }, steps.work),
+		/session contains an unsupported field/u
 	);
 	assert.throws(
-		() => webMcpHandoffSessionView({ steps: [steps.work, steps.work], agentSaved: 0, agentStarted: 0 }),
+		() => recordWebMcpHandoffStepState({ steps: [steps.work, steps.work] }, steps.next),
 		/step ids must be unique/u
 	);
 	assert.throws(
-		() => webMcpHandoffSessionView({ steps: [steps.review, steps.work], agentSaved: 0, agentStarted: 0 }),
+		() => recordWebMcpHandoffStepState({ steps: [steps.review, steps.work] }, steps.next),
 		/canonical order/u
 	);
 	assert.throws(
@@ -95,14 +88,20 @@ test('one shared rail records only successful scoped receipts and reset clears t
 	assert.equal((layoutSource.match(/<WebMcpHandoffRail \/>/gu) ?? []).length, 1);
 	assert.match(railSource, /Live WebMCP handoff[\s\S]*?currentStep\.title[\s\S]*?Ready for one bounded run[\s\S]*?currentStep\?\.summary[\s\S]*?\{steps\.length\} of 5 steps/u);
 	assert.match(railSource, /STAGES[\s\S]*?'work-scope', number: 1, label: 'Work'[\s\S]*?'review-scope', number: 2, label: 'Review'[\s\S]*?'next-proposal', number: 3, label: 'Next'[\s\S]*?'draft-batch', number: 4, label: 'Drafts'[\s\S]*?'human-decision', number: 5, label: 'Decide'/u);
-	assert.match(railSource, /Agent authority[\s\S]*?agentSaved[\s\S]*?saved ·[\s\S]*?agentStarted[\s\S]*?started[\s\S]*?Human decides/u);
+	assert.match(railSource, /Agent authority[\s\S]*?0 saved · 0 started[\s\S]*?Human decides/u);
 	assert.doesNotMatch(railSource, /step\?\.evidence|step\.evidence|min-height: 108px|One agent run · visible across pages/u);
 	assert.match(stripSource, /Step 1 · Narrow Work[\s\S]*?Step 2 · Verify Review[\s\S]*?Step 3 · Prepare Next[\s\S]*?Step 4 · Stage Drafts/u);
+	assert.match(stripSource, /Page view only · Workspace unchanged[\s\S]*?Unsaved proposal · Human approval required[\s\S]*?Draft only · Human Start required/u);
 	assert.match(stripSource, /font-size: 18px;[\s\S]*?font-size: 14px;/u);
-	assert.match(workSource, /id: 'work-scope'[\s\S]*?Page view only · Workspace unchanged/u);
-	assert.match(workSource, /id: 'draft-batch'[\s\S]*?Draft only · Human Start required[\s\S]*?pendingNextActionDrafts\(\$demoState\)\.find[\s\S]*?if \(pendingWebMcpDraft\)[\s\S]*?id: 'human-decision'[\s\S]*?Only a person can Save or Start/u);
-	assert.match(reviewSource, /id: 'review-scope'[\s\S]*?Page view only · Workspace unchanged/u);
-	assert.match(nextSource, /id: 'next-proposal'[\s\S]*?Human approval required/u);
-	assert.match(nextSource, /wasWebMcpPreparation[\s\S]*?Discarded by person[\s\S]*?Workspace unchanged[\s\S]*?Approved and saved by person[\s\S]*?Human decision completed/u);
+	assert.match(reducerSource, /STEP_FIELDS = new Set\(\['id', 'title', 'summary'\]\)/u);
+	assert.match(reducerSource, /SESSION_FIELDS = new Set\(\['steps'\]\)/u);
+	assert.doesNotMatch(`${reducerSource}\n${storeSource}`, /agentSaved|agentStarted/u);
+	assert.doesNotMatch(reducerSource, /candidate\.(?:evidence|authority)|(?:evidence|authority): normalizedText/u);
+	assert.doesNotMatch(storeSource, /(?:evidence|authority): string;/u);
+	assert.match(workSource, /id: 'work-scope'[\s\S]*?summary: `\$\{outcome\.work\.counts\.matching\} matching of \$\{outcome\.work\.counts\.workspace\}`/u);
+	assert.match(workSource, /id: 'draft-batch'[\s\S]*?summary: `\$\{outcome\.created\.length\} Drafts[\s\S]*?pendingNextActionDrafts\(\$demoState\)\.find[\s\S]*?if \(pendingWebMcpDraft\)[\s\S]*?id: 'human-decision'[\s\S]*?summary: 'Pending approval'/u);
+	assert.match(reviewSource, /id: 'review-scope'[\s\S]*?summary: `\$\{outcome\.review\.counts\.shown\} shown of \$\{outcome\.review\.counts\.totalReview\}`/u);
+	assert.match(nextSource, /id: 'next-proposal'[\s\S]*?summary: `Unsaved · \$\{outcome\.next\.preparationReceipt\.preparedAction\}`/u);
+	assert.match(nextSource, /wasWebMcpPreparation[\s\S]*?summary: 'Discarded by person'[\s\S]*?summary: 'Approved and saved by person'/u);
 	assert.match(guideSource, /await resetDemoSampleState\(\);[\s\S]*?resetWebMcpHandoffSession\(\);[\s\S]*?Live sample reset/u);
 });
