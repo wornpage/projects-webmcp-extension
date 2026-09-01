@@ -63,6 +63,7 @@ svelte-frontend/src/routes/+layout.ts
 svelte-frontend/src/routes/next/+page.svelte
 svelte-frontend/src/routes/next/next-webmcp.mjs
 svelte-frontend/src/routes/next/NextCandidatePicker.svelte
+svelte-frontend/src/routes/next/NextWorkContext.svelte
 svelte-frontend/src/routes/priority/+page.svelte
 svelte-frontend/src/routes/priority/priority-webmcp.mjs
 svelte-frontend/src/routes/review/+page.svelte

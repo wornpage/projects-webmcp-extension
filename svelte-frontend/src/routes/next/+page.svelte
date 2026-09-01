@@ -50,6 +50,7 @@
 	import { recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import NextCandidatePicker from './NextCandidatePicker.svelte';
+	import NextWorkContext from './NextWorkContext.svelte';
 	import {
 		NEXT_ACTION_MAX_LENGTH,
 		NEXT_EDITOR_PREVIEW_ID,
@@ -573,24 +574,7 @@ let showingCustom = $state(false);
 	</WornPage>
 {:else if pack && preview}
 	<WornPage sectionLabel="Step 3 of 3 · Prepare" title={preparationReceipt ? 'Review the proposed next action' : 'Set the next action'}>
-		<dl class="next-work-context" data-next-current-work>
-			<div>
-				<dt>Current work</dt>
-				<dd>{workTitle(pack)}</dd>
-			</div>
-			{#if decisionWorkspaceContext}
-				<div class="next-decision-context" data-next-decision-context data-next-decision-mode={decisionWorkspaceContext.mode}>
-					<dt>Decision workspace context</dt>
-					<dd data-next-decision-reason>{decisionWorkspaceContext.reason}</dd>
-				</div>
-				{#if decisionWorkspaceContext.decider}
-					<div data-next-decision-decider>
-						<dt>Decision owner</dt>
-						<dd>{decisionWorkspaceContext.decider}</dd>
-					</div>
-				{/if}
-			{/if}
-		</dl>
+		<NextWorkContext workTitle={workTitle(pack)} decisionContext={decisionWorkspaceContext} />
 		{#if $demoStateError}
 			<WornError message="Could not load next actions" detail={$demoStateError} onretry={refreshNext} />
 		{/if}
@@ -683,46 +667,6 @@ let showingCustom = $state(false);
 
 <style>
 	/* Inline style attributes are blocked by the shared CSP — scoped classes. */
-	.next-work-context {
-		background: var(--worn-bg-secondary);
-		border: 1px solid var(--worn-border-strong);
-		border-left: 3px solid var(--worn-accent);
-		border-radius: var(--worn-radius);
-		box-sizing: border-box;
-		margin: 0 0 14px;
-		max-inline-size: 100%;
-		min-inline-size: 0;
-		padding: 12px 14px;
-	}
-	.next-work-context > div {
-		display: grid;
-		gap: 4px;
-		min-inline-size: 0;
-	}
-	.next-work-context > div + div {
-		border-top: 1px solid var(--worn-border);
-		padding-top: 10px;
-	}
-	.next-work-context dt,
-	.next-work-context dd {
-		margin: 0;
-		min-inline-size: 0;
-	}
-	.next-work-context dt {
-		color: var(--worn-text-muted);
-		font-family: var(--font-typewriter);
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-	}
-	.next-work-context dd {
-		color: var(--worn-text);
-		font-size: 15px;
-		font-weight: 700;
-		line-height: 1.4;
-		overflow-wrap: anywhere;
-	}
 	.next-action-editor {
 		align-items: center;
 		display: grid;
@@ -771,9 +715,6 @@ let showingCustom = $state(false);
 		min-inline-size: 0;
 	}
 	@media (max-width: 500px) {
-		.next-work-context {
-			padding: 12px;
-		}
 		.next-action-editor {
 			grid-template-columns: minmax(0, 1fr);
 		}

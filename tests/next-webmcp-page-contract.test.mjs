@@ -37,6 +37,7 @@ const registrationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/
 const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/WebMcpActivityStrip.svelte'), 'utf8');
 const decisionNavigationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/decision-workspace-navigation.mjs'), 'utf8');
 const candidatePickerSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/NextCandidatePicker.svelte'), 'utf8');
+const workContextSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/NextWorkContext.svelte'), 'utf8');
 
 const presetChoices = ['Review', 'Open', 'Focus', 'Set Blocker: None', 'Start', 'Finish with proof'];
 const currentEvidenceReference = Object.freeze({
@@ -585,9 +586,13 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(helperSource, /Browser agent prepared an unsaved draft\. No workspace data was saved\./u);
 	assert.match(routeSource, /Proposed next action<\/span><strong>\{effectiveChoice \|\| 'Not set'\}/u);
 	assert.doesNotMatch(routeSource, /<WornPage[^>]*status=\{workTitle\(pack\)\}/u);
-	assert.match(routeSource, /<WornPage sectionLabel="Step 3 of 3 · Prepare"[^>]*>[\s\S]*?<dl class="next-work-context" data-next-current-work>[\s\S]*?<dt>Current work<\/dt>[\s\S]*?<dd>\{workTitle\(pack\)\}<\/dd>/u);
-	assert.match(routeSource, /\.next-work-context\s*\{[\s\S]*?background: var\(--worn-bg-secondary\);[\s\S]*?border: 1px solid var\(--worn-border-strong\);[\s\S]*?box-sizing: border-box;[\s\S]*?max-inline-size: 100%;[\s\S]*?min-inline-size: 0;[\s\S]*?padding: 12px 14px;/u);
-	assert.match(routeSource, /\.next-work-context dd\s*\{[\s\S]*?overflow-wrap: anywhere;/u);
+	assert.match(routeSource, /import NextWorkContext from '\.\/NextWorkContext\.svelte';[\s\S]*?<WornPage sectionLabel="Step 3 of 3 · Prepare"[^>]*>[\s\S]*?<NextWorkContext workTitle=\{workTitle\(pack\)\} decisionContext=\{decisionWorkspaceContext\} \/>/u);
+	assert.match(workContextSource, /workTitle: string;[\s\S]*?decisionContext: \{[\s\S]*?mode: 'decision-workspace';[\s\S]*?reason: string;[\s\S]*?decider: string \| null;[\s\S]*?\} \| null;[\s\S]*?let \{ workTitle, decisionContext \}: Props = \$props\(\);/u);
+	assert.match(workContextSource, /<dl class="next-work-context" data-next-current-work>[\s\S]*?<dt>Current work<\/dt>[\s\S]*?<dd>\{workTitle\}<\/dd>[\s\S]*?data-next-decision-context[\s\S]*?data-next-decision-mode=\{decisionContext\.mode\}[\s\S]*?data-next-decision-reason>\{decisionContext\.reason\}[\s\S]*?data-next-decision-decider[\s\S]*?>\{decisionContext\.decider\}<\/dd>/u);
+	assert.match(workContextSource, /\.next-work-context\s*\{[\s\S]*?background: var\(--worn-bg-secondary\);[\s\S]*?border: 1px solid var\(--worn-border-strong\);[\s\S]*?box-sizing: border-box;[\s\S]*?max-inline-size: 100%;[\s\S]*?min-inline-size: 0;[\s\S]*?padding: 12px 14px;/u);
+	assert.match(workContextSource, /\.next-work-context dd\s*\{[\s\S]*?overflow-wrap: anywhere;/u);
+	assert.doesNotMatch(routeSource, /<dl class="next-work-context"|\.next-work-context/u);
+	assert.doesNotMatch(workContextSource, /\$state|\$bindable|\bon[a-z][A-Za-z]*\??:|registerPageTools|modelContext|fetch\(|localStorage|sessionStorage|goto\(|<slot|\{@render/u);
 	assert.match(routeSource, /\{#if preparationReceipt && preparationToolName === PREPARE_NEXT_ACTION_TOOL_NAME\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?id=\{NEXT_PREPARATION_RECEIPT_ID\}[\s\S]*?route="next"[\s\S]*?outcome="Draft prepared — waiting for your approval\."[\s\S]*?toolName=\{preparationToolName\}[\s\S]*?cells=\{preparationCells\}/u);
 	assert.doesNotMatch(routeSource, /data-webmcp-receipt="next"|webmcp-tool-label/u);
 	assert.match(activityStripSource, /Unsaved proposal · Human approval required[\s\S]*?webmcp-activity-outcome[\s\S]*?webmcp-activity-evidence[\s\S]*?webmcp-activity-authority[\s\S]*?WebMCP · \{toolName\}/u);
@@ -597,7 +602,7 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /<div class="demo-inline-form next-action-editor">[\s\S]*?<div class="next-save-actions">[\s\S]*?<\/div>[\s\S]*?<\/div>[\s\S]*?\{#if workItemIssues\(pack\)\.length > 0\}[\s\S]*?<div class="next-item-warnings" data-next-item-warnings>[\s\S]*?<WornAlert tone="warning">\{v\.message\}<\/WornAlert>/u);
 	assert.match(routeSource, /\.next-item-warnings\s*\{[\s\S]*?margin-block-start: 16px;[\s\S]*?max-inline-size: 100%;[\s\S]*?min-inline-size: 0;/u);
 	assert.match(routeSource, /@media \(max-width: 500px\)[\s\S]*?\.next-action-editor\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\);/u);
-	assert.match(routeSource, /@media \(max-width: 500px\)[\s\S]*?\.next-work-context\s*\{\s*padding: 12px;/u);
+	assert.match(workContextSource, /@media \(max-width: 500px\)[\s\S]*?\.next-work-context\s*\{\s*padding: 12px;/u);
 	assert.match(routeSource, /@media \(max-width: 500px\)[\s\S]*?\.next-save-help\s*\{\s*flex: 0 0 auto;/u);
 	assert.match(registrationSource, /const registrationController = new AbortController\(\);/u);
 	assert.doesNotMatch(helperSource, /modelContext|registerTool|fetch\(|jsonrpc|setPackNextAction|update_pack/u);
