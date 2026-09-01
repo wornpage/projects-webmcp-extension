@@ -43,9 +43,8 @@
 		workflowLabel,
 		type DemoPack
 	} from '$lib/demo-workflow';
-	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAccordion, WornAlert, WornTimeline, WornPage, WornReceipt } from '$lib/components';
+	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAlert, WornPage, WornReceipt } from '$lib/components';
 	import { buildActionUndoSnapshot, commitActionUndo, receiptUndo, undoReceipt } from '$lib/undo';
-	import { activityActor, activityEvidenceText, recentPackActivity, relativeActivityTime } from '$lib/activity';
 	import { localDateInputValue } from '$lib/local-date.mjs';
 	import { summarizeWorkMetadata } from '$lib/work-metadata.mjs';
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
@@ -61,6 +60,7 @@
 	import WorkDecisionWorkspace from './WorkDecisionWorkspace.svelte';
 	import WorkFilterControls from './WorkFilterControls.svelte';
 	import WorkQuickAdd from './WorkQuickAdd.svelte';
+	import WorkRecentActivity from './WorkRecentActivity.svelte';
 	import WorkShortcutHelp from './WorkShortcutHelp.svelte';
 	import {
 		WORK_SEARCH_TOOL_NAME,
@@ -84,7 +84,6 @@
 		['review', 'Review'],
 		['archived', 'Archived']
 	];
-	const RECENT_ACTIVITY_LIMIT = 6;
 	// Keep the Work route responsive when a real workspace holds thousands of
 	// packs. Filtering and sorting stay accurate across the full result, while
 	// the DOM starts with a bounded, explicit slice that a person can expand.
@@ -107,16 +106,6 @@
 
 	// Declared before the filter deriveds that read it (TDZ-safe for TS).
 	let packs = $derived(($demoState?.packs ?? []) as DemoPack[]);
-	let allRecentActivity = $derived(recentPackActivity(packs, Math.max(RECENT_ACTIVITY_LIMIT, packs.length)));
-	let recentActivity = $derived(allRecentActivity.slice(0, RECENT_ACTIVITY_LIMIT));
-	let recentTimelineEntries = $derived(recentActivity.map((entry) => ({
-		date: entry.at,
-		description: activityEvidenceText(entry),
-		href: `/next?pack=${encodeURIComponent(entry.packId)}`,
-		meta: activityActor(entry) || undefined,
-		title: entry.packTitle
-	})));
-
 	let workMetadata = $derived.by(() => summarizeWorkMetadata(packs, { isMissingOwnerValue, dueUrgency }));
 	let dueUrgencyFilter = $state('all');
 	// The Work page begins with the complete sample workspace visible so people and page tools
@@ -1231,20 +1220,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	</div>
 	{/each}
 
-{#if recentActivity.length > 0}
-		<div class="demo-work-recent">
-			<WornAccordion label="Recent activity">
-				<WornTimeline
-					class="demo-work-recent-timeline"
-					entries={recentTimelineEntries}
-					ariaLabel="Recent work activity"
-					density="compact"
-					headingLevel={2}
-					formatDate={relativeActivityTime}
-				/>
-			</WornAccordion>
-		</div>
-{/if}
+	<WorkRecentActivity {packs} />
 </WornPage>
 
 <style>
@@ -1297,11 +1273,4 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		:global([data-work-item] .worn-btn[data-work-primary-mutation]){min-height:44px}
 	}
 
-	.demo-work-recent {
-		margin-top: 16px;
-	}
-	:global(.demo-work-recent-timeline) {
-		--worn-timeline-max-inline-size: 100%;
-		margin-top: 6px;
-	}
 </style>

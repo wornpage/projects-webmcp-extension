@@ -30,6 +30,7 @@ const workDeleteDialogSource = fs.readFileSync(path.join(repoRoot, 'svelte-front
 const workFilterControlsSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkFilterControls.svelte'), 'utf8');
 const workDecisionWorkspaceSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkDecisionWorkspace.svelte'), 'utf8');
 const workQuickAddSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkQuickAdd.svelte'), 'utf8');
+const workRecentActivitySource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkRecentActivity.svelte'), 'utf8');
 const workShortcutHelpSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/WorkShortcutHelp.svelte'), 'utf8');
 const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
 const workGridCardSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/components/WorkGridCard.svelte'), 'utf8');
@@ -746,7 +747,14 @@ test('Quick Add and the canonical create owner share one explicit title-length b
 });
 
 test('expanded Recent activity follows the Work page heading hierarchy', () => {
-	const recentTimeline = routeSource.match(/<WornAccordion label="Recent activity">[\s\S]*?<WornTimeline[\s\S]*?\/>/u)?.[0] ?? '';
+	assert.match(routeSource, /import WorkRecentActivity from '\.\/WorkRecentActivity\.svelte';[\s\S]*?<WorkRecentActivity \{packs\} \/>/u);
+	assert.doesNotMatch(routeSource, /RECENT_ACTIVITY_LIMIT|allRecentActivity|recentActivity|recentTimelineEntries|recentPackActivity|activityEvidenceText|activityActor|demo-work-recent/u);
+	assert.match(workRecentActivitySource, /const RECENT_ACTIVITY_LIMIT = 6;[\s\S]*?recentPackActivity\(packs, Math\.max\(RECENT_ACTIVITY_LIMIT, packs\.length\)\)\.slice\(0, RECENT_ACTIVITY_LIMIT\)/u);
+	assert.match(workRecentActivitySource, /description: activityEvidenceText\(entry\),[\s\S]*?href: `\/next\?pack=\$\{encodeURIComponent\(entry\.packId\)\}`,[\s\S]*?meta: activityActor\(entry\) \|\| undefined,[\s\S]*?title: entry\.packTitle/u);
+	const recentTimeline = workRecentActivitySource.match(/<WornAccordion label="Recent activity">[\s\S]*?<WornTimeline[\s\S]*?\/>/u)?.[0] ?? '';
+	assert.match(recentTimeline, /entries=\{timelineEntries\}[\s\S]*?ariaLabel="Recent work activity"[\s\S]*?density="compact"/u);
 	assert.match(recentTimeline, /headingLevel=\{2\}/u);
 	assert.doesNotMatch(recentTimeline, /headingLevel=\{3\}/u);
+	assert.match(workRecentActivitySource, /:global\(\.demo-work-recent-timeline\)\{--worn-timeline-max-inline-size:100%;margin-top:6px\}/u);
+	assert.doesNotMatch(workRecentActivitySource, /fetch\(|localStorage|sessionStorage|saveBrowserState|createPack|runPackAction/u);
 });
