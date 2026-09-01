@@ -162,6 +162,9 @@ test('Svelte prerender validates one static adapter and no server output', () =>
 	assert.doesNotMatch(config, /writeServer|cloudflare|worker\/index/iu);
 	assert.match(build, /buildStaticPublish\(stagedPublicDir\)/u);
 	assert.match(build, /PROJECTS_SVELTE_ASSET_DIR: stagedPublicDir/u);
+	assert.match(build, /async function buildSvelteFrontend\(args\)[\s\S]*?spawnSync\(process\.execPath, \[viteCli, 'build', \.\.\.args\]/u);
+	assert.match(build, /await buildSvelteFrontend\(process\.argv\.slice\(2\)\);/u);
+	assert.doesNotMatch(build, /export async function buildSvelteFrontend|args = process\.argv/u);
 	assert.match(staticPublish, /export async function buildStaticPublish\(outputDir\)/u);
 	assert.doesNotMatch(staticPublish, /^#!|isMainModule|process\.argv|Built static input/mu);
 });

@@ -33,7 +33,7 @@ function finalizeStaticCsp(outputDir) {
 	writeFileSync(headersPath, headers.replace(CSP_SCRIPT_HASH_PLACEHOLDER, [...hashes].sort().join(' ')), 'utf8');
 }
 
-export async function buildSvelteFrontend(args = process.argv.slice(2)) {
+async function buildSvelteFrontend(args) {
 	try {
 		await buildStaticPublish(stagedPublicDir);
 		rmSync(DEFAULT_STATIC_PUBLISH_DIR, { recursive: true, force: true });
@@ -58,7 +58,7 @@ export async function buildSvelteFrontend(args = process.argv.slice(2)) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 	try {
-		await buildSvelteFrontend();
+		await buildSvelteFrontend(process.argv.slice(2));
 	} catch (error) {
 		process.stderr.write(`${error?.stack || error}\n`);
 		process.exitCode = Number.isInteger(error?.exitCode) ? error.exitCode : 1;
