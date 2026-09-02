@@ -19,9 +19,26 @@ function relative(absolute) {
 	return path.relative(root, absolute).split(path.sep).join('/');
 }
 
+function normalizeCssEscapes(source) {
+	return source.replace(
+		/\\(?:([\da-f]{1,6})(?:\r\n|[\t\n\f\r ])?|((?:\r\n)|[\n\f\r])|(.))/giu,
+		(_escape, hexadecimal, newline, character) => {
+			if (hexadecimal) {
+				const codePoint = Number.parseInt(hexadecimal, 16);
+				return codePoint === 0 || codePoint > 0x10ffff || (codePoint >= 0xd800 && codePoint <= 0xdfff)
+					? '\ufffd'
+					: String.fromCodePoint(codePoint);
+			}
+			if (newline) return '';
+			return character;
+		}
+	);
+}
+
 function sideBorderWidths(source) {
 	const widths = [];
-	for (const match of source.matchAll(/\bborder-(?:left|right|inline-start|inline-end)(?:-width)?\s*:\s*([^;{}]+)/giu)) {
+	const normalized = normalizeCssEscapes(source);
+	for (const match of normalized.matchAll(/\bborder-(?:left|right|inline-start|inline-end)(?:-width)?\s*:\s*([^;{}]+)/giu)) {
 		for (const width of match[1].matchAll(/(-?(?:\d+|\d*\.\d+))px\b/giu)) widths.push(Number(width[1]));
 	}
 	return widths;
@@ -29,13 +46,46 @@ function sideBorderWidths(source) {
 
 function horizontalInsetRails(source) {
 	const rails = [];
-	for (const declaration of source.matchAll(/\bbox-shadow\s*:\s*([^;}]+)/giu)) {
-		for (const shadow of declaration[1].matchAll(/\binset\s+(-?(?:\d+|\d*\.\d+))px\s+0(?:px)?\s+0(?:px)?\b/giu)) {
+	const normalized = normalizeCssEscapes(source);
+	for (const declaration of normalized.matchAll(/\bbox-shadow\s*:\s*([^;}]+)/giu)) {
+		for (const shadow of declaration[1].matchAll(/\binset\s+(-?(?:\d+|\d*\.\d+))px\s+-?(?:0+(?:\.0+)?|\.0+)(?:px)?\s+-?(?:0+(?:\.0+)?|\.0+)(?:px)?\b/giu)) {
 			if (Number(shadow[1]) !== 0) rails.push(shadow[0]);
 		}
 	}
 	return rails;
 }
+
+function fullBorderViolations(source) {
+	return {
+		wideSides: sideBorderWidths(source).filter((width) => Math.abs(width) > 1),
+		insetRails: horizontalInsetRails(source)
+	};
+}
+
+test('the Full Border Rule scanner rejects physical, logical, escaped, decimal, and inset side rails', () => {
+	const violations = fullBorderViolations(String.raw`
+		.escaped-left { border-\6c eft: 2px solid red; }
+		.physical-right { border-right-width: 2.25px; }
+		.logical-start { border-inline-start: -2px solid red; }
+		.logical-end { border-inline-end-width: -2.5px; }
+		.left-inset { box-shadow: inset 3.5px 0 0 red; }
+		.right-inset { box-shadow: inset -4px 0.0px -0px red; }
+	`);
+
+	assert.deepEqual(violations.wideSides, [2, 2.25, -2, -2.5]);
+	assert.deepEqual(violations.insetRails, ['inset 3.5px 0 0', 'inset -4px 0.0px -0px']);
+});
+
+test('the Full Border Rule scanner accepts neutral 1px separators and non-side shadows', () => {
+	const violations = fullBorderViolations(`
+		.physical { border-left: 1px solid var(--border); border-right-width: 1px; }
+		.logical { border-inline-start: 1px solid var(--border); border-inline-end-width: 1px; }
+		.elevated { box-shadow: 0 8px 24px rgb(0 0 0 / 18%); }
+		.vertical-inset { box-shadow: inset 0 1px 0 var(--border), inset 0 -1px 0 var(--border); }
+	`);
+
+	assert.deepEqual(violations, { wideSides: [], insetRails: [] });
+});
 
 test('the Full Border Rule covers every authored extension CSS and Svelte source', () => {
 	const sources = [
@@ -50,8 +100,7 @@ test('the Full Border Rule covers every authored extension CSS and Svelte source
 
 	const violations = sources.flatMap((file) => {
 		const source = readFileSync(file, 'utf8');
-		const wideSides = sideBorderWidths(source).filter((width) => Math.abs(width) > 1);
-		const insetRails = horizontalInsetRails(source);
+		const { wideSides, insetRails } = fullBorderViolations(source);
 		return wideSides.length || insetRails.length
 			? [{ file: relative(file), wideSides, insetRails }]
 			: [];
