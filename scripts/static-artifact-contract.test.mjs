@@ -6,6 +6,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { STATIC_PUBLISH_FILES, SVELTE_PUBLIC_FILES } from './build-static-publish.mjs';
+import { collectInlineScriptBodies } from './inline-script-bodies.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifactRoot = path.join(root, 'dist', 'static-publish');
@@ -42,6 +43,15 @@ function getAttribute(element, name) {
 	const match = element.match(new RegExp(`\\b${name}="([^"]*)"`, 'u'));
 	return match?.[1] ?? null;
 }
+
+test('inline script extraction follows HTML parsing semantics', () => {
+	assert.deepEqual(
+		collectInlineScriptBodies(
+			'<SCRIPT nonce="one">window.bootstrap = "<tag>";</SCRIPT foo="ignored"><script SRC="app.js">ignored()</script><script>  </script>'
+		),
+		['window.bootstrap = "<tag>";']
+	);
+});
 
 function countTopLevelTests(source) {
 	return source.match(/^test\(/gmu)?.length ?? 0;
@@ -314,9 +324,8 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	const inlineScriptHashes = new Set();
 	for (const name of actualHtml) {
 		const html = readFileSync(path.join(artifactRoot, name), 'utf8');
-		for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gu)) {
-			if (/\bsrc\s*=/u.test(match[1]) || !match[2].trim()) continue;
-			inlineScriptHashes.add(`'sha256-${createHash('sha256').update(match[2], 'utf8').digest('base64')}'`);
+		for (const body of collectInlineScriptBodies(html)) {
+			inlineScriptHashes.add(`'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`);
 		}
 	}
 	assert.ok(inlineScriptHashes.size > 0, 'built Svelte routes contain bootstrap scripts to hash');
