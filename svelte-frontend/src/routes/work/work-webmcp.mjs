@@ -222,9 +222,7 @@ export function createWorkDraftsTool(createDrafts) {
 		async execute(input, options = {}) {
 			options.signal?.throwIfAborted();
 			const createInput = workDraftInput(input);
-			const receipt = workDraftReceipt(await createDrafts(createInput), createInput);
-			options.signal?.throwIfAborted();
-			return receipt;
+			return workDraftReceipt(await createDrafts(createInput), createInput);
 		}
 	};
 }
@@ -273,13 +271,14 @@ function workCreationDraft(input) {
 
 /** @param {unknown} value @param {number} maxLength @param {boolean} [required] */
 function workDraftText(value, maxLength, required = false) {
-	if (value === undefined || value === null) {
+	if (value === undefined) {
 		if (required) throw new TypeError('Work draft title is required.');
 		return null;
 	}
 	if (typeof value !== 'string' || /\p{Cc}/u.test(value)) throw new TypeError('Work draft text is invalid.');
+	if ([...value].length > maxLength) throw new TypeError('Work draft text is outside its allowed length.');
 	const text = value.trim().replace(/\s+/gu, ' ');
-	if ((required && !text) || text.length > maxLength) throw new TypeError('Work draft text is outside its allowed length.');
+	if (required && !text) throw new TypeError('Work draft text is outside its allowed length.');
 	return text || null;
 }
 

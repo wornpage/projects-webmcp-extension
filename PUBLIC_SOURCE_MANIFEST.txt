@@ -101,6 +101,7 @@ tests/review-webmcp-page-contract.test.mjs
 tests/toast-lifecycle-webmcp-contract.test.mjs
 tests/webmcp-registration-contract.test.mjs
 tests/work-webmcp-page-contract.test.mjs
+tests/work-webmcp-seeded-regression.test.mjs
 THIRD_PARTY_LICENSES.txt
 THIRD_PARTY_NOTICES.md
 TRADEMARKS.md
