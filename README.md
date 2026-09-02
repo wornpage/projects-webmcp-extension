@@ -138,7 +138,7 @@ There is no `server/`, `worker/`, Pages Functions, or hidden compatibility route
 npm run verify
 ```
 
-The gate runs Svelte diagnostics, focused WebMCP contracts, recording-preflight and static-artifact contracts, and a production prerender. Current expected denominators are 107/107 public source paths, 113/113 WebMCP contracts, 6/6 recording-preflight contracts, and 7/7 static-artifact contracts. A static contract derives those values from the current manifest and test sources so this reviewer-facing summary cannot silently drift. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
+The gate runs Svelte diagnostics, focused WebMCP contracts, recording-preflight and static-artifact contracts, and a production prerender. Current expected denominators are 109/109 public source paths, 115/115 WebMCP contracts, 6/6 recording-preflight contracts, and 7/7 static-artifact contracts. A static contract derives those values from the current manifest and test sources so this reviewer-facing summary cannot silently drift. Manual WebMCP checks are listed in [docs/submission/webmcp/reviewer-tests.md](docs/submission/webmcp/reviewer-tests.md).
 
 ## License and trademarks
 

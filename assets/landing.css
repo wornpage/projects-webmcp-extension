@@ -185,7 +185,6 @@ p { text-wrap: pretty; }
 .lp-card.is-attention { border-color: var(--warning-border); }
 .lp-card.is-done {
   border-color: var(--success-border);
-  box-shadow: inset 3px 0 0 var(--success-border);
 }
 .lp-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .lp-card-title { font-family: var(--font-display); font-size: 15px; font-weight: 610; color: var(--ink); }
