@@ -6,7 +6,7 @@ import test from 'node:test';
 
 const sourceRoot = fileURLToPath(new URL('../svelte-frontend/src/', import.meta.url));
 const toastArchive = 'https://codeload.github.com/wornpage/toast/tar.gz/f8b12dbab5b5072e7a2f009ef52a9417a3cbde64';
-const receiptArchive = 'https://codeload.github.com/wornpage/receipt/tar.gz/d3d71e7b39843745b7822262365ebaf025d38425';
+const receiptArchive = 'https://codeload.github.com/wornpage/receipt/tar.gz/6710499b30a410a5e4b12aef2cbde4e3883e249f';
 const frontendPackage = JSON.parse(readFileSync(
 	new URL('../svelte-frontend/package.json', import.meta.url),
 	'utf8'

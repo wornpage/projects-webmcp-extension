@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildStaticPublish, DEFAULT_STATIC_PUBLISH_DIR } from './build-static-publish.mjs';
+import { collectInlineScriptBodies } from './inline-script-bodies.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const frontendRoot = path.join(repoRoot, 'svelte-frontend');
@@ -18,9 +19,8 @@ function finalizeStaticCsp(outputDir) {
 	const hashes = new Set();
 	for (const name of readdirSync(outputDir).filter((entry) => entry.endsWith('.html'))) {
 		const html = readFileSync(path.join(outputDir, name), 'utf8');
-		for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gu)) {
-			if (/\bsrc\s*=/u.test(match[1]) || !match[2].trim()) continue;
-			hashes.add(`'sha256-${createHash('sha256').update(match[2], 'utf8').digest('base64')}'`);
+		for (const body of collectInlineScriptBodies(html)) {
+			hashes.add(`'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`);
 		}
 	}
 	if (hashes.size === 0) throw new Error('Static CSP finalization found no inline Svelte bootstrap scripts.');
