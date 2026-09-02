@@ -293,7 +293,7 @@
 		return { changed, focus };
 	}
 
-	async function focusReviewScopeDestination(requireVisibleFocus: boolean, requestedItemId = '') {
+	async function focusReviewScopeDestination(requireVisibleFocus: boolean, requestedItemId = '', signal?: AbortSignal) {
 		const requestedItem = requestedItemId
 			? [currentReviewView?.upNext, ...(currentReviewView?.items || [])].find((item) => item?.id === requestedItemId) || null
 			: null;
@@ -313,13 +313,16 @@
 		if (firstTitle && !itemId) throw new Error('Review scope destination is missing its work-item identity.');
 		if (requestedItemId && itemId !== requestedItemId) return null;
 		const pulseTarget = firstTitle?.closest<HTMLElement>('.review-priority') || focusTarget;
-		const runFocus = (verify: boolean) => focusAndPulse(focusTarget, {
-			pulseTarget,
-			requireVisibleFocus: verify
-		});
+		const runFocus = (verify: boolean) => signal?.aborted
+			? null
+			: focusAndPulse(focusTarget, {
+				pulseTarget,
+				requireVisibleFocus: verify
+			});
 		const focusReceipt = requireVisibleFocus
 			? await settleReviewScopeFocus(runFocus)
 			: runFocus(false);
+		if (!focusReceipt) return null;
 		const activityPresenter = document.getElementById('review-webmcp-activity');
 		if (requireVisibleFocus && activityPresenter) keepActivityPresenterVisible(activityPresenter, focusTarget);
 		return firstTitle
@@ -408,8 +411,11 @@
 			focusedReviewId = '';
 		}
 		if (!target || target === focusedReviewId) return;
+		const signal = getAbortSignal();
 		void tick().then(async () => {
-			const focus = await focusReviewScopeDestination(true, target);
+			if (signal.aborted) return;
+			const focus = await focusReviewScopeDestination(true, target, signal);
+			if (signal.aborted) return;
 			if (focus?.target === 'item' && focus.itemId === target) focusedReviewId = target;
 		});
 	});
