@@ -368,6 +368,8 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	assert.doesNotMatch(guideHtml, /data-agent-work-query-input/u);
 	assert.match(guideHtml, /All visible work is ready by default/u);
 	assert.match(guideHtml, /Follow the brief on this page\./u);
+	assert.match(guideHtml, /Agent · inspect \+ prepare/u);
+	assert.match(guideHtml, /You · decide \+ save/u);
 	assert.match(guideHtml, /data-agent-brief-fast-create[^>]*>.*?Use fast-create brief/u);
 	assert.match(guideHtml, /Local draft · not saved · workspace unchanged/u);
 	assert.match(guideHtml, /data-webmcp-status-pill/u);

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { WornAccordion, WornButton, WornPage, WornReceipt } from '$lib/components';
+	import { WornAccordion, WornBadge, WornButton, WornPage, WornReceipt } from '$lib/components';
 	import AgentBriefEditor from '$lib/AgentBriefEditor.svelte';
 	import { ChallengeStateError, demoState, displayToast, resetDemoSampleState } from '$lib/demo-client';
 	import { filterPacks, type DemoPack } from '$lib/demo-workflow';
@@ -133,6 +133,11 @@
 				<div class="challenge-intro">
 					<p class="challenge-kicker">WebMCP project workspace · live sample · no login</p>
 					<p class="challenge-purpose">Choose visible work and edit the brief; the browser agent can inspect, prepare, or add bounded Drafts while you control Start and final Save.</p>
+					<div class="challenge-role-split" aria-label="Authority handoff">
+						<WornBadge variant="accent" size="sm" label="Agent · inspect + prepare" />
+						<span class="challenge-role-arrow" aria-hidden="true">→</span>
+						<WornBadge size="sm" label="You · decide + save" />
+					</div>
 					<div class="challenge-sample-reset">
 						<WornButton type="button" size="sm" disabled={resettingSample} onclick={resetLiveSample}>
 							{resettingSample ? 'Resetting sample…' : 'Reset live sample'}
@@ -223,6 +228,18 @@
 		line-height: 1.6;
 		margin: 0;
 	}
+	.challenge-role-split {
+		align-items: center;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.challenge-role-arrow {
+		color: var(--worn-text-muted);
+		font-family: var(--font-typewriter);
+		font-size: 13px;
+		font-weight: 700;
+	}
 	.challenge-sample-reset {
 		align-items: center;
 		color: var(--worn-text-muted);
@@ -256,8 +273,10 @@
 	}
 	.challenge-number {
 		align-items: center;
+		background: var(--worn-accent);
 		border: 1px solid var(--worn-accent);
 		border-radius: 50%;
+		color: var(--worn-accent-text);
 		display: flex;
 		font-family: var(--font-typewriter);
 		font-size: 12px;
