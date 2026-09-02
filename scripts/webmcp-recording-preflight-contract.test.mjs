@@ -69,13 +69,13 @@ test('one deep-frozen recording specification owns the exact 1:50 choreography',
 		{
 			priorityGuide: RECORDING_PREFLIGHT_SPEC.keyboard.priorityToGuideTabs,
 			guideFast: RECORDING_PREFLIGHT_SPEC.keyboard.guideToFastBriefShiftTabs,
-			guideWorkMax: RECORDING_PREFLIGHT_SPEC.keyboard.guideToWorkMaxTabs,
+			guideWork: RECORDING_PREFLIGHT_SPEC.keyboard.guideToWorkTabs,
 			workReview: RECORDING_PREFLIGHT_SPEC.keyboard.workToReviewShiftTabs,
 			reviewNext: RECORDING_PREFLIGHT_SPEC.keyboard.reviewToNextShiftTabs,
 			nextWork: RECORDING_PREFLIGHT_SPEC.keyboard.nextToWorkShiftTabs,
 			workPending: RECORDING_PREFLIGHT_SPEC.keyboard.workToPendingShiftTabs
 		},
-		{ priorityGuide: 7, guideFast: 3, guideWorkMax: 10, workReview: 7, reviewNext: 3, nextWork: 5, workPending: 10 }
+		{ priorityGuide: 7, guideFast: 3, guideWork: 9, workReview: 7, reviewNext: 3, nextWork: 5, workPending: 10 }
 	);
 	assert.deepEqual(RECORDING_PREFLIGHT_SPEC.denominators, {
 		guide: { visible: 8, workspace: 8 },
@@ -141,7 +141,7 @@ test('the human cue sheet parses to the exact executable recording specification
 		/missing its exact Guide to fast brief keyboard destination/u
 	);
 	assert.throws(
-		() => parseRecordingCueSheet(cueSource.replace('then use ten additional Tabs to reach **1 Work**', 'then use five additional Tabs to reach **1 Work**')),
+		() => parseRecordingCueSheet(cueSource.replace('then use nine additional Tabs to reach **1 Work**', 'then use five additional Tabs to reach **1 Work**')),
 		/missing its exact Guide reader to Work keyboard destination/u
 	);
 	assert.notDeepEqual(
@@ -183,6 +183,8 @@ test('the CLI owns installed Edge, native viewport, exact keyboard order, diagno
 	assert.match(harnessSource, /context\.addInitScript\(buildModelContextProbeInitScript\(\), \{[\s\S]*?forbiddenHumanActivations: RECORDING_PREFLIGHT_SPEC\.forbiddenHumanActivations[\s\S]*?\}\)/u);
 	assert.match(harnessSource, /const serializedInput = JSON\.stringify\(input\)[\s\S]*?modelContext\.getTools\(\)[\s\S]*?modelContext\.executeTool\(descriptor, serializedInput\)/u);
 	assert.match(harnessSource, /seekForward\(page, spec\.keyboard\.landingToGuideMaxTabs, \{ path: spec\.routes\.guide\.path, text: 'Open the handoff workflow →' \}\)/u);
+	assert.match(harnessSource, /async function settleKeyboardStep\(page\) \{[\s\S]*?bounded\([\s\S]*?requestAnimationFrame\(\(\) => resolve\(\)\)[\s\S]*?Exact keyboard step render settlement[\s\S]*?async function pressExact\(page, key, count, destination\) \{[\s\S]*?page\.keyboard\.press\(key\);[\s\S]*?settleKeyboardStep\(page\);/u);
+	assert.match(harnessSource, /bodyTab\(page, spec\.keyboard\.guideReaderBodyTabs, 'guide-reader-reclaim'\)[\s\S]*?pressExact\(page, 'Tab', spec\.keyboard\.guideToWorkTabs, \{ text: '1 Work', path: spec\.routes\.work\.path \}\)/u);
 	assert.match(harnessSource, /executeRegisteredTool\(page, 'get_projects_handoff_guide'[\s\S]*?locator\('\[data-webmcp-receipt="guide"\]'\)\.waitFor\(\{ state: 'visible'[\s\S]*?emit\('reader-receipt'[\s\S]*?actionFocusClaimed: false/u);
 	assert.doesNotMatch(harnessSource, /assertVisibleFocus\(page, 'guide-reader'\)/u);
 	assert.match(harnessSource, /catch \(error\) \{[\s\S]*?heading: document\.querySelector\('h1'\)[\s\S]*?status: document\.querySelector\('\[data-webmcp-status-pill\]'\)[\s\S]*?toolNames: document\.modelContext\?\.getTools\(\)[\s\S]*?emit\('route-rejection'[\s\S]*?did not settle within/u);
