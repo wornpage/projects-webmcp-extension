@@ -10,6 +10,62 @@ function deepFreeze(value) {
 	return Object.freeze(value);
 }
 
+const RECORDING_WORK_QUERY = 'Garage reset';
+const RECORDING_DENOMINATORS = {
+	guide: { visible: 8, workspace: 8 },
+	work: { workspace: 8, matching: 4, blocked: 2 },
+	review: { total: 5, searchMatches: 3, filtered: 2, shown: 2 },
+	drafts: { before: 8, created: 3, after: 11 }
+};
+const RECORDING_DRAFT_TITLES = [
+	'Confirm donation pickup window',
+	'Print shelf labels',
+	'Prepare bike rack checklist'
+];
+const RECORDING_LANDING_FRAME = {
+	heading: 'Let an agent find the next move. Keep the final say.',
+	lede: 'Browser workers read and narrow the same work you see, can add bounded Draft items, then prepare an unsaved next action for you to approve.',
+	facts: ['No backend', 'No automatic starts'],
+	action: 'Open the handoff workflow →',
+	previewLabel: 'WebMCP handoff in Review: the agent narrows visible work, explains a blocker, and prepares a next action for human approval.'
+};
+const RECORDING_GUIDE_OPENING_FRAME = {
+	scope: { workspace: 8, visible: 8, countText: '8 visible of 8 workspace' },
+	trail: { summary: 'Ready for one bounded run', detail: 'No agent action recorded.', outcome: 'No action recorded', progress: '0 verified actions, 0 pending' },
+	toolText: 'WebMCP 1 tool',
+	pendingNavigationCount: 0,
+	actionReceiptCount: 0
+};
+const RECORDING_GUIDE_LOWER_FRAME = {
+	brief: 'Use the WebMCP tools on Work, Review, and Next to inspect the visible project state, narrow the items that need attention, and prepare an evidence-based next action for my review. Do not save or change workspace data.',
+	fastCreate: 'Use fast-create brief'
+};
+
+function buildRecordingActivityFrames(workQuery, denominators, draftTitles) {
+	return {
+		work: {
+			route: 'work', step: 'Step 1 · Narrow Work', outcome: `Work search updated for “${workQuery}”.`,
+			cells: { 'Visible query': `“${workQuery}”`, 'Current scope': `${denominators.work.matching} shown · ${denominators.work.matching} matching · ${denominators.work.workspace} workspace`, Evidence: `${denominators.work.blocked} blocked in the matching work`, Status: 'Visible search updated · Not saved' },
+			authority: 'Page view only · Workspace unchanged', provenance: 'WebMCP · show_work_search'
+		},
+		review: {
+			route: 'review', step: 'Step 2 · Verify Review', outcome: `Review scope updated: “${workQuery}” · Blocked.`,
+			cells: { 'Visible Review scope': `“${workQuery}” · Blocked`, 'Current queue': `${denominators.review.shown} shown · ${denominators.review.filtered} filtered · ${denominators.review.searchMatches} search matches · ${denominators.review.total} total review`, 'Search-match evidence': `${denominators.review.shown} blocked · 0 missing next · 0 missing owner`, Status: 'Visible queue updated · Not saved' },
+			authority: 'Page view only · Workspace unchanged', provenance: 'WebMCP · set_review_scope'
+		},
+		next: {
+			route: 'next', step: 'Step 3 · Prepare Next', outcome: 'Draft prepared — waiting for your approval.',
+			cells: { 'Verified evidence': 'Garage reset: sort shelves — Workflow: Blocked. Garage reset: sort shelves — Blocker: Waiting on storage bins.', Status: 'Draft — waiting for your approval', Save: 'Not saved' },
+			authority: 'Unsaved proposal · Human approval required', provenance: 'WebMCP · prepare_next_action'
+		},
+		draft: {
+			route: 'work', step: 'Step 4 · Stage Drafts', outcome: `${denominators.drafts.created} draft work items created for human review.`,
+			cells: { Created: `${denominators.drafts.created} · Draft`, 'Draft work': draftTitles.join(' · '), Workspace: `${denominators.drafts.before} → ${denominators.drafts.after}`, Authority: 'No work started · Human Start required' },
+			authority: 'Draft only · Human Start required', provenance: 'WebMCP · create_work_drafts'
+		}
+	};
+}
+
 export const RECORDING_PREFLIGHT_SPEC = deepFreeze({
 	productionUrl: 'https://projects-webmcp-extension.pages.dev/',
 	targetDurationMs: 110_000,
@@ -30,7 +86,7 @@ export const RECORDING_PREFLIGHT_SPEC = deepFreeze({
 		profilePrefix: 'projects-webmcp-recording-preflight-'
 	},
 	routes: {
-		landing: { path: '/', heading: 'Let an agent find the next move. Keep the final say.', tools: [] },
+		landing: { path: '/', heading: RECORDING_LANDING_FRAME.heading, tools: [] },
 		guide: { path: '/webmcp-challenge', heading: 'Projects handoff guide', tools: ['get_projects_handoff_guide'] },
 		priority: { path: '/priority', heading: 'Priority', tools: ['get_next_recommendation'] },
 		work: { path: '/work', heading: 'Work', tools: ['get_current_work_view', 'show_work_search', 'create_work_drafts'] },
@@ -50,7 +106,7 @@ export const RECORDING_PREFLIGHT_SPEC = deepFreeze({
 	],
 	keyboard: {
 		landingBodyTabs: 1,
-		landingToGuideMaxTabs: 5,
+		landingToGuideTabs: 5,
 		guideToPriorityTabs: 4,
 		priorityToGuideTabs: 7,
 		guideToFastBriefShiftTabs: 3,
@@ -64,20 +120,22 @@ export const RECORDING_PREFLIGHT_SPEC = deepFreeze({
 		nextBodyArrowDowns: 4,
 		finalBodyArrowDowns: 8
 	},
-	denominators: {
-		guide: { visible: 8, workspace: 8 },
-		work: { workspace: 8, matching: 4, blocked: 2 },
-		review: { total: 5, searchMatches: 3, filtered: 2, shown: 2 },
-		drafts: { before: 8, created: 3, after: 11 }
-	},
-	workQuery: 'Garage reset',
+	denominators: RECORDING_DENOMINATORS,
+	workQuery: RECORDING_WORK_QUERY,
 	reviewFilter: 'blocked',
 	nextChoice: 'Confirm storage bin delivery',
-	draftTitles: [
-		'Confirm donation pickup window',
-		'Print shelf labels',
-		'Prepare bike rack checklist'
-	],
+	priorityRecommendation: {
+		title: 'Garden study: log interviews',
+		reason: 'Due in 6 days · No blocker or pending decision.',
+		workId: 'garden-study-log-interviews',
+		destination: '/next?pack=garden-study-log-interviews',
+		action: 'Open next action'
+	},
+	landingFrame: RECORDING_LANDING_FRAME,
+	guideOpeningFrame: RECORDING_GUIDE_OPENING_FRAME,
+	guideLowerFrame: RECORDING_GUIDE_LOWER_FRAME,
+	activityFrames: buildRecordingActivityFrames(RECORDING_WORK_QUERY, RECORDING_DENOMINATORS, RECORDING_DRAFT_TITLES),
+	draftTitles: RECORDING_DRAFT_TITLES,
 	trail: [
 		{ checkpoint: 'work', verified: 1, pending: 0, decide: 'absent' },
 		{ checkpoint: 'review', verified: 2, pending: 0, decide: 'absent' },
@@ -122,6 +180,13 @@ function integer(value) {
 	return Number.parseInt(value, 10);
 }
 
+function cueBacktickValues(markdown, expression, label, expectedCount) {
+	const line = cueMatch(markdown, expression, label)[0];
+	const values = [...line.matchAll(/`([^`]+)`/gu)].map((match) => match[1]);
+	if (values.length !== expectedCount) throw new Error(`Recording cue sheet ${label} must contain ${expectedCount} exact values.`);
+	return values;
+}
+
 export function recordingCueProjectionFromSpec(spec = RECORDING_PREFLIGHT_SPEC) {
 	return {
 		productionUrl: spec.productionUrl,
@@ -150,8 +215,15 @@ export function recordingCueProjectionFromSpec(spec = RECORDING_PREFLIGHT_SPEC) 
 		workQuery: spec.workQuery,
 		reviewFilter: spec.reviewFilter,
 		nextChoice: spec.nextChoice,
+		priorityRecommendation: structuredClone(spec.priorityRecommendation),
+		landingFrame: structuredClone(spec.landingFrame),
+		guideOpeningFrame: structuredClone(spec.guideOpeningFrame),
+		guideLowerFrame: structuredClone(spec.guideLowerFrame),
+		activityFrames: structuredClone(spec.activityFrames),
 		keyboard: {
 			landingBodyTabs: spec.keyboard.landingBodyTabs,
+			landingToGuideTabs: spec.keyboard.landingToGuideTabs,
+			guideToPriorityTabs: spec.keyboard.guideToPriorityTabs,
 			priorityToGuideShiftTabs: spec.keyboard.priorityToGuideTabs,
 			guideToFastBriefShiftTabs: spec.keyboard.guideToFastBriefShiftTabs,
 			guideToWorkTabs: spec.keyboard.guideToWorkTabs,
@@ -189,6 +261,15 @@ export function parseRecordingCueSheet(markdown) {
 	const sequence = cueMatch(markdown, /Registered tool sequence:\s*`?([a-z][a-z0-9_]*(?:`?\s*→\s*`?[a-z][a-z0-9_]*)+)`?\./u, 'registered tool sequence')[1]
 		.split(/`?\s*→\s*`?/u);
 	const boundedInputs = cueMatch(markdown, /Exact bounded inputs: Work\/Review query `([^`]+)`; Review filter `([^`]+)`; Next choice `([^`]+)`\./u, 'bounded tool inputs');
+	const priorityRecommendation = cueMatch(markdown, /Priority hold: title `([^`]+)`; reason `([^`]+)`; Work ID `([^`]+)`; destination `([^`]+)`; action `([^`]+)`; entire recommendation fully visible\./u, 'Priority hold');
+	const workFrame = cueBacktickValues(markdown, /^15\. Work hold:[^\n]+$/mu, 'Work hold', 8);
+	const reviewFrame = cueBacktickValues(markdown, /^16\. Review hold:[^\n]+$/mu, 'Review hold', 8);
+	const nextFrame = cueBacktickValues(markdown, /^17\. Next hold:[^\n]+$/mu, 'Next hold', 7);
+	const draftFrame = cueBacktickValues(markdown, /^18\. Draft hold:[^\n]+$/mu, 'Draft hold', 8);
+	const landingFrame = cueBacktickValues(markdown, /^20\. Landing hold:[^\n]+$/mu, 'Landing hold', 6);
+	const guideOpeningFrame = cueBacktickValues(markdown, /^12\. Opening Guide frame:[^\n]+$/mu, 'opening Guide frame', 6);
+	const guideOpeningCount = cueMatch(guideOpeningFrame[0], /^(\d+) visible of (\d+) workspace$/u, 'opening Guide scope');
+	const guideLowerFrame = cueBacktickValues(markdown, /^10\. Guide:[^\n]+$/mu, 'lower Guide frame', 2);
 	const timelineText = cueMatch(markdown, /Executable target timeline: ([^\n]+)\./u, 'executable target timeline')[1];
 	const timeline = timelineText.split(/\s*→\s*/u).map((entry) => {
 		const match = cueMatch(entry, /^`([a-z][a-z0-9-]+)@(\d{2}):(\d{2})\.(\d{3})`$/u, 'timeline event');
@@ -198,7 +279,8 @@ export function parseRecordingCueSheet(markdown) {
 	const reviewToNext = cueMatch(markdown, /Review receipt → Next:\s*three Shift\+Tab presses/u, 'Review to Next keyboard destination');
 	const nextToWork = cueMatch(markdown, /Prepared Next receipt → Work:\s*five Shift\+Tab presses/u, 'Next to Work keyboard destination');
 	const workToPending = cueMatch(markdown, /Work Draft receipt → pending decision:\s*ten Shift\+Tab presses/u, 'Work to pending keyboard destination');
-	const landingBodyTab = cueMatch(markdown, /Landing → Guide: press Tab on the page body to reclaim focus/u, 'landing body-owned Tab');
+	const landingToGuide = cueMatch(markdown, /Landing → Guide: press Tab on the page body to reclaim focus, then use five additional Tab presses to reach \*\*Open the handoff workflow\*\* and press Enter; any earlier or later destination fails the take/u, 'Landing to Guide keyboard destination');
+	const guideToPriority = cueMatch(markdown, /Guide → Priority:\s*four Tab presses/u, 'Guide to Priority keyboard destination');
 	const guideBodyTab = cueMatch(markdown, /press Tab once on the page body to reclaim page focus/u, 'Guide reader body-owned Tab');
 	const priorityToGuide = cueMatch(markdown, /Priority → Guide:\s*seven Shift\+Tab presses/u, 'Priority to Guide keyboard destination');
 	const guideToFastBrief = cueMatch(markdown, /Returned Guide → fast brief:\s*three Shift\+Tab presses/u, 'Guide to fast brief keyboard destination');
@@ -213,7 +295,7 @@ export function parseRecordingCueSheet(markdown) {
 	const titles = ['Confirm donation pickup window', 'Print shelf labels', 'Prepare bike rack checklist'];
 	for (const title of titles) cueMatch(markdown, new RegExp(`(?:^|[\`])${title.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}(?:[\`]|$)`, 'mu'), `Draft title ${title}`);
 	const trail = cueMatch(markdown, /trail advances from 1 verified → 2 verified → 3 verified \+ 1 pending → 4 verified \+ 1 pending[\s\S]*?Decide remains pending/u, 'action-trail progression');
-	void workToReview; void reviewToNext; void nextToWork; void workToPending; void landingBodyTab; void guideBodyTab; void priorityToGuide; void guideToFastBrief; void guideToWork;
+	void workToReview; void reviewToNext; void nextToWork; void workToPending; void landingToGuide; void guideToPriority; void guideBodyTab; void priorityToGuide; void guideToFastBrief; void guideToWork;
 	void browser; void guidePageDown; void nextArrowDown; void finalArrowDown; void work; void review; void drafts; void trail;
 	return {
 		productionUrl: productionUrl[1],
@@ -235,8 +317,30 @@ export function parseRecordingCueSheet(markdown) {
 		workQuery: boundedInputs[1],
 		reviewFilter: boundedInputs[2],
 		nextChoice: boundedInputs[3],
+		priorityRecommendation: {
+			title: priorityRecommendation[1],
+			reason: priorityRecommendation[2],
+			workId: priorityRecommendation[3],
+			destination: priorityRecommendation[4],
+			action: priorityRecommendation[5]
+		},
+		landingFrame: { heading: landingFrame[0], lede: landingFrame[1], facts: [landingFrame[2], landingFrame[3]], action: landingFrame[4], previewLabel: landingFrame[5] },
+		guideOpeningFrame: {
+			scope: { visible: integer(guideOpeningCount[1]), workspace: integer(guideOpeningCount[2]), countText: guideOpeningFrame[0] },
+			trail: { summary: guideOpeningFrame[1], detail: guideOpeningFrame[2], outcome: guideOpeningFrame[3], progress: guideOpeningFrame[4] },
+			toolText: guideOpeningFrame[5], pendingNavigationCount: 0, actionReceiptCount: 0
+		},
+		guideLowerFrame: { brief: guideLowerFrame[0], fastCreate: guideLowerFrame[1] },
+		activityFrames: {
+			work: { route: 'work', step: workFrame[0], provenance: workFrame[1], outcome: workFrame[2], cells: { 'Visible query': workFrame[3], 'Current scope': workFrame[4], Evidence: workFrame[5], Status: workFrame[6] }, authority: workFrame[7] },
+			review: { route: 'review', step: reviewFrame[0], provenance: reviewFrame[1], outcome: reviewFrame[2], cells: { 'Visible Review scope': reviewFrame[3], 'Current queue': reviewFrame[4], 'Search-match evidence': reviewFrame[5], Status: reviewFrame[6] }, authority: reviewFrame[7] },
+			next: { route: 'next', step: nextFrame[0], provenance: nextFrame[1], outcome: nextFrame[2], cells: { 'Verified evidence': nextFrame[3], Status: nextFrame[4], Save: nextFrame[5] }, authority: nextFrame[6] },
+			draft: { route: 'work', step: draftFrame[0], provenance: draftFrame[1], outcome: draftFrame[2], cells: { Created: draftFrame[3], 'Draft work': draftFrame[4], Workspace: draftFrame[5], Authority: draftFrame[6] }, authority: draftFrame[7] }
+		},
 		keyboard: {
 			landingBodyTabs: 1,
+			landingToGuideTabs: 5,
+			guideToPriorityTabs: 4,
 			priorityToGuideShiftTabs: 7,
 			guideToFastBriefShiftTabs: 3,
 			guideToWorkTabs: 9,
@@ -458,6 +562,14 @@ async function activeFocus(page) {
 	});
 }
 
+function focusMatchesDestination(focus, { text, visibleText, path: expectedPath }) {
+	if (!focus) return false;
+	if (text && focus.text !== text) return false;
+	if (visibleText && focus.visibleText !== visibleText) return false;
+	if (expectedPath && (!focus.href || new URL(focus.href, RECORDING_PREFLIGHT_SPEC.productionUrl).pathname !== expectedPath)) return false;
+	return true;
+}
+
 async function assertFocusedDestination(page, { text, visibleText, path: expectedPath }) {
 	const focus = await activeFocus(page);
 	assert.ok(focus, 'A keyboard destination must own focus.');
@@ -471,7 +583,16 @@ async function assertFocusedDestination(page, { text, visibleText, path: expecte
 
 async function settleKeyboardStep(page) {
 	await bounded(
-		page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve()))),
+		page.evaluate(() => new Promise((resolve, reject) => requestAnimationFrame(() => {
+			const settledFocus = document.activeElement;
+			requestAnimationFrame(() => {
+				if (document.activeElement !== settledFocus) {
+					reject(new Error('Exact keyboard step focus changed between rendered frames.'));
+					return;
+				}
+				resolve();
+			});
+		}))),
 		RECORDING_PREFLIGHT_SPEC.routeSettleMs,
 		'Exact keyboard step render settlement'
 	);
@@ -481,24 +602,17 @@ async function pressExact(page, key, count, destination) {
 	for (let index = 0; index < count; index += 1) {
 		await page.keyboard.press(key);
 		await settleKeyboardStep(page);
+		if (index < count - 1) {
+			const focus = await activeFocus(page);
+			if (focusMatchesDestination(focus, destination)) {
+				const actualCount = index + 1;
+				emit('keyboard-rejection', { key, expectedCount: count, actualCount, destination, actual: focus });
+				throw new Error(`Keyboard reached its declared destination after ${actualCount} of ${count} ${key} presses.`);
+			}
+		}
 	}
 	const focus = await assertFocusedDestination(page, destination);
 	emit('keyboard', { key, count, expected: destination, actual: focus });
-}
-
-async function seekForward(page, maximumTabs, destination) {
-	for (let count = 1; count <= maximumTabs; count += 1) {
-		await page.keyboard.press('Tab');
-		const focus = await activeFocus(page);
-		if (focus?.href && new URL(focus.href, RECORDING_PREFLIGHT_SPEC.productionUrl).pathname === destination.path &&
-			(!destination.text || focus.text === destination.text)) {
-			assert.equal(focus.focusVisible, true);
-			assert.equal(focus.fullyVisible, true);
-			emit('keyboard', { key: 'Tab', count, expected: destination, actual: focus });
-			return;
-		}
-	}
-	throw new Error(`Keyboard did not reach ${destination.path} within ${maximumTabs} Tab presses.`);
 }
 
 async function bodyKeyScroll(page, key, count, checkpoint) {
@@ -525,7 +639,10 @@ async function bodyKeyScroll(page, key, count, checkpoint) {
 
 async function bodyTab(page, count, checkpoint) {
 	const body = page.locator('body');
-	for (let index = 0; index < count; index += 1) await body.press('Tab');
+	for (let index = 0; index < count; index += 1) {
+		await body.press('Tab');
+		await settleKeyboardStep(page);
+	}
 	emit('keyboard', { key: 'Tab', owner: 'body', count, checkpoint });
 }
 
@@ -735,6 +852,182 @@ function evidenceForCurrentNext(nextEditor, priorWork, reviewReceipt) {
 	];
 }
 
+async function assertOpeningGuideFrame(page) {
+	const frame = await page.evaluate(() => {
+		const scope = document.querySelector('[data-agent-scope-chooser]');
+		const countLine = scope?.querySelector('#agent-scope-title + p');
+		const countRect = countLine?.getBoundingClientRect();
+		const rail = document.querySelector('[data-webmcp-handoff-session]');
+		const tool = document.querySelector('[data-webmcp-status-pill]');
+		return {
+			scope: {
+				workspace: Number(scope?.getAttribute('data-workspace-count')),
+				visible: Number(scope?.getAttribute('data-visible-count')),
+				countText: countLine?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+				countFullyVisible: !!countRect && countRect.top >= 0 && countRect.bottom <= innerHeight && countRect.left >= 0 && countRect.right <= innerWidth
+			},
+			trail: {
+				summary: rail?.querySelector('.webmcp-handoff-summary strong')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+				detail: rail?.querySelector('.webmcp-handoff-summary small')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+				outcome: rail?.querySelector('.webmcp-handoff-authority strong')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+				progress: rail?.querySelector('.webmcp-handoff-progress')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null
+			},
+			toolText: tool?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			pendingNavigationCount: document.querySelectorAll('a[aria-label^="Resume "][aria-label*=" pending approval"]').length,
+			actionReceiptCount: document.querySelectorAll('[data-webmcp-receipt]').length
+		};
+	});
+	emit('guide-opening-frame-observation', { actual: frame });
+	const { countFullyVisible, ...scope } = frame.scope;
+	assert.deepEqual(
+		{ scope, trail: frame.trail, toolText: frame.toolText, pendingNavigationCount: frame.pendingNavigationCount, actionReceiptCount: frame.actionReceiptCount },
+		RECORDING_PREFLIGHT_SPEC.guideOpeningFrame
+	);
+	assert.equal(countFullyVisible, true);
+	emit('guide-opening-frame', {
+		expected: { workspace: 8, visible: 8, ready: true, noAction: true, verified: 0, pending: 0, pendingNavigationCount: 0, actionReceiptCount: 0 },
+		actual: frame
+	});
+}
+
+async function assertLandingFrame(page) {
+	const frame = await page.evaluate(() => {
+		const inspect = (element) => {
+			if (!(element instanceof HTMLElement)) return null;
+			const rect = element.getBoundingClientRect();
+			return {
+				top: rect.top,
+				bottom: rect.bottom,
+				fullyVisible: rect.top >= 0 && rect.bottom <= innerHeight && rect.left >= 0 && rect.right <= innerWidth
+			};
+		};
+		const hero = document.querySelector('.lp-hero');
+		const copy = hero?.querySelector('.lp-hero-copy');
+		const preview = hero?.querySelector('.lp-preview');
+		return {
+			heading: hero?.querySelector('h1')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			lede: hero?.querySelector('.lp-lede')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			facts: Array.from(hero?.querySelectorAll('.lp-fine span:not(.lp-dot)') ?? [], (fact) => fact.textContent?.trim() ?? ''),
+			action: hero?.querySelector('a[href="/webmcp-challenge"]')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			previewLabel: preview?.getAttribute('aria-label') ?? null,
+			copy: inspect(copy),
+			preview: inspect(preview)
+		};
+	});
+	emit('landing-frame-observation', { actual: frame });
+	assert.deepEqual(
+		{ heading: frame.heading, lede: frame.lede, facts: frame.facts, action: frame.action, previewLabel: frame.previewLabel },
+		RECORDING_PREFLIGHT_SPEC.landingFrame
+	);
+	assert.equal(frame.copy?.fullyVisible, true);
+	assert.equal(frame.preview?.fullyVisible, true);
+	emit('landing-frame', { expected: { canonicalCopy: true, noBackend: true, noAutomaticStarts: true, workflowAction: true, preview: true, fullyVisible: true }, actual: frame });
+}
+
+async function assertPriorityFrame(page) {
+	const frame = await page.evaluate(() => {
+		const root = document.querySelector('[data-priority-next-recommendation]');
+		const rect = root?.getBoundingClientRect();
+		const details = Object.fromEntries(Array.from(root?.querySelectorAll('dl > div') ?? [], (row) => [
+			row.querySelector('dt')?.textContent?.trim() ?? '',
+			row.querySelector('dd')?.textContent?.trim() ?? ''
+		]));
+		const action = root?.querySelector('a');
+		return {
+			title: root?.querySelector('#priority-recommendation-title')?.textContent?.trim() ?? null,
+			reason: root?.querySelector('.priority-reason')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			workId: details['Work ID'] ?? null,
+			destination: details.Destination ?? null,
+			action: action?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			actionHref: action instanceof HTMLAnchorElement ? `${action.pathname}${action.search}` : null,
+			top: rect?.top ?? null,
+			bottom: rect?.bottom ?? null,
+			fullyVisible: !!rect && rect.top >= 0 && rect.bottom <= innerHeight && rect.left >= 0 && rect.right <= innerWidth
+		};
+	});
+	emit('priority-frame-observation', { actual: frame });
+	assert.deepEqual(
+		{ title: frame.title, reason: frame.reason, workId: frame.workId, destination: frame.destination, action: frame.action },
+		RECORDING_PREFLIGHT_SPEC.priorityRecommendation
+	);
+	assert.equal(frame.actionHref, RECORDING_PREFLIGHT_SPEC.priorityRecommendation.destination);
+	assert.equal(frame.fullyVisible, true, 'The complete Priority recommendation must remain visible during its hold.');
+	emit('priority-frame', { expected: { ...RECORDING_PREFLIGHT_SPEC.priorityRecommendation, fullyVisible: true }, actual: frame });
+}
+
+async function readActivityFrame(page, route) {
+	return page.evaluate((receiptRoute) => {
+		const root = document.querySelector(`[data-webmcp-receipt="${receiptRoute}"]`);
+		const rect = root?.getBoundingClientRect();
+		return {
+			step: root?.querySelector('.webmcp-activity-step')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			outcome: root?.querySelector('.webmcp-activity-outcome')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			cells: Object.fromEntries(Array.from(root?.querySelectorAll('.webmcp-activity-evidence > div') ?? [], (cell) => [
+				cell.querySelector('dt')?.textContent?.trim() ?? '',
+				cell.querySelector('dd')?.textContent?.replace(/\s+/gu, ' ').trim() ?? ''
+			])),
+			authority: root?.querySelector('.webmcp-activity-authority')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			provenance: root?.querySelector('.webmcp-tool-provenance')?.textContent?.replace(/\s+/gu, ' ').trim() ?? null,
+			top: rect?.top ?? null,
+			bottom: rect?.bottom ?? null,
+			fullyVisible: !!rect && rect.top >= 0 && rect.bottom <= innerHeight && rect.left >= 0 && rect.right <= innerWidth
+		};
+	}, route);
+}
+
+async function assertActivityFrame(page, checkpoint, phase) {
+	const expected = RECORDING_PREFLIGHT_SPEC.activityFrames[checkpoint];
+	assert.ok(expected, `Unknown recording activity frame: ${checkpoint}`);
+	const { route, ...expectedContent } = expected;
+	const frame = await readActivityFrame(page, route);
+	emit(`${checkpoint}-frame-observation`, { phase, actual: frame });
+	assert.deepEqual(
+		{ step: frame.step, outcome: frame.outcome, cells: frame.cells, authority: frame.authority, provenance: frame.provenance },
+		expectedContent
+	);
+	assert.equal(frame.fullyVisible, true, `The complete ${expected.step} receipt must remain visible at ${phase}.`);
+	emit(`${checkpoint}-frame`, { phase, expected: { ...expectedContent, fullyVisible: true }, actual: frame });
+}
+
+async function assertGuideLowerFrame(page) {
+	const frame = await page.evaluate(() => {
+		const inspect = (element) => {
+			if (!(element instanceof HTMLElement)) return null;
+			const rect = element.getBoundingClientRect();
+			return {
+				text: element instanceof HTMLTextAreaElement ? element.value : element.textContent?.replace(/\s+/gu, ' ').trim(),
+				top: rect.top,
+				bottom: rect.bottom,
+				fullyVisible: rect.top >= 0 && rect.bottom <= innerHeight && rect.left >= 0 && rect.right <= innerWidth
+			};
+		};
+		return {
+			brief: inspect(document.querySelector('[data-agent-brief-input]')),
+			fastCreate: inspect(document.querySelector('[data-agent-brief-fast-create]'))
+		};
+	});
+	emit('guide-lower-frame-observation', { actual: frame });
+	assert.deepEqual({ brief: frame.brief?.text, fastCreate: frame.fastCreate?.text }, RECORDING_PREFLIGHT_SPEC.guideLowerFrame);
+	assert.equal(frame.brief?.fullyVisible, true, 'The Guide PageDown must reveal the complete browser-agent brief.');
+	assert.equal(frame.fastCreate?.fullyVisible, true, 'The Guide PageDown must reveal the complete fast-create control.');
+	emit('guide-lower-frame', { expected: { ...RECORDING_PREFLIGHT_SPEC.guideLowerFrame, briefFullyVisible: true, fastCreateFullyVisible: true }, actual: frame });
+}
+
+async function assertPreparedNextFrame(page) {
+	const receipt = await page.locator('#next-preparation-receipt').evaluate((element) => {
+		const rect = element.getBoundingClientRect();
+		return {
+			text: element.textContent?.replace(/\s+/gu, ' ').trim(),
+			top: rect.top,
+			bottom: rect.bottom,
+			fullyVisible: rect.top >= 0 && rect.bottom <= innerHeight && rect.left >= 0 && rect.right <= innerWidth
+		};
+	});
+	emit('prepared-frame-observation', { actual: { receipt } });
+	assert.equal(receipt.fullyVisible, true, 'The prepared Next hold must keep its canonical receipt fully visible.');
+	emit('prepared-frame', { expected: { receiptFullyVisible: true }, actual: { receipt } });
+}
+
 async function assertFinalHumanFrame(page) {
 	const frame = await page.evaluate(() => {
 		const receipt = document.querySelector('#next-preparation-receipt');
@@ -784,21 +1077,25 @@ async function runChoreography(page, diagnostics) {
 	await page.locator('h1', { hasText: spec.routes.landing.heading }).waitFor({ state: 'visible', timeout: spec.routeSettleMs });
 	await assertFullscreenSettled(page);
 	await assertZeroOverflow(page, 'landing-ready');
+	await assertLandingFrame(page);
 	const startedAt = performance.now();
 
 	await waitUntil(startedAt, cueAt('landing-to-guide'));
 	await bodyTab(page, spec.keyboard.landingBodyTabs, 'landing-reclaim');
-	await seekForward(page, spec.keyboard.landingToGuideMaxTabs, { path: spec.routes.guide.path, text: 'Open the handoff workflow →' });
+	await pressExact(page, 'Tab', spec.keyboard.landingToGuideTabs, { path: spec.routes.guide.path, text: 'Open the handoff workflow →' });
 	await activateRoute(page, 'guide');
+	await assertOpeningGuideFrame(page);
 
 	await waitUntil(startedAt, cueAt('guide-body-page-down'));
 	await bodyKeyScroll(page, 'PageDown', spec.keyboard.guideBodyPageDowns, 'guide');
 	await assertZeroOverflow(page, 'guide-lower');
+	await assertGuideLowerFrame(page);
 
 	await waitUntil(startedAt, cueAt('guide-to-priority'));
 	await pressExact(page, 'Tab', spec.keyboard.guideToPriorityTabs, { text: 'Priority', path: spec.routes.priority.path });
 	await activateRoute(page, 'priority');
 	await page.locator('[data-priority-next-recommendation]').waitFor({ state: 'visible', timeout: spec.routeSettleMs });
+	await assertPriorityFrame(page);
 
 	await waitUntil(startedAt, cueAt('priority-to-guide'));
 	await pressExact(page, 'Shift+Tab', spec.keyboard.priorityToGuideTabs, { text: 'Guide', path: spec.routes.guide.path });
@@ -835,6 +1132,7 @@ async function runChoreography(page, diagnostics) {
 	);
 	emit('denominator', { checkpoint: 'work', expected: spec.denominators.work, actual: workDenominators });
 	await assertVisibleFocus(page, 'work-receipt');
+	await assertActivityFrame(page, 'work', 'hold');
 	await assertTrail(page, 'work');
 	await assertZeroOverflow(page, 'work-narrowed');
 
@@ -851,6 +1149,7 @@ async function runChoreography(page, diagnostics) {
 	);
 	emit('denominator', { checkpoint: 'review', expected: spec.denominators.review, actual: reviewDenominators });
 	await assertVisibleFocus(page, 'review-receipt');
+	await assertActivityFrame(page, 'review', 'hold');
 	await assertTrail(page, 'review');
 	await assertZeroOverflow(page, 'review-scoped');
 
@@ -878,12 +1177,14 @@ async function runChoreography(page, diagnostics) {
 		}
 	});
 	await assertVisibleFocus(page, 'next-receipt');
+	await assertActivityFrame(page, 'next', 'prepared');
 	await assertTrail(page, 'next');
 	await assertZeroOverflow(page, 'next-prepared');
 
 	await waitUntil(startedAt, cueAt('next-body-arrow-downs'));
 	await bodyKeyScroll(page, 'ArrowDown', spec.keyboard.nextBodyArrowDowns, 'next-prepared');
 	await assertZeroOverflow(page, 'next-prepared-lower');
+	await assertPreparedNextFrame(page);
 
 	await waitUntil(startedAt, cueAt('next-to-work'));
 	await pressExact(page, 'Shift+Tab', spec.keyboard.nextToWorkShiftTabs, { text: '1 Work', path: spec.routes.work.path });
@@ -909,6 +1210,7 @@ async function runChoreography(page, diagnostics) {
 		actual: { ...draftDenominators, titles: created.created.map(({ title }) => title), requiresHumanStart: created.requiresHumanStart }
 	});
 	await assertVisibleFocus(page, 'draft-receipt');
+	await assertActivityFrame(page, 'draft', 'hold');
 	await assertTrail(page, 'drafts');
 	await assertZeroOverflow(page, 'work-drafts');
 
@@ -921,6 +1223,7 @@ async function runChoreography(page, diagnostics) {
 	await waitUntil(startedAt, cueAt('final-body-arrow-downs'));
 	await bodyKeyScroll(page, 'ArrowDown', spec.keyboard.finalBodyArrowDowns, 'next-final');
 	await assertZeroOverflow(page, 'next-final');
+	await assertActivityFrame(page, 'next', 'restored-final');
 	await assertFinalHumanFrame(page);
 
 	await waitUntil(startedAt, cueAt('final-acceptance'));
@@ -949,7 +1252,7 @@ function createDiagnostics(context) {
 			diagnostics.consoleErrors.push(receipt);
 			if (/Content Security Policy|\bCSP\b/iu.test(message.text())) diagnostics.cspFailures.push(receipt);
 		});
-		page.on('pageerror', (error) => diagnostics.pageErrors.push(error.message));
+		page.on('pageerror', (error) => diagnostics.pageErrors.push(error.stack || error.message));
 	};
 	for (const page of context.pages()) observePage(page);
 	context.on('page', observePage);

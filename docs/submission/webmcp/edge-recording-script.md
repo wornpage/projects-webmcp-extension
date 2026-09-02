@@ -35,11 +35,11 @@ Measured rehearsal baseline (September 1, 2026): production app commit `32a4d0ee
 
 Post-#74 comparison (September 2, 2026): production app commit `2729e30` retained the post-#72 baseline viewport, complete target timeline, exact backward counts, catalogs, denominators, receipts, and final human-only state with zero browser warnings or errors. The new Guide authority relay remained non-interactive. The final receipt remained fully visible from 82.09–285.23 CSS px, and both human controls remained fully visible from 570.64–606.64 CSS px after the eight body-owned ArrowDown presses. The measured Guide reader → Work path is one body-owned Tab plus exactly nine additional Tabs.
 
-The preflight settles one rendered frame after every exact Tab or Shift+Tab press so page-owned focus recovery completes before the next key. It still requires the declared count and destination; it never searches for an alternate target.
+The preflight requires stable focus across two consecutive rendered frames after every exact Tab or Shift+Tab press, including the body-owned focus reclaims, so page-owned focus recovery completes before the next key. After each settled key, it aborts if the declared destination arrives before the declared count. It still requires the declared count and destination; it never searches for an alternate target.
 
 After the Guide reader inserts its receipt, reclaim page focus with one body-owned Tab, then use nine additional Tabs to reach **1 Work**.
 
-1. Landing → Guide: press Tab on the page body to reclaim focus, then advance visibly with Tab until **Open the handoff workflow** receives focus. Require the target within five additional moves, then press Enter.
+1. Landing → Guide: press Tab on the page body to reclaim focus, then use five additional Tab presses to reach **Open the handoff workflow** and press Enter; any earlier or later destination fails the take.
 2. Guide → Priority: four Tab presses, then Enter.
 3. Priority → Guide: seven Shift+Tab presses, then Enter.
 4. Returned Guide → fast brief: three Shift+Tab presses, then Enter on **Use fast-create brief**.
@@ -48,10 +48,17 @@ After the Guide reader inserts its receipt, reclaim page focus with one body-own
 7. Review receipt → Next: three Shift+Tab presses, then Enter on **3 Next**.
 8. Prepared Next receipt → Work: five Shift+Tab presses, then Enter on **1 Work**.
 9. Work Draft receipt → pending decision: ten Shift+Tab presses, then Enter on **Pending 1**.
-10. Guide: the upper view must first show the counted scope; one PageDown pressed on the page body must then reveal the complete brief and fast-brief control.
-11. Next: four ArrowDown presses on the page body own the prepared hold; after returning through **Pending 1**, eight ArrowDown presses must keep the WebMCP receipt visible while bringing **Discard draft** and **Approve and save** fully into view.
-12. Confirm the compact **WebMCP** pill shows `1 tool` and ready only after Guide registration, alongside the exact 8-item state, visible focus at every destination, and no browser error or warning.
-13. Confirm the shared trail advances from 1 verified → 2 verified → 3 verified + 1 pending → 4 verified + 1 pending. Drafts appear only after the optional create call, and Decide remains pending.
+10. Guide: the upper view must first show the counted scope; one PageDown pressed on the page body must then reveal brief `Use the WebMCP tools on Work, Review, and Next to inspect the visible project state, narrow the items that need attention, and prepare an evidence-based next action for my review. Do not save or change workspace data.` and `Use fast-create brief` control, both fully visible.
+11. Next: four ArrowDown presses on the page body must keep the prepared WebMCP receipt fully visible; after returning through **Pending 1**, eight ArrowDown presses must keep the WebMCP receipt visible while bringing **Discard draft** and **Approve and save** fully into view.
+12. Opening Guide frame: scope `8 visible of 8 workspace`; trail `Ready for one bounded run` / `No agent action recorded.` / `No action recorded` / `0 verified actions, 0 pending`; tool `WebMCP 1 tool`; no Pending navigation and no action receipt. The pill is ready only after Guide registration; require visible focus at every destination and no browser error or warning.
+13. Priority hold: title `Garden study: log interviews`; reason `Due in 6 days · No blocker or pending decision.`; Work ID `garden-study-log-interviews`; destination `/next?pack=garden-study-log-interviews`; action `Open next action`; entire recommendation fully visible.
+14. Confirm the shared trail advances from 1 verified → 2 verified → 3 verified + 1 pending → 4 verified + 1 pending. Drafts appear only after the optional create call, and Decide remains pending.
+15. Work hold: complete `Step 1 · Narrow Work` / `WebMCP · show_work_search` receipt fully visible with `Work search updated for “Garage reset”.`, `“Garage reset”`, `4 shown · 4 matching · 8 workspace`, `2 blocked in the matching work`, `Visible search updated · Not saved`, and `Page view only · Workspace unchanged`.
+16. Review hold: complete `Step 2 · Verify Review` / `WebMCP · set_review_scope` receipt fully visible with `Review scope updated: “Garage reset” · Blocked.`, `“Garage reset” · Blocked`, `2 shown · 2 filtered · 3 search matches · 5 total review`, `2 blocked · 0 missing next · 0 missing owner`, `Visible queue updated · Not saved`, and `Page view only · Workspace unchanged`.
+17. Next hold: complete `Step 3 · Prepare Next` / `WebMCP · prepare_next_action` receipt fully visible with `Draft prepared — waiting for your approval.`, `Garage reset: sort shelves — Workflow: Blocked. Garage reset: sort shelves — Blocker: Waiting on storage bins.`, `Draft — waiting for your approval`, `Not saved`, and `Unsaved proposal · Human approval required`.
+18. Draft hold: complete `Step 4 · Stage Drafts` / `WebMCP · create_work_drafts` receipt fully visible with `3 draft work items created for human review.`, `3 · Draft`, `Confirm donation pickup window · Print shelf labels · Prepare bike rack checklist`, `8 → 11`, `No work started · Human Start required`, and `Draft only · Human Start required`.
+19. Final restored receipt must repeat the exact Step 3 Next presenter contract after Pending navigation and the eight-arrow reveal; visibility alone is not sufficient.
+20. Landing hold: headline `Let an agent find the next move. Keep the final say.`; lede `Browser workers read and narrow the same work you see, can add bounded Draft items, then prepare an unsaved next action for you to approve.`; facts `No backend` and `No automatic starts`; action `Open the handoff workflow →`; preview `WebMCP handoff in Review: the agent narrows visible work, explains a blocker, and prepares a next action for human approval.`; both hero columns fully visible before T0.
 
 Use a fixed **2.25-second settle window** after every route activation. Abort instead of retrying, double-activating, clicking, or relaxing a checkpoint.
 
@@ -59,7 +66,7 @@ Use a fixed **2.25-second settle window** after every route activation. Abort in
 
 | Final time | Keyboard/WebMCP action | Required visible checkpoint | Narration track |
 | --- | --- | --- | --- |
-| 00:00–00:06 | Hold the canonical landing hero. | `Let an agent find the next move. Keep the final say.`; 9 tools; 4 bounded actions; No automatic starts. | “Projects gives a browser agent bounded access to visible work while the person keeps the final say.” |
+| 00:00–00:06 | Hold the canonical landing hero. | `Let an agent find the next move. Keep the final say.`; browser-worker lede; `No backend`; `No automatic starts`; workflow CTA and Review handoff preview. | “Projects gives a browser agent bounded access to visible work while the person keeps the final say.” |
 | 00:06–00:18 | Tab to Guide, show the clean action trail and upper scope, then press PageDown on the page body at 00:12. | Guide ready by 00:08.25; 8 visible of 8; trail says `Ready for one bounded run` and `No action recorded`; lower view shows the complete brief and fast-create control. | “The shared action trail will preserve each verified outcome across the workflow.” |
 | 00:18–00:25 | Tab to Priority and hold the single recommendation. | Priority ready by 00:20.25; one exact title, reason, and Next destination. | “Priority contributes one read-only recommendation—nothing more.” |
 | 00:25–00:30 | Tab back to Guide, activate **Use fast-create brief**, then let Codex invoke the registered Guide reader and follow the returned brief. | Guide ready by 00:27.25; fast brief selected only now; reader returns the exact brief; workspace remains 8. | “The page-owned brief permits Draft staging but still forbids Save and Start.” |
