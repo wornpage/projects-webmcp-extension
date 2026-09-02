@@ -44,12 +44,51 @@ function sideBorderWidths(source) {
 	return widths;
 }
 
+function shadowLayers(value) {
+	const layers = [[]];
+	let token = '';
+	let depth = 0;
+	const finishToken = () => {
+		if (token) layers.at(-1).push(token);
+		token = '';
+	};
+
+	for (const character of value) {
+		if (character === '(') depth += 1;
+		else if (character === ')') depth = Math.max(0, depth - 1);
+
+		if (depth === 0 && (character === ',' || /\s/u.test(character))) {
+			finishToken();
+			if (character === ',') layers.push([]);
+		} else {
+			token += character;
+		}
+	}
+	finishToken();
+	return layers.filter((layer) => layer.length > 0);
+}
+
+function pixelLength(token) {
+	const match = token.match(/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(px)?$/iu);
+	if (!match) return null;
+	const value = Number(match[1]);
+	return match[2] || value === 0 ? value : null;
+}
+
 function horizontalInsetRails(source) {
 	const rails = [];
 	const normalized = normalizeCssEscapes(source);
 	for (const declaration of normalized.matchAll(/\bbox-shadow\s*:\s*([^;}]+)/giu)) {
-		for (const shadow of declaration[1].matchAll(/\binset\s+(-?(?:\d+|\d*\.\d+))px\s+-?(?:0+(?:\.0+)?|\.0+)(?:px)?\s+-?(?:0+(?:\.0+)?|\.0+)(?:px)?\b/giu)) {
-			if (Number(shadow[1]) !== 0) rails.push(shadow[0]);
+		for (const tokens of shadowLayers(declaration[1])) {
+			if (!tokens.some((token) => /^inset$/iu.test(token))) continue;
+			const lengths = tokens.map(pixelLength).filter((length) => length !== null);
+			if (lengths.length < 2 || lengths.length > 4) continue;
+
+			const [offsetX, offsetY, blurRadius = 0, spreadRadius = 0] = lengths;
+			const sideWidth = Math.max(0, Math.abs(offsetX) + spreadRadius);
+			if (offsetX !== 0 && offsetY === 0 && blurRadius === 0 && sideWidth >= 2) {
+				rails.push(tokens.join(' '));
+			}
 		}
 	}
 	return rails;
@@ -68,19 +107,33 @@ test('the Full Border Rule scanner rejects physical, logical, escaped, decimal, 
 		.physical-right { border-right-width: 2.25px; }
 		.logical-start { border-inline-start: -2px solid red; }
 		.logical-end { border-inline-end-width: -2.5px; }
-		.left-inset { box-shadow: inset 3.5px 0 0 red; }
-		.right-inset { box-shadow: inset -4px 0.0px -0px red; }
+		.prefix-inset { box-shadow: inset 3.5px 0 0 red; }
+		.suffix-inset { box-shadow: 3px 0 0 red inset; }
+		.interleaved-inset { box-shadow: 2.25px 0 inset 0 red; }
+		.multiple-layers { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), -4px 0.0px -0px var(--rail) inset; }
+		.spread-shaped-rail { box-shadow: 1px 0 0 1px inset color-mix(in srgb, red 60%, transparent); }
+		.decimal-right-rail { box-shadow: -3.25px 0 0 -1.25px inset red; }
 	`);
 
 	assert.deepEqual(violations.wideSides, [2, 2.25, -2, -2.5]);
-	assert.deepEqual(violations.insetRails, ['inset 3.5px 0 0', 'inset -4px 0.0px -0px']);
+	assert.deepEqual(violations.insetRails, [
+		'inset 3.5px 0 0 red',
+		'3px 0 0 red inset',
+		'2.25px 0 inset 0 red',
+		'-4px 0.0px -0px var(--rail) inset',
+		'1px 0 0 1px inset color-mix(in srgb, red 60%, transparent)',
+		'-3.25px 0 0 -1.25px inset red'
+	]);
 });
 
 test('the Full Border Rule scanner accepts neutral 1px separators and non-side shadows', () => {
 	const violations = fullBorderViolations(`
 		.physical { border-left: 1px solid var(--border); border-right-width: 1px; }
 		.logical { border-inline-start: 1px solid var(--border); border-inline-end-width: 1px; }
-		.elevated { box-shadow: 0 8px 24px rgb(0 0 0 / 18%); }
+		.one-pixel-inset { box-shadow: inset 1px 0 0 var(--border), -1px 0 0 var(--border) inset; }
+		.spread-reduced-inset { box-shadow: 2px 0 0 -1px inset var(--border); }
+		.elevated { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); }
+		.non-inset-horizontal { box-shadow: 4px 0 0 red; }
 		.vertical-inset { box-shadow: inset 0 1px 0 var(--border), inset 0 -1px 0 var(--border); }
 	`);
 
