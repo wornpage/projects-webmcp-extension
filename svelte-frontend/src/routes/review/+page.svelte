@@ -726,7 +726,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 	}
 	.review-reasons {
 		background: var(--worn-bg-secondary);
-		border-left: 3px solid var(--worn-accent);
+		border: 1px solid var(--worn-accent);
 		display: grid;
 		gap: 5px;
 		padding: 9px 11px;

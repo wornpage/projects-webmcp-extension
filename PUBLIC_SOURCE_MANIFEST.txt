@@ -9,6 +9,7 @@ assets/landing.js
 assets/not-found.css
 assets/og-image.svg
 data/demo-packs.json
+DESIGN.md
 docs/submission/webmcp/edge-recording-script.md
 docs/submission/webmcp/public-repository-boundary.md
 docs/submission/webmcp/README.md
@@ -93,6 +94,7 @@ tests/activity-presentation-webmcp-contract.test.mjs
 tests/challenge-brand-affordance-webmcp-contract.test.mjs
 tests/challenge-webmcp-page-contract.test.mjs
 tests/focus-pulse-webmcp-contract.test.mjs
+tests/full-border-webmcp-contract.test.mjs
 tests/handoff-session-webmcp-contract.test.mjs
 tests/next-webmcp-page-contract.test.mjs
 tests/priority-webmcp-page-contract.test.mjs

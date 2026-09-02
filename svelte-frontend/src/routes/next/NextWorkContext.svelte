@@ -33,8 +33,7 @@
 <style>
 	.next-work-context {
 		background: var(--worn-bg-secondary);
-		border: 1px solid var(--worn-border-strong);
-		border-left: 3px solid var(--worn-accent);
+		border: 1px solid var(--worn-accent);
 		border-radius: var(--worn-radius);
 		box-sizing: border-box;
 		margin: 0 0 14px;

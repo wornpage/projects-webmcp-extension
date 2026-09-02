@@ -776,7 +776,8 @@ h3,
 }
 .demo-work-card.is-blocked {
   background: color-mix(in srgb, var(--worn-warning-bg) 60%, var(--worn-surface));
-  box-shadow: inset 2px 0 0 var(--worn-warning-border, #fdba74), var(--worn-shadow-sm);
+  border-color: var(--worn-warning-border, #fdba74);
+  box-shadow: var(--worn-shadow-sm);
 }
 .demo-review-card {
   display: grid;

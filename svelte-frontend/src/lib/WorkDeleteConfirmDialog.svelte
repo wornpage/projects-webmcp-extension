@@ -83,7 +83,7 @@
 	}
 	.work-delete-error {
 		background: var(--worn-danger-bg);
-		border-left: 3px solid var(--worn-danger-border);
+		border: 1px solid var(--worn-danger-border);
 		color: var(--worn-danger-text);
 		margin: 0 0 12px;
 		overflow-wrap: anywhere;

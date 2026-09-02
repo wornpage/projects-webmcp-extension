@@ -137,10 +137,10 @@
 	:global(.demo-batch-check-slot){position:absolute;z-index:2;inset-block-start:8px;inset-inline-start:8px}
 	.demo-grid-card.batch-active .grid-card-title{display:block;box-sizing:border-box;inline-size:calc(100% - 52px);margin-inline-start:52px;min-block-size:44px}
 	.demo-grid-card:active{background:color-mix(in srgb,var(--worn-accent)15%,var(--worn-surface));transition:background 0s}
-	:global(.focus-mode) .demo-grid-card:not(.selected){border-color:var(--worn-border);box-shadow:none}:global(.focus-mode) .demo-grid-card.selected{border-color:var(--worn-accent);box-shadow:inset 2px 0 0 var(--worn-accent),0 0 0 1px var(--worn-accent-50)}
-	.demo-grid-card.is-done{box-shadow:inset 2px 0 0 var(--worn-success-border);overflow:hidden}
-	.demo-grid-card.is-blocked{background:color-mix(in srgb,var(--worn-warning-bg)60%,var(--worn-surface));box-shadow:inset 2px 0 0 var(--worn-warning-border,#fdba74)}
+	:global(.focus-mode) .demo-grid-card:not(.selected){border-color:var(--worn-border);box-shadow:none}:global(.focus-mode) .demo-grid-card.selected{border-color:var(--worn-accent);box-shadow:0 0 0 1px var(--worn-accent-50)}
+	.demo-grid-card.is-done{background:color-mix(in srgb,var(--worn-success-bg)60%,var(--worn-surface));border-color:var(--worn-success-border);overflow:hidden}
+	.demo-grid-card.is-blocked{background:color-mix(in srgb,var(--worn-warning-bg)60%,var(--worn-surface));border-color:var(--worn-warning-border,#fdba74)}
 	.is-blocked .grid-card-fact-label{color:var(--worn-warning-text,#a85200)}
-	.demo-grid-card.selected{box-shadow:inset 2px 0 0 var(--worn-accent),0 0 0 1px var(--worn-accent-50);background:color-mix(in srgb,var(--worn-accent)4%,var(--worn-surface))}
-	.demo-grid-card.is-batch-checked{box-shadow:inset 2px 0 0 var(--worn-accent),0 0 0 1px var(--worn-accent);background:color-mix(in srgb,var(--worn-accent)6%,var(--worn-surface))}
+	.demo-grid-card.selected{border-color:var(--worn-accent);box-shadow:0 0 0 1px var(--worn-accent-50);background:color-mix(in srgb,var(--worn-accent)4%,var(--worn-surface))}
+	.demo-grid-card.is-batch-checked{border-color:var(--worn-accent);box-shadow:0 0 0 1px var(--worn-accent);background:color-mix(in srgb,var(--worn-accent)6%,var(--worn-surface))}
 </style>

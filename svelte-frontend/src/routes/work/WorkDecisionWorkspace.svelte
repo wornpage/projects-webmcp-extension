@@ -63,7 +63,7 @@
 </section>
 
 <style>
-	.decision-workspace{background:color-mix(in srgb,var(--worn-accent) 10%,var(--worn-surface));border:1px solid color-mix(in srgb,var(--worn-accent) 58%,var(--worn-border));border-inline-start:4px solid var(--worn-accent);border-radius:var(--worn-radius-md,10px);box-shadow:var(--worn-shadow-sm,0 1px 2px rgb(0 0 0 / 10%));box-sizing:border-box;margin-block:0 14px;max-width:100%;min-width:0;padding:16px;width:100%}
+	.decision-workspace{background:color-mix(in srgb,var(--worn-accent) 10%,var(--worn-surface));border:1px solid color-mix(in srgb,var(--worn-accent) 58%,var(--worn-border));border-radius:var(--worn-radius-md,10px);box-shadow:var(--worn-shadow-sm,0 1px 2px rgb(0 0 0 / 10%));box-sizing:border-box;margin-block:0 14px;max-width:100%;min-width:0;padding:16px;width:100%}
 	.decision-workspace-heading{display:grid;gap:5px}
 	.decision-workspace-kicker{color:var(--worn-accent);font-size:12px;font-weight:800;letter-spacing:.08em;margin:0;text-transform:uppercase}
 	.decision-workspace h2,.decision-workspace h3{margin:0}
