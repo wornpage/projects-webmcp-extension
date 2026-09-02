@@ -528,11 +528,15 @@ test('repeated Work and Review action disclosures include their visible work tit
 	assert.equal(reviewRouteSource.match(/<WornAccordion label="Other actions"/gu)?.length, 1);
 });
 
-test('Work text search includes the visible work type with every existing search field', () => {
-	const searchHaystack = workflowSource.match(/return \[\s*pack\.title,[\s\S]*?memory\s*\]\s*\.join\(' '\)\.toLowerCase\(\)\.includes\(q\);/u)?.[0] ?? '';
-	for (const field of ['pack.title', 'pack.type', 'pack.next', 'pack.owner', 'pack.due', 'pack.blocker', 'pack.area', "(pack.sources || []).join(' ')", 'pack.purpose', 'memory']) {
+test('Work text search uses only its intentional visible evidence allowlist', () => {
+	const searchHaystack = workflowSource.match(/return \[\s*pack\.title,[\s\S]*?pack\.area\s*\]\s*\.join\(' '\)\.toLowerCase\(\)\.includes\(q\);/u)?.[0] ?? '';
+	for (const field of ['pack.title', 'pack.type', 'pack.next', 'pack.owner', 'pack.due', 'pack.blocker', 'pack.area']) {
 		assert.match(searchHaystack, new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
 	}
+	for (const hiddenField of ['pack.sources', 'pack.purpose', 'pack.memory', 'memory', 'activityTextWithoutActor']) {
+		assert.doesNotMatch(searchHaystack, new RegExp(hiddenField.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
+	}
+	assert.doesNotMatch(workflowSource, /activityTextWithoutActor/u);
 });
 
 test('Work active-filter count excludes the separately persisted display density', () => {
@@ -691,6 +695,8 @@ test('custom workers create only bounded Draft-status work with visible human au
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Same' }, { title: ' same ' }] },
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Bad date', due: '2026-02-30' }] },
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Bad energy', energy: 'urgent' }] },
+		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Null owner', owner: null }] },
+		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Raw over limit', owner: `${' '.repeat(120)}A` }] },
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Extra', secret: 'no' }] },
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Control\u0000character' }] }
 	]) {

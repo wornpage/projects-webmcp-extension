@@ -2,7 +2,6 @@
 // demo-client.ts; this module owns the small display and navigation contract
 // shared by Work, Review, and Next.
 
-import { activityTextWithoutActor } from '$lib/activity';
 import {
 	DEMO_BLOCKER_NONE,
 	DEMO_BLOCKER_NONE_LABEL,
@@ -426,7 +425,6 @@ export function filterPacks(
 			? isMissingOwnerValue(pack.owner)
 			: pack.owner === ownerFilter)) return false;
 		if (!q) return true;
-		const memory = (pack.memory || []).map((note) => activityTextWithoutActor(note)).join(' ');
 		return [
 			pack.title,
 			pack.type,
@@ -434,10 +432,7 @@ export function filterPacks(
 			pack.owner,
 			pack.due,
 			pack.blocker,
-			pack.area,
-			(pack.sources || []).join(' '),
-			pack.purpose,
-			memory
+			pack.area
 		].join(' ').toLowerCase().includes(q);
 	});
 }
