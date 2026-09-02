@@ -55,7 +55,7 @@ export const RECORDING_PREFLIGHT_SPEC = deepFreeze({
 		priorityToGuideTabs: 7,
 		guideToFastBriefShiftTabs: 3,
 		guideReaderBodyTabs: 1,
-		guideToWorkMaxTabs: 10,
+		guideToWorkTabs: 9,
 		workToReviewShiftTabs: 7,
 		reviewToNextShiftTabs: 3,
 		nextToWorkShiftTabs: 5,
@@ -154,7 +154,7 @@ export function recordingCueProjectionFromSpec(spec = RECORDING_PREFLIGHT_SPEC) 
 			landingBodyTabs: spec.keyboard.landingBodyTabs,
 			priorityToGuideShiftTabs: spec.keyboard.priorityToGuideTabs,
 			guideToFastBriefShiftTabs: spec.keyboard.guideToFastBriefShiftTabs,
-			guideToWorkMaxTabs: spec.keyboard.guideToWorkMaxTabs,
+			guideToWorkTabs: spec.keyboard.guideToWorkTabs,
 			workToReviewShiftTabs: spec.keyboard.workToReviewShiftTabs,
 			reviewToNextShiftTabs: spec.keyboard.reviewToNextShiftTabs,
 			nextToWorkShiftTabs: spec.keyboard.nextToWorkShiftTabs,
@@ -202,7 +202,7 @@ export function parseRecordingCueSheet(markdown) {
 	const guideBodyTab = cueMatch(markdown, /press Tab once on the page body to reclaim page focus/u, 'Guide reader body-owned Tab');
 	const priorityToGuide = cueMatch(markdown, /Priority → Guide:\s*seven Shift\+Tab presses/u, 'Priority to Guide keyboard destination');
 	const guideToFastBrief = cueMatch(markdown, /Returned Guide → fast brief:\s*three Shift\+Tab presses/u, 'Guide to fast brief keyboard destination');
-	const guideToWork = cueMatch(markdown, /After the Guide reader inserts its receipt, reclaim page focus with one body-owned Tab, then use ten additional Tabs to reach \*\*1 Work\*\*/u, 'Guide reader to Work keyboard destination');
+	const guideToWork = cueMatch(markdown, /After the Guide reader inserts its receipt, reclaim page focus with one body-owned Tab, then use nine additional Tabs to reach \*\*1 Work\*\*/u, 'Guide reader to Work keyboard destination');
 	const guidePageDown = cueMatch(markdown, /Guide:[^\n]*?one PageDown pressed on the page body/u, 'Guide body PageDown');
 	const nextArrowDown = cueMatch(markdown, /Next:[^\n]*?four ArrowDown presses on the page body/u, 'prepared Next body ArrowDown');
 	const finalArrowDown = cueMatch(markdown, /then send ArrowDown to the page body eight times at 01:43/u, 'final body ArrowDown');
@@ -239,7 +239,7 @@ export function parseRecordingCueSheet(markdown) {
 			landingBodyTabs: 1,
 			priorityToGuideShiftTabs: 7,
 			guideToFastBriefShiftTabs: 3,
-			guideToWorkMaxTabs: 10,
+			guideToWorkTabs: 9,
 			workToReviewShiftTabs: 7,
 			reviewToNextShiftTabs: 3,
 			nextToWorkShiftTabs: 5,
@@ -469,8 +469,19 @@ async function assertFocusedDestination(page, { text, visibleText, path: expecte
 	return focus;
 }
 
+async function settleKeyboardStep(page) {
+	await bounded(
+		page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve()))),
+		RECORDING_PREFLIGHT_SPEC.routeSettleMs,
+		'Exact keyboard step render settlement'
+	);
+}
+
 async function pressExact(page, key, count, destination) {
-	for (let index = 0; index < count; index += 1) await page.keyboard.press(key);
+	for (let index = 0; index < count; index += 1) {
+		await page.keyboard.press(key);
+		await settleKeyboardStep(page);
+	}
 	const focus = await assertFocusedDestination(page, destination);
 	emit('keyboard', { key, count, expected: destination, actual: focus });
 }
@@ -812,7 +823,7 @@ async function runChoreography(page, diagnostics) {
 
 	await waitUntil(startedAt, cueAt('guide-to-work'));
 	await bodyTab(page, spec.keyboard.guideReaderBodyTabs, 'guide-reader-reclaim');
-	await seekForward(page, spec.keyboard.guideToWorkMaxTabs, { path: spec.routes.work.path });
+	await pressExact(page, 'Tab', spec.keyboard.guideToWorkTabs, { text: '1 Work', path: spec.routes.work.path });
 	await activateRoute(page, 'work');
 	const initialWork = await executeRegisteredTool(page, 'get_current_work_view', {});
 	assert.equal(initialWork.counts.workspace, spec.denominators.work.workspace);

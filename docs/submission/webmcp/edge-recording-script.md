@@ -33,13 +33,17 @@ Complete this exact path once immediately before recording. Any mismatch cancels
 
 Measured rehearsal baseline (September 1, 2026): production app commit `32a4d0ee`, fullscreen Edge Dev inner viewport 1116 × 698, document client viewport 1101 × 698 and scroll width 1101, exact backward counts 7/3/7/3/5/10 for Priority→Guide / Guide→fast brief / Work→Review / Review→Next / Next→Work / Draft→Pending, and zero browser warnings or errors. The command emits the final receipt/control geometry and requires both to fit after the eight body-owned ArrowDown presses. This evidence does not replace a fresh preflight: any change to the header, activity receipt, Work controls, or Pending navigation focus order invalidates the counts and requires the cue plus its static contract to change together.
 
-After the Guide reader inserts its receipt, reclaim page focus with one body-owned Tab, then use ten additional Tabs to reach **1 Work**.
+Post-#74 comparison (September 2, 2026): production app commit `2729e30` retained the post-#72 baseline viewport, complete target timeline, exact backward counts, catalogs, denominators, receipts, and final human-only state with zero browser warnings or errors. The new Guide authority relay remained non-interactive. The final receipt remained fully visible from 82.09–285.23 CSS px, and both human controls remained fully visible from 570.64–606.64 CSS px after the eight body-owned ArrowDown presses. The measured Guide reader → Work path is one body-owned Tab plus exactly nine additional Tabs.
+
+The preflight settles one rendered frame after every exact Tab or Shift+Tab press so page-owned focus recovery completes before the next key. It still requires the declared count and destination; it never searches for an alternate target.
+
+After the Guide reader inserts its receipt, reclaim page focus with one body-owned Tab, then use nine additional Tabs to reach **1 Work**.
 
 1. Landing → Guide: press Tab on the page body to reclaim focus, then advance visibly with Tab until **Open the handoff workflow** receives focus. Require the target within five additional moves, then press Enter.
 2. Guide → Priority: four Tab presses, then Enter.
 3. Priority → Guide: seven Shift+Tab presses, then Enter.
 4. Returned Guide → fast brief: three Shift+Tab presses, then Enter on **Use fast-create brief**.
-5. Fast brief → Work: press Tab once on the page body to reclaim page focus from the completed reader, then advance visibly with Tab until **1 Work** receives focus. Require the target within ten additional moves and press Enter; fail if focus reaches a later route first.
+5. Fast brief → Work: press Tab once on the page body to reclaim page focus from the completed reader, then use nine additional Tab presses to reach **1 Work** and press Enter; any earlier or later destination fails the take.
 6. Work receipt → Review: seven Shift+Tab presses, then Enter on **Review in queue**.
 7. Review receipt → Next: three Shift+Tab presses, then Enter on **3 Next**.
 8. Prepared Next receipt → Work: five Shift+Tab presses, then Enter on **1 Work**.
