@@ -192,7 +192,7 @@
 						</div>
 					{#if importError}<p class="challenge-import-error" role="alert">{importError}</p>{/if}
 						{#if importPreview}
-							<div class="challenge-import-preview" aria-live="polite"><strong>Preview:</strong> {importPreview.packs} work items · {importPreview.pendingApprovals} pending approvals · {importPreview.collisions} existing ID collisions.</div>
+							<div class="challenge-import-preview" aria-live="polite"><strong>Preview:</strong> {importPreview.packs} work items · {importPreview.pendingApprovals} pending approvals · {importPreview.collisions} existing ID collisions{importPreview.collisionIds.length ? ` (${importPreview.collisionIds.join(', ')})` : ''}.</div>
 							<div class="challenge-portability-actions"><WornButton size="sm" variant="primary" disabled={importBusy} onclick={() => applyWorkspaceImport('merge')}>Merge</WornButton><WornButton size="sm" variant="danger" disabled={importBusy} onclick={() => applyWorkspaceImport('replace')}>Replace</WornButton></div>
 						{/if}
 					</section>

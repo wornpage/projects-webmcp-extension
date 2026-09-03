@@ -495,6 +495,7 @@ export type WorkspaceImportPreview = {
 	packs: number;
 	pendingApprovals: number;
 	collisions: number;
+	collisionIds: string[];
 	serialized: string;
 };
 
@@ -526,10 +527,18 @@ export function previewWorkspaceImport(serialized: string): WorkspaceImportPrevi
 		if (!result) throw new ChallengeStateError('The workspace export is empty.');
 		const current = get(demoState);
 		const existingIds = new Set(current?.packs.map((pack) => pack.id) || []);
+		const imported = result.envelope.state;
+		const importedIds = new Set(imported.packs.map((pack) => pack.id));
+		for (const draft of imported.pendingNextActionDrafts || []) {
+			if (!importedIds.has(draft.workId) || draft.evidence.some((fact) => !importedIds.has(fact.workId))) {
+				throw new ChallengeStateError(`The workspace export contains an orphaned pending approval for "${draft.workId}".`);
+			}
+		}
 		return {
-			packs: result.envelope.state.packs.length,
-			pendingApprovals: result.envelope.state.pendingNextActionDrafts?.length || 0,
-			collisions: result.envelope.state.packs.filter((pack) => existingIds.has(pack.id)).length,
+			packs: imported.packs.length,
+			pendingApprovals: imported.pendingNextActionDrafts?.length || 0,
+			collisions: imported.packs.filter((pack) => existingIds.has(pack.id)).length,
+			collisionIds: imported.packs.filter((pack) => existingIds.has(pack.id)).map((pack) => pack.id),
 			serialized
 		};
 	} catch (error) {
@@ -555,12 +564,17 @@ export async function importWorkspaceState(
 		if (mode === 'replace') {
 			draft.packs = imported.packs;
 			draft.pendingNextActionDrafts = imported.pendingNextActionDrafts || [];
+			draft.manualOrder = imported.manualOrder || imported.packs.map((pack) => pack.id);
 			packs = draft.packs.length;
 		} else {
 			const ids = new Set(draft.packs.map((pack) => pack.id));
 			const additions = imported.packs.filter((pack) => !ids.has(pack.id));
 			skipped = imported.packs.length - additions.length;
 			draft.packs.push(...additions);
+			draft.manualOrder = [
+				...((draft.manualOrder as string[] | undefined) || draft.packs.filter((pack) => !additions.includes(pack)).map((pack) => pack.id)),
+				...additions.map((pack) => pack.id)
+			];
 			const pending = draft.pendingNextActionDrafts || [];
 			const pendingIds = new Set(pending.map((item) => item.workId));
 			draft.pendingNextActionDrafts = [...pending, ...(imported.pendingNextActionDrafts || []).filter((item) => !pendingIds.has(item.workId))];

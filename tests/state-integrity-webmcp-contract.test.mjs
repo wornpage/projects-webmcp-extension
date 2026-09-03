@@ -193,6 +193,7 @@ test('workspace portability previews before explicit merge or replace', () => {
 	const client = readFileSync(new URL('../svelte-frontend/src/lib/demo-client.ts', import.meta.url), 'utf8');
 	assert.match(client, /exportWorkspaceState[\s\S]*?previewWorkspaceImport[\s\S]*?importWorkspaceState[\s\S]*?mode: WorkspaceImportMode/u);
 	assert.match(client, /delete copy\.status[\s\S]*?copy\.actionReceipt = null/u);
+	assert.match(client, /collisionIds[\s\S]*?orphaned pending approval[\s\S]*?draft\.manualOrder = imported\.manualOrder/u);
 	const guide = readFileSync(new URL('../svelte-frontend/src/routes/webmcp-challenge/+page.svelte', import.meta.url), 'utf8');
 	assert.match(guide, /Prepare export[\s\S]*?Download export[\s\S]*?Import export[\s\S]*?Preview:[\s\S]*?Merge[\s\S]*?Replace/u);
 });
