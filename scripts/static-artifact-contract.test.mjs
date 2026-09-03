@@ -159,7 +159,9 @@ test('static artifact publishes the complete challenge input and security metada
 		assert.ok(existsSync(path.join(root, 'svelte-frontend', 'static', file)), `${file} exists`);
 	}
 	const serviceWorker = readFileSync(path.join(root, 'svelte-frontend', 'static', 'sw.js'), 'utf8');
-	assert.match(serviceWorker, /CACHE_NAME[\s\S]*?PRECACHE[\s\S]*?event\.request\.mode === 'navigate'/u);
+	assert.match(serviceWorker, /CACHE_NAME = 'projects-webmcp-v2'[\s\S]*?PRECACHE[\s\S]*?pathname === '\/sw\.js'[\s\S]*?event\.request\.mode === 'navigate'/u);
+	const layout = readFileSync(path.join(root, 'svelte-frontend', 'src', 'routes', '+layout.svelte'), 'utf8');
+	assert.match(layout, /serviceWorker\.register\('\/sw\.js', \{ updateViaCache: 'none' \}\)/u);
 	assert.equal(existsSync(path.join(root, 'svelte-frontend', 'static', 'sitemap.xml')), false);
 	assert.equal(STATIC_PUBLISH_FILES.includes('assets/runtime-config.js'), false);
 	const notices = readFileSync(path.join(root, 'THIRD_PARTY_LICENSES.txt'), 'utf8');

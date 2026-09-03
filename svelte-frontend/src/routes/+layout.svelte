@@ -45,7 +45,7 @@
 		window.addEventListener('online', setOnline);
 		window.addEventListener('offline', setOnline);
 		if ('serviceWorker' in navigator) {
-			void navigator.serviceWorker.register('/sw.js').then((registration) => {
+			void navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then((registration) => {
 				if (registration.waiting) { waitingWorker = registration.waiting; updateAvailable = true; }
 				registration.addEventListener('updatefound', () => {
 					const worker = registration.installing;
