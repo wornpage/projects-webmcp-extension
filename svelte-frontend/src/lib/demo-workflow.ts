@@ -363,7 +363,14 @@ export function workflowCardClass(
 	return classes.join(' ');
 }
 
-export function orderPacks(packs: DemoPack[], sortBy = 'urgency'): DemoPack[] {
+export function orderPacks(packs: DemoPack[], sortBy = 'urgency', manualOrder: string[] = []): DemoPack[] {
+	if (sortBy === 'manual') {
+		const positions = new Map(manualOrder.map((id, index) => [id, index]));
+		return packs
+			.map((pack, index) => ({ pack, index }))
+			.sort((a, b) => (positions.get(a.pack.id) ?? manualOrder.length + a.index) - (positions.get(b.pack.id) ?? manualOrder.length + b.index))
+			.map(({ pack }) => pack);
+	}
 	const urgencyRank = (pack: DemoPack): number => {
 		const urgency = dueUrgency(pack);
 		return urgency === 'overdue' ? 0 : urgency === 'today' ? 1 : urgency === 'soon' ? 2 : 3;
