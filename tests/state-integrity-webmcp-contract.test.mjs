@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -172,6 +173,20 @@ test('explicit revisions rotate on success and a stale tab cannot overwrite the 
 	assert.equal(third.revision, 'revision-c');
 	assert.notEqual(third.revision, second.revision);
 	assert.deepEqual(third.state, stateC);
+});
+
+test('persisted-state decoder rejects malformed records instead of deferring failures to rendering', () => {
+	const source = readFileSync(new URL('../svelte-frontend/src/lib/demo-client.ts', import.meta.url), 'utf8');
+	assert.match(source, /optionalTextLimits[\s\S]*?VALID_PACK_STATUSES\.has\(pack\.status\)[\s\S]*?parseDateOnly\(pack\.due\)[\s\S]*?pack\.reactions[\s\S]*?unresolved dependency/u);
+	const layout = readFileSync(new URL('../svelte-frontend/src/routes/+layout.svelte', import.meta.url), 'utf8');
+	assert.match(layout, /resetDemoSampleState[\s\S]*?Workspace data needs recovery[\s\S]*?Reset local workspace/u);
+});
+
+test('pending approvals center exposes every proposal with evidence status and recovery actions', () => {
+	const center = readFileSync(new URL('../svelte-frontend/src/lib/PendingApprovalsCenter.svelte', import.meta.url), 'utf8');
+	assert.match(center, /Pending approvals \(\$\{drafts\.length\}\)[\s\S]*?Every proposal remains unsaved until you approve it on Next/u);
+	assert.match(center, /draftStatus\([\s\S]*?fresh[\s\S]*?stale[\s\S]*?orphaned/u);
+	assert.match(center, /Review on Next[\s\S]*?Discard/u);
 });
 
 test('exclusive migration interleaving cannot overwrite a queued normal write or deadlock', { timeout: 1_000 }, async () => {

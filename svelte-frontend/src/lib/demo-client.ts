@@ -140,10 +140,50 @@ function assertDemoState(value: unknown): asserts value is DemoState {
 				throw new ChallengeStateError('Saved workspace data contains a non-canonical or overlong work title.');
 			}
 		}
+		const optionalTextLimits: Record<string, number> = {
+			type: 120, blocker: 200, blockedBy: 200, next: 200, owner: 120, due: 40,
+			doneWhen: 1000, purpose: 1000, area: 120, energy: 40, recurrence: 40,
+			decider: 120, milestone: 200, location: 200
+		};
+		for (const [field, maxLength] of Object.entries(optionalTextLimits)) {
+			const raw = pack[field];
+			if (raw !== undefined && (typeof raw !== 'string' || raw.length > maxLength || /\p{Cc}/u.test(raw))) {
+				throw new ChallengeStateError(`Saved workspace data contains an invalid ${field} value.`);
+			}
+		}
+		if (pack.status !== undefined && !VALID_PACK_STATUSES.has(pack.status)) {
+			throw new ChallengeStateError(`Saved workspace data contains an invalid status for "${pack.id}".`);
+		}
+		for (const field of ['archived', 'pinned', 'decision'] as const) {
+			if (pack[field] !== undefined && typeof pack[field] !== 'boolean') {
+				throw new ChallengeStateError(`Saved workspace data contains an invalid ${field} flag.`);
+			}
+		}
+		if (pack.progress !== undefined && (!Number.isFinite(pack.progress) || pack.progress < 0 || pack.progress > 100)) {
+			throw new ChallengeStateError(`Saved workspace data contains invalid progress for "${pack.id}".`);
+		}
+		if (pack.due && !parseDateOnly(pack.due)) {
+			throw new ChallengeStateError(`Saved workspace data contains an invalid due date for "${pack.id}".`);
+		}
+		for (const field of ['activity', 'memory', 'sources'] as const) {
+			const entries = pack[field];
+			if (entries !== undefined && (!Array.isArray(entries) || entries.some((entry) => typeof entry !== 'string' || entry.length > 2000 || /\p{Cc}/u.test(entry)))) {
+				throw new ChallengeStateError(`Saved workspace data contains invalid ${field} entries.`);
+			}
+		}
+		if (pack.reactions !== undefined && (!pack.reactions || typeof pack.reactions !== 'object' || Array.isArray(pack.reactions) || Object.values(pack.reactions).some((count) => !Number.isSafeInteger(count) || count < 0))) {
+			throw new ChallengeStateError(`Saved workspace data contains invalid reactions for "${pack.id}".`);
+		}
 	}
 	const pending = (value as DemoState).pendingNextActionDrafts;
 	if (pending !== undefined && (!Array.isArray(pending) || pending.some((draft) => !isPendingNextActionDraft(draft)))) {
 		throw new ChallengeStateError('Saved pending approvals are invalid. Clear this site\'s local data to restart.');
+	}
+	const dependencyIds = new Set((value as DemoState).packs.map((pack) => pack.id));
+	for (const pack of (value as DemoState).packs) {
+		if (pack.blockedBy && !dependencyIds.has(pack.blockedBy)) {
+			throw new ChallengeStateError(`Saved workspace data contains an unresolved dependency for "${pack.id}".`);
+		}
 	}
 }
 
