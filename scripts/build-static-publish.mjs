@@ -22,7 +22,8 @@ export const STATIC_PUBLISH_FILES = Object.freeze([
 
 export const SVELTE_PUBLIC_FILES = Object.freeze([
 	'_headers',
-	'robots.txt'
+	'robots.txt',
+	'sw.js'
 ]);
 
 const STATIC_404_PAGE = `<!DOCTYPE html>

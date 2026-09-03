@@ -31,11 +31,32 @@
 	let recoveryBusy = $state(false);
 	let recoveryError = $state('');
 	let pendingCenterOpen = $state(false);
+	let online = $state(true);
+	let updateAvailable = $state(false);
 
 	onMount(() => {
 		// The shared workspace shell hydrates the one browser-local state owner.
 		// Guide only derives and renders that state; it owns no fetch or storage path.
 		void refreshDemoState({ reuseRecent: true });
+		online = navigator.onLine;
+		const setOnline = () => (online = navigator.onLine);
+		window.addEventListener('online', setOnline);
+		window.addEventListener('offline', setOnline);
+		if ('serviceWorker' in navigator) {
+			void navigator.serviceWorker.register('/sw.js').then((registration) => {
+				if (registration.waiting) updateAvailable = true;
+				registration.addEventListener('updatefound', () => {
+					const worker = registration.installing;
+					worker?.addEventListener('statechange', () => {
+						if (worker.state === 'installed' && navigator.serviceWorker.controller) updateAvailable = true;
+					});
+				});
+			}).catch(() => {});
+		}
+		return () => {
+			window.removeEventListener('online', setOnline);
+			window.removeEventListener('offline', setOnline);
+		};
 	});
 
 	function dismissToast(id: string) {
@@ -85,6 +106,7 @@
 		</nav>
 
 		<WebMcpStatus />
+		{#if !online || updateAvailable}<span class="offline-status" role="status" aria-live="polite">{online ? 'Update available — reload to apply.' : 'Offline mode — local workspace remains available.'}</span>{/if}
 	</header>
 
 	<WebMcpHandoffRail />
@@ -244,6 +266,7 @@
 		gap: 22px;
 		min-width: 0;
 	}
+	.offline-status { color: var(--worn-text-secondary); font-family: var(--font-typewriter); font-size: 11px; line-height: 1.3; max-inline-size: 220px; text-align: end; }
 
 	.demo-recovery { align-items: center; background: var(--worn-surface); border: 1px solid var(--worn-border-strong); border-radius: var(--worn-radius); display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; padding: 12px 14px; }
 	.demo-recovery div { display: grid; gap: 3px; min-width: 0; }

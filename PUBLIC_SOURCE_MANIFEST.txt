@@ -94,6 +94,7 @@ svelte-frontend/src/routes/work/WorkRecentActivity.svelte
 svelte-frontend/src/routes/work/WorkShortcutHelp.svelte
 svelte-frontend/static/_headers
 svelte-frontend/static/robots.txt
+svelte-frontend/static/sw.js
 svelte-frontend/svelte.check.config.js
 svelte-frontend/svelte.config.js
 svelte-frontend/tsconfig.json
