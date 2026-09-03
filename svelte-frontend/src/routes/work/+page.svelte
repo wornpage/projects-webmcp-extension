@@ -478,6 +478,7 @@
 	// In batch mode a tap anywhere on the card toggles selection; inner
 	// controls (buttons, links, the details toggle) keep their own behavior.
 let focusedIndex = $state(0);
+let manualFocusId = $state('');
 let shortcutHelpOpen = $state(false);
 
 function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
@@ -891,7 +892,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	}
 	async function moveFocusedManual(delta: -1 | 1) {
 		if (sortBy !== 'manual' || busyId) return;
-		const focusedId = (document.activeElement as HTMLElement | null)?.dataset.packId || '';
+		const focusedId = manualFocusId || (document.activeElement as HTMLElement | null)?.dataset.packId || '';
 		const currentIndex = visible.findIndex((pack) => pack.id === focusedId);
 		const target = visible[currentIndex + delta];
 		if (!focusedId || currentIndex < 0 || !target?.id) return;
@@ -1101,7 +1102,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 					{batchCheckbox}
 					onCardClick={handleCardClick}
 					onCardKeydown={handleCardKeys}
-					onCardFocus={(index) => { focusedIndex = index; }}
+					onCardFocus={(index) => { focusedIndex = index; manualFocusId = pack.id!; }}
 					onPrimaryMutation={doAction}
 				/>
 			{/each}
@@ -1144,7 +1145,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				{snoozeDays}
 				onCardClick={handleCardClick}
 				onCardKeydown={handleCardKeys}
-				onCardFocus={(index) => { focusedIndex = index; }}
+				onCardFocus={(index) => { focusedIndex = index; manualFocusId = pack.id!; }}
 				onDragStart={handleDragStart}
 				onDragOver={handleDragOver}
 				onDragEnd={handleDragEnd}
