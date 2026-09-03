@@ -142,6 +142,7 @@ test('Projects workflow surfaces keep the Guide compact and product-labeled', ()
 	assert.doesNotMatch(layoutSource, /aria-label="Challenge pages"/u);
 	assert.match(pageSource, /Choose visible work and edit the brief; the browser agent can inspect, prepare, or add bounded Drafts while you control Start and final Save\./u);
 	assert.match(pageSource, /<WornAccordion label="Authority boundary">/u);
+	assert.match(pageSource, /<WornAccordion label="Workspace portability">[\s\S]*?Import export/u);
 	assert.doesNotMatch(pageSource, /challenge-facts|Projects workflow capabilities/u);
 	assert.match(editorSource, /All visible work is ready by default; choose a counted scope or Custom, then ask:/u);
 });
