@@ -42,7 +42,7 @@
 		workTitle,
 		type DemoPack
 	} from '$lib/demo-workflow';
-	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAlert, WornPage, WornReceipt } from '$lib/components';
+	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAlert, WornPage, WornReceipt, WornSelect } from '$lib/components';
 	import { buildActionUndoSnapshot, commitActionUndo, receiptUndo, undoReceipt } from '$lib/undo';
 	import { localDateInputValue } from '$lib/local-date.mjs';
 	import { summarizeWorkMetadata } from '$lib/work-metadata.mjs';
@@ -139,11 +139,13 @@
 	let quickAddBusy = $state(false);
 	let sortBy = $state('urgency');
 	let manualOrderAnnouncement = $state('');
+	let manualTargetId = $state('');
 	let manualOrder = $derived(($demoState?.manualOrder ?? []) as string[]);
 	let renderLimit = $state(WORK_RENDER_LIMIT);
 
 	let filter = $derived($demoState?.filter || 'all');
 	let visible = $derived((()=>{let v=orderPacks(filterPacks(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone), sortBy, manualOrder);if(dueUrgencyFilter!=='all'){v=v.filter(p=>dueUrgency(p)===dueUrgencyFilter)}const sel=$demoState?.selectedId;if(focusMode&&sel){return v.filter(p=>p.id===sel)}return v})());
+	let manualTargetOptions = $derived(visible.map((pack) => ({ value: pack.id, label: workTitle(pack) })));
 	let decisionWorkspace = $derived(recommendedDecisionWork(visible));
 	let decisionWorkspaceDecider = $derived(
 		decisionWorkspace
@@ -892,7 +894,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	}
 	async function moveFocusedManual(delta: -1 | 1) {
 		if (sortBy !== 'manual' || busyId) return;
-		const focusedId = manualFocusId || (document.activeElement as HTMLElement | null)?.dataset.packId || '';
+		const focusedId = manualTargetId || manualFocusId || (document.activeElement as HTMLElement | null)?.dataset.packId || $demoState?.selectedId || '';
 		const currentIndex = visible.findIndex((pack) => pack.id === focusedId);
 		const target = visible[currentIndex + delta];
 		if (!focusedId || currentIndex < 0 || !target?.id) return;
@@ -1043,9 +1045,10 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	{#if sortBy === 'manual' && visible.length > 1}
 		<div class="manual-order-toolbar" role="toolbar" aria-label="Manual ordering controls">
 			<span>Manual order</span>
-			<WornButton size="sm" type="button" onclick={() => moveFocusedManual(-1)}>Move focused up</WornButton>
-			<WornButton size="sm" type="button" onclick={() => moveFocusedManual(1)}>Move focused down</WornButton>
-			<span class="sr-only" aria-live="polite">{manualOrderAnnouncement}</span>
+			<WornSelect aria-label="Card to reorder" options={manualTargetOptions} bind:value={manualTargetId} />
+			<WornButton size="sm" type="button" disabled={!manualTargetId && !manualFocusId && !$demoState?.selectedId} onclick={() => moveFocusedManual(-1)}>Move focused up</WornButton>
+			<WornButton size="sm" type="button" disabled={!manualTargetId && !manualFocusId && !$demoState?.selectedId} onclick={() => moveFocusedManual(1)}>Move focused down</WornButton>
+			<span aria-live="polite">{manualOrderAnnouncement}</span>
 		</div>
 	{/if}
 
@@ -1102,7 +1105,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 					{batchCheckbox}
 					onCardClick={handleCardClick}
 					onCardKeydown={handleCardKeys}
-					onCardFocus={(index) => { focusedIndex = index; manualFocusId = pack.id!; }}
+					onCardFocus={(index) => { focusedIndex = index; manualFocusId = pack.id!; manualTargetId = pack.id!; }}
 					onPrimaryMutation={doAction}
 				/>
 			{/each}
@@ -1145,7 +1148,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				{snoozeDays}
 				onCardClick={handleCardClick}
 				onCardKeydown={handleCardKeys}
-				onCardFocus={(index) => { focusedIndex = index; manualFocusId = pack.id!; }}
+				onCardFocus={(index) => { focusedIndex = index; manualFocusId = pack.id!; manualTargetId = pack.id!; }}
 				onDragStart={handleDragStart}
 				onDragOver={handleDragOver}
 				onDragEnd={handleDragEnd}
