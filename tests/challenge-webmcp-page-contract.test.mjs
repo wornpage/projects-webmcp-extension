@@ -143,7 +143,7 @@ test('Projects workflow surfaces keep the Guide compact and product-labeled', ()
 	assert.match(pageSource, /Choose visible work and edit the brief; the browser agent can inspect, prepare, or add bounded Drafts while you control Start and final Save\./u);
 	assert.match(pageSource, /<WornAccordion label="Authority boundary">/u);
 	assert.match(pageSource, /<WornAccordion label="Workspace portability">[\s\S]*?Import export/u);
-	assert.match(pageSource, /challenge-export-primary[\s\S]*?inline-size: 114px;/u);
+	assert.match(pageSource, /challenge-export-primary[\s\S]*?inline-size: 124px;/u);
 	assert.match(pageSource, /\.challenge-import-label \{[\s\S]*?background: var\(--worn-surface\);[\s\S]*?block-size: 32px;[\s\S]*?border: 1px solid var\(--worn-border\);[\s\S]*?border-radius: var\(--worn-radius\);[\s\S]*?font-size: 12px;[\s\S]*?line-height: 14\.4px;/u);
 	assert.match(pageSource, /@media \(pointer: coarse\) \{ \.challenge-import-label \{ block-size: 44px; \} \}/u);
 	assert.doesNotMatch(pageSource, /challenge-facts|Projects workflow capabilities/u);

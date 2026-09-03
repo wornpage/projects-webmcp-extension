@@ -325,7 +325,7 @@
 	.challenge-portability h2 { font-size: 16px; margin: 0; }
 	.challenge-portability p { color: var(--worn-text-secondary); font-size: 13px; line-height: 1.45; margin: 0; }
 	.challenge-portability-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
-	:global(.challenge-export-primary.worn-btn), .challenge-import-label { inline-size: 114px; }
+	:global(.challenge-export-primary.worn-btn), .challenge-import-label { inline-size: 124px; }
 	.challenge-import-label { align-items: center; background: var(--worn-surface); block-size: 32px; border: 1px solid var(--worn-border); border-radius: var(--worn-radius); box-sizing: border-box; cursor: pointer; display: inline-flex; font-family: var(--font-typewriter); font-size: 12px; font-weight: 610; justify-content: center; line-height: 14.4px; padding: 4px 10px; }
 	@media (pointer: coarse) { .challenge-import-label { block-size: 44px; } }
 	.challenge-import-label input { max-width: 1px; opacity: 0; position: absolute; }
