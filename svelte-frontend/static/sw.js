@@ -13,11 +13,18 @@ const PRECACHE = [
 ];
 
 self.addEventListener('install', (event) => {
-	event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)));
+	event.waitUntil(caches.open(CACHE_NAME).then(async (cache) => {
+		await Promise.all(PRECACHE.map(async (url) => {
+			try {
+				const response = await fetch(url);
+				if (response.ok) await cache.put(url, response);
+			} catch {}
+		}));
+	}));
 });
 
 self.addEventListener('activate', (event) => {
-	event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))));
+	event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('message', (event) => {
