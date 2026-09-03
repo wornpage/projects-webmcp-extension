@@ -455,10 +455,13 @@ export async function createPack(payload: Record<string, unknown>): Promise<{
 	};
 	const state = await saveBrowserState((draft) => {
 		draft.packs.push(pack);
+		const summary = `Created ${formatWorkTitle(fields.title)}.`;
+		const receipt: DemoReceipt = { summary, pack };
 		draft.selectedId = id;
-		draft.status = `Created ${formatWorkTitle(fields.title)}.`;
+		draft.status = summary;
+		draft.actionReceipt = receipt;
 	});
-	if (!state) throw new ChallengeStateError('Workspace data is not available.');
+	if (!state?.actionReceipt?.pack) throw new ChallengeStateError('Created work did not return a receipt.');
 	const created = state.packs.find((item) => item.id === id)!;
 	displayToast(`Created: ${formatWorkTitle(created.title)}`, 'success');
 	return { pack: created, state };

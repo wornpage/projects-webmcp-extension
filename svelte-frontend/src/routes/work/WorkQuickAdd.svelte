@@ -16,9 +16,11 @@
 
 	let {
 		filters,
+		onCreated,
 		busy = $bindable(false)
 	}: {
 		filters: WorkQuickAddFilters;
+		onCreated?: () => void;
 		busy?: boolean;
 	} = $props();
 
@@ -66,6 +68,7 @@
 				energy: normalizedEnergy || undefined,
 				recurrence: normalizedRecurrence || undefined
 			});
+			onCreated?.();
 			title = '';
 			proofTarget = '';
 			owner = '';

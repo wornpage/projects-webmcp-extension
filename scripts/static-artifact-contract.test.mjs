@@ -429,6 +429,7 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 		compactMediaBlocks.some(({ prelude }) => /\(width<=700px\)/u.test(prelude)),
 		'compiled Svelte CSS contains the emitted @media (width<=700px) block'
 	);
+	const compactBrandGridPlacements = [];
 	for (const { prelude, body } of compactMediaBlocks) {
 		const compactBrandRules = parseCssRules(body).filter(({ selectors }) =>
 			selectors.some(
@@ -437,12 +438,27 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 					/^\.challenge-brand(?:\.[\w-]+)? span(?::where\([^)]*\))?$/u.test(selector)
 			)
 		);
+		compactBrandGridPlacements.push(...compactBrandRules
+			.filter(({ declarations }) => declarations.has('grid-area') || declarations.has('grid-column') || declarations.has('grid-row'))
+			.map(({ declarations }) => ({
+				gridArea: declarations.get('grid-area') ?? null,
+				gridColumn: declarations.get('grid-column') ?? null,
+				gridRow: declarations.get('grid-row') ?? null
+			})));
+		const compactBrandPresentationOverrides = compactBrandRules.filter(({ declarations }) =>
+			['padding', 'padding-inline', 'overflow', 'text-overflow', 'white-space'].some((property) => declarations.has(property))
+		);
 		assert.deepEqual(
-			compactBrandRules,
+			compactBrandPresentationOverrides,
 			[],
 			`compact compiled Svelte CSS ${prelude} does not override challenge-brand padding or ellipsis containment`
 		);
 	}
+	assert.deepEqual(
+		compactBrandGridPlacements,
+		[{ gridArea: '1/1', gridColumn: null, gridRow: null }],
+		'compact compiled Svelte CSS keeps only the explicit challenge-brand grid placement'
+	);
 	for (const pattern of deniedRuntimePatterns) assert.doesNotMatch(artifactText, pattern);
 });
 
