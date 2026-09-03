@@ -5,6 +5,8 @@
 assets/demo.css
 assets/favicon.png
 assets/favicon.svg
+assets/icon-192.svg
+assets/icon-512.svg
 assets/landing.css
 assets/landing.js
 assets/not-found.css
@@ -94,6 +96,7 @@ svelte-frontend/src/routes/work/WorkRecentActivity.svelte
 svelte-frontend/src/routes/work/WorkShortcutHelp.svelte
 svelte-frontend/static/_headers
 svelte-frontend/static/robots.txt
+svelte-frontend/static/sw.js
 svelte-frontend/svelte.check.config.js
 svelte-frontend/svelte.config.js
 svelte-frontend/tsconfig.json

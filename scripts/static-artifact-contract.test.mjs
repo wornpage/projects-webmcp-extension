@@ -146,16 +146,20 @@ test('static artifact publishes the complete challenge input and security metada
 		'manifest.json',
 		'assets/og-image.svg',
 		'assets/not-found.css',
+		'assets/icon-192.svg',
+		'assets/icon-512.svg',
 		'data/demo-packs.json'
 	]) {
 		assert.ok(STATIC_PUBLISH_FILES.includes(file), `${file} is published`);
 		assert.ok(existsSync(path.join(root, file)), `${file} exists`);
 	}
 	assert.equal(STATIC_PUBLISH_FILES.includes('index.html'), false, 'root HTML is derived from the landing source');
-	for (const file of ['_headers', 'robots.txt']) {
+	for (const file of ['_headers', 'robots.txt', 'sw.js']) {
 		assert.ok(SVELTE_PUBLIC_FILES.includes(file), `${file} is published`);
 		assert.ok(existsSync(path.join(root, 'svelte-frontend', 'static', file)), `${file} exists`);
 	}
+	const serviceWorker = readFileSync(path.join(root, 'svelte-frontend', 'static', 'sw.js'), 'utf8');
+	assert.match(serviceWorker, /CACHE_NAME[\s\S]*?PRECACHE[\s\S]*?event\.request\.mode === 'navigate'/u);
 	assert.equal(existsSync(path.join(root, 'svelte-frontend', 'static', 'sitemap.xml')), false);
 	assert.equal(STATIC_PUBLISH_FILES.includes('assets/runtime-config.js'), false);
 	const notices = readFileSync(path.join(root, 'THIRD_PARTY_LICENSES.txt'), 'utf8');

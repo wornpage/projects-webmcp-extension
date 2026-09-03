@@ -16,13 +16,16 @@ export const STATIC_PUBLISH_FILES = Object.freeze([
 	'assets/not-found.css',
 	'assets/favicon.png',
 	'assets/favicon.svg',
+	'assets/icon-192.svg',
+	'assets/icon-512.svg',
 	'assets/og-image.svg',
 	'data/demo-packs.json'
 ]);
 
 export const SVELTE_PUBLIC_FILES = Object.freeze([
 	'_headers',
-	'robots.txt'
+	'robots.txt',
+	'sw.js'
 ]);
 
 const STATIC_404_PAGE = `<!DOCTYPE html>
