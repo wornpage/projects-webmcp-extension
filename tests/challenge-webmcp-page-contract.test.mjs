@@ -432,7 +432,7 @@ test('wide Guide layout keeps the existing steps in the left rail beside the edi
 	assert.doesNotMatch(layoutCss, /min-height|overflow:\s*(?:hidden|clip)/u);
 	assert.match(pageSource, /@media \(max-width: 860px\) \{[\s\S]*?\.challenge-hero\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/u);
 	assert.match(pageSource, /<WornButton href=\{step\.href\} size="sm">\{step\.action\}<\/WornButton>/u);
-	assert.match(pageSource, /import \{ WornAccordion, WornBadge, WornButton, WornPage, WornReceipt \} from '\$lib\/components';/u);
+	assert.match(pageSource, /import \{ WornAccordion, WornBadge, WornButton, WornDialog, WornPage, WornReceipt \} from '\$lib\/components';/u);
 	assert.match(pageSource, /<div class="challenge-role-split" aria-label="Authority handoff">[\s\S]*?<WornBadge variant="accent" size="sm" label="Agent · inspect \+ prepare" \/>[\s\S]*?<span class="challenge-role-arrow" aria-hidden="true">→<\/span>[\s\S]*?<WornBadge size="sm" label="You · decide \+ save" \/>/u);
 	assert.match(pageSource, /\.challenge-role-split \{[\s\S]*?display: flex;[\s\S]*?flex-wrap: wrap;[\s\S]*?gap: 8px;/u);
 	assert.match(pageSource, /\.challenge-number \{[\s\S]*?background: var\(--worn-accent\);[\s\S]*?border: 1px solid var\(--worn-accent\);[\s\S]*?color: var\(--worn-accent-text\);/u);
