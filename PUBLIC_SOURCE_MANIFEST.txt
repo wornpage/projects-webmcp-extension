@@ -5,6 +5,8 @@
 assets/demo.css
 assets/favicon.png
 assets/favicon.svg
+assets/icon-192.svg
+assets/icon-512.svg
 assets/landing.css
 assets/landing.js
 assets/not-found.css

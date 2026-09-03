@@ -146,6 +146,8 @@ test('static artifact publishes the complete challenge input and security metada
 		'manifest.json',
 		'assets/og-image.svg',
 		'assets/not-found.css',
+		'assets/icon-192.svg',
+		'assets/icon-512.svg',
 		'data/demo-packs.json'
 	]) {
 		assert.ok(STATIC_PUBLISH_FILES.includes(file), `${file} is published`);

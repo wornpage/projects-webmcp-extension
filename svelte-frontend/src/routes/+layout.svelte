@@ -33,6 +33,7 @@
 	let pendingCenterOpen = $state(false);
 	let online = $state(true);
 	let updateAvailable = $state(false);
+	let waitingWorker = $state<ServiceWorker | null>(null);
 
 	onMount(() => {
 		// The shared workspace shell hydrates the one browser-local state owner.
@@ -44,11 +45,11 @@
 		window.addEventListener('offline', setOnline);
 		if ('serviceWorker' in navigator) {
 			void navigator.serviceWorker.register('/sw.js').then((registration) => {
-				if (registration.waiting) updateAvailable = true;
+				if (registration.waiting) { waitingWorker = registration.waiting; updateAvailable = true; }
 				registration.addEventListener('updatefound', () => {
 					const worker = registration.installing;
 					worker?.addEventListener('statechange', () => {
-						if (worker.state === 'installed' && navigator.serviceWorker.controller) updateAvailable = true;
+						if (worker.state === 'installed' && navigator.serviceWorker.controller) { waitingWorker = worker; updateAvailable = true; }
 					});
 				});
 			}).catch(() => {});
@@ -61,6 +62,11 @@
 
 	function dismissToast(id: string) {
 		toasts.update((items) => items.filter((item) => item.id !== id));
+	}
+
+	function reloadForUpdate() {
+		if (waitingWorker) waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+		location.reload();
 	}
 
 	async function recoverWorkspace() {
@@ -106,7 +112,7 @@
 		</nav>
 
 		<WebMcpStatus />
-		{#if !online || updateAvailable}<span class="offline-status" role="status" aria-live="polite">{online ? 'Update available — reload to apply.' : 'Offline mode — local workspace remains available.'}</span>{/if}
+		{#if updateAvailable}<WornButton class="offline-status" size="sm" type="button" onclick={reloadForUpdate}>Reload to update</WornButton>{:else if !online}<span class="offline-status" role="status" aria-live="polite">Offline mode — local workspace remains available.</span>{/if}
 	</header>
 
 	<WebMcpHandoffRail />
