@@ -161,6 +161,21 @@
 		justify-content: flex-end;
 	}
 
+	/* At tablet widths the brand and status share a compact row, while the
+	   complete workflow (including Pending) stays together below it. */
+	@media (max-width: 900px) and (min-width: 701px) {
+		.challenge-shell-nav {
+			display: grid;
+			gap: 6px 10px;
+			grid-template-columns: minmax(0, 1fr) auto;
+			padding: 6px 8px;
+		}
+		.challenge-shell-nav :global(.webmcp-status-pill) { grid-column: 2; grid-row: 1; }
+		.challenge-shell-nav nav { flex-wrap: nowrap; gap: 2px; grid-column: 1 / -1; justify-content: stretch; }
+		.challenge-shell-nav nav a { flex: 1 1 auto; font-size: 11px; justify-content: center; min-height: 36px; padding-inline: 7px; }
+		.challenge-brand { min-height: 36px; padding-inline: 8px; }
+	}
+
 	.challenge-shell-nav nav a {
 		align-items: center;
 		border: 1px solid transparent;
