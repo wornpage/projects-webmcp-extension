@@ -605,7 +605,7 @@ test('Work batch actions are planned by eligibility, committed once, and restore
 	const beforeFirstMutation = batchAction.match(/async function runBatchAction\([\s\S]*?\n\t\ttry \{/u)?.[0] ?? '';
 	assert.match(beforeFirstMutation, /if \(selectedIds\.length === 0 \|\| busyId\) return;[\s\S]*?busyId = 'batch';[\s\S]*?busyAction = action;[\s\S]*?errorText = '';[\s\S]*?try \{/u);
 	assert.doesNotMatch(beforeFirstMutation, /await /u);
-	assert.match(batchAction, /const result = await runPackBatchAction\(selectedIds, action\);[\s\S]*?commitActionUndo\(null\);[\s\S]*?displayToast\(result\.receipt\.summary \|\| 'Batch action complete\.', 'success'\)/u);
+	assert.match(batchAction, /const undoSnapshot = action === 'delete' \? null : buildBatchUndoSnapshot\(packs, selectedIds, action\);[\s\S]*?const result = await runPackBatchAction\(selectedIds, action\);[\s\S]*?commitActionUndo\(result\.appliedCount > 0 \? undoSnapshot : null\);[\s\S]*?displayToast\(result\.receipt\.summary \|\| 'Batch action complete\.', 'success'\)/u);
 	assert.doesNotMatch(batchAction, /for \(const id|runPackAction|saveBrowserState/u);
 	assert.match(batchAction, /catch \(error\) \{[\s\S]*?error instanceof ChallengeStateError[\s\S]*?\? error\.message[\s\S]*?: 'The batch action failed — the local state is unchanged\.';[\s\S]*?if \(reportError\) errorText = message;[\s\S]*?else throw new Error\(message\);/u);
 	assert.match(batchAction, /finally \{[\s\S]*?busyAction = null;[\s\S]*?busyId = '';[\s\S]*?actionBusy\.set\(''\);/u);

@@ -1019,7 +1019,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			summary={receipt.summary || ''}
 			announce={false}
 			cells={receipt.pack ? receiptCells(receipt.pack) : []}
-			undoAvailable={$receiptUndo && receipt.pack?.id ? $receiptUndo.packId === receipt.pack.id : false}
+			undoAvailable={receipt ? ($receiptUndo?.type === 'batch' || Boolean($receiptUndo && receipt.pack?.id && $receiptUndo.type === 'action' && $receiptUndo.packId === receipt.pack.id)) : false}
 			onundo={() => undoReceipt()}
 			ondone={() => (dismissedReceiptSummary = receipt?.summary || '')}
 		/>
@@ -1106,7 +1106,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				{busyAction}
 				{batchCheckbox}
 				{receipt}
-				receiptUndo={$receiptUndo}
+				receiptUndo={$receiptUndo?.type === 'action' ? $receiptUndo : null}
 				{snoozeDays}
 				onCardClick={handleCardClick}
 				onCardKeydown={handleCardKeys}
