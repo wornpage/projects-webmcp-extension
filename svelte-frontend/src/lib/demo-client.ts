@@ -490,6 +490,89 @@ export async function saveBrowserState(
 	}
 }
 
+export type WorkspaceImportMode = 'replace' | 'merge';
+export type WorkspaceImportPreview = {
+	packs: number;
+	pendingApprovals: number;
+	collisions: number;
+	serialized: string;
+};
+
+function portableState(state: DemoState): DemoState {
+	const copy = cloneState(state);
+	delete copy.status;
+	copy.actionReceipt = null;
+	delete copy.filter;
+	delete copy.energyFilter;
+	return copy;
+}
+
+export function exportWorkspaceState(): string {
+	const state = get(demoState);
+	if (!state) throw new ChallengeStateError('Workspace data is not loaded yet.');
+	assertDemoState(state);
+	const revision = storageRevision || createStorageRevision();
+	return JSON.stringify({ schemaVersion: 1, revision, state: portableState(state) }, null, 2);
+}
+
+export function previewWorkspaceImport(serialized: string): WorkspaceImportPreview {
+	if (typeof serialized !== 'string' || !serialized.trim()) throw new ChallengeStateError('Choose a workspace export file first.');
+	try {
+		const result = readStateEnvelope(serialized, {
+			assertState: assertDemoState,
+			migrateLegacyState,
+			createRevision: createStorageRevision
+		}) as { envelope: { state: DemoState }; migrated: boolean } | null;
+		if (!result) throw new ChallengeStateError('The workspace export is empty.');
+		const current = get(demoState);
+		const existingIds = new Set(current?.packs.map((pack) => pack.id) || []);
+		return {
+			packs: result.envelope.state.packs.length,
+			pendingApprovals: result.envelope.state.pendingNextActionDrafts?.length || 0,
+			collisions: result.envelope.state.packs.filter((pack) => existingIds.has(pack.id)).length,
+			serialized
+		};
+	} catch (error) {
+		if (error instanceof ChallengeStateError) throw error;
+		throw new ChallengeStateError(error instanceof Error ? error.message : 'The workspace export is invalid.');
+	}
+}
+
+export async function importWorkspaceState(
+	serialized: string,
+	mode: WorkspaceImportMode
+): Promise<{ packs: number; skipped: number }> {
+	const preview = previewWorkspaceImport(serialized);
+	const parsed = readStateEnvelope(serialized, {
+		assertState: assertDemoState,
+		migrateLegacyState,
+		createRevision: createStorageRevision
+	}) as { envelope: { state: DemoState } };
+	let packs = 0;
+	let skipped = 0;
+	await saveBrowserState((draft) => {
+		const imported = portableState(parsed.envelope.state);
+		if (mode === 'replace') {
+			draft.packs = imported.packs;
+			draft.pendingNextActionDrafts = imported.pendingNextActionDrafts || [];
+			packs = draft.packs.length;
+		} else {
+			const ids = new Set(draft.packs.map((pack) => pack.id));
+			const additions = imported.packs.filter((pack) => !ids.has(pack.id));
+			skipped = imported.packs.length - additions.length;
+			draft.packs.push(...additions);
+			const pending = draft.pendingNextActionDrafts || [];
+			const pendingIds = new Set(pending.map((item) => item.workId));
+			draft.pendingNextActionDrafts = [...pending, ...(imported.pendingNextActionDrafts || []).filter((item) => !pendingIds.has(item.workId))];
+			packs = additions.length;
+		}
+		repairActiveSelection(draft);
+		draft.status = mode === 'replace' ? `Workspace replaced with ${packs} work items.` : `Workspace merged with ${packs} new work items.`;
+		draft.actionReceipt = { summary: draft.status };
+	});
+	return { packs, skipped };
+}
+
 function appendActivity(pack: DemoPack, detail: string): boolean {
 	const entry = formatActivityEntry(detail);
 	if (!entry) return false;
