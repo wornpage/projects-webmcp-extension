@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { demoState, pendingNextActionDrafts, refreshDemoState, toasts } from '$lib/demo-client';
+	import { demoState, demoStateError, displayToast, pendingNextActionDrafts, refreshDemoState, resetDemoSampleState, toasts } from '$lib/demo-client';
 	import { pendingDraftNavigation } from '$lib/pending-next-action.mjs';
 	import WornToast from '$lib/components/WornToast.svelte';
 	import WebMcpHandoffRail from '$lib/WebMcpHandoffRail.svelte';
 	import WebMcpStatus from '$lib/WebMcpStatus.svelte';
+	import { WornButton } from '$lib/components';
+	import PendingApprovalsCenter from '$lib/PendingApprovalsCenter.svelte';
 
 	type RouteItem = {
 		href: '/webmcp-challenge' | '/priority' | '/work' | '/review' | '/next';
@@ -26,6 +28,9 @@
 	let pendingApprovals = $derived(pendingNextActionDrafts($demoState));
 	let pendingNavigation = $derived(pendingDraftNavigation({ pendingNextActionDrafts: pendingApprovals }));
 	let pendingResumeHref = $derived(pendingNavigation.resumeHref);
+	let recoveryBusy = $state(false);
+	let recoveryError = $state('');
+	let pendingCenterOpen = $state(false);
 
 	onMount(() => {
 		// The shared workspace shell hydrates the one browser-local state owner.
@@ -35,6 +40,20 @@
 
 	function dismissToast(id: string) {
 		toasts.update((items) => items.filter((item) => item.id !== id));
+	}
+
+	async function recoverWorkspace() {
+		if (recoveryBusy) return;
+		recoveryBusy = true;
+		recoveryError = '';
+		try {
+			await resetDemoSampleState();
+			displayToast('Local workspace restored from the bundled sample.', 'success');
+		} catch (error) {
+			recoveryError = error instanceof Error ? error.message : 'The local workspace could not be restored.';
+		} finally {
+			recoveryBusy = false;
+		}
 	}
 </script>
 
@@ -59,7 +78,7 @@
 				</a>
 			{/each}
 			{#if pendingNavigation.count > 0}
-				<a class="pending-approval-link" href={pendingResumeHref} aria-label={`Resume ${pendingNavigation.count} pending approval${pendingNavigation.count === 1 ? '' : 's'}`}>
+				<a class="pending-approval-link" href={pendingResumeHref} aria-label={`Resume ${pendingNavigation.count} pending approval${pendingNavigation.count === 1 ? '' : 's'}`} onclick={(event) => { event.preventDefault(); pendingCenterOpen = true; }}>
 					Pending {pendingNavigation.count}
 				</a>
 			{/if}
@@ -70,6 +89,14 @@
 
 	<WebMcpHandoffRail />
 
+	{#if $demoStateError}
+		<section class="demo-recovery" role="alert" aria-label="Workspace recovery">
+			<div><strong>Workspace data needs recovery.</strong><span>Reset restores the bundled sample and removes only this browser's local changes.</span></div>
+			<WornButton size="sm" variant="primary" type="button" onclick={recoverWorkspace} disabled={recoveryBusy}>{recoveryBusy ? 'Restoring…' : 'Reset local workspace'}</WornButton>
+			{#if recoveryError}<span class="demo-recovery-error">{recoveryError}</span>{/if}
+		</section>
+	{/if}
+
 	<div class="demo-toast-container">
 		{#each $toasts as toast (toast.id)}
 			<WornToast {toast} ondismiss={() => dismissToast(toast.id)} />
@@ -79,6 +106,8 @@
 	<main id="challenge-main" class="challenge-route" tabindex="-1" aria-label={`${routeLabel} page`}>
 		{@render children()}
 	</main>
+
+	<PendingApprovalsCenter bind:open={pendingCenterOpen} drafts={pendingApprovals} packs={($demoState?.packs ?? []) as any} />
 </div>
 
 <style>
@@ -215,6 +244,11 @@
 		gap: 22px;
 		min-width: 0;
 	}
+
+	.demo-recovery { align-items: center; background: var(--worn-surface); border: 1px solid var(--worn-border-strong); border-radius: var(--worn-radius); display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; padding: 12px 14px; }
+	.demo-recovery div { display: grid; gap: 3px; min-width: 0; }
+	.demo-recovery span { color: var(--worn-text-secondary); font-size: 13px; }
+	.demo-recovery-error { color: var(--worn-danger); flex-basis: 100%; }
 
 	.challenge-route > :global(.demo-panel) {
 		animation: challenge-route-arrive 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
