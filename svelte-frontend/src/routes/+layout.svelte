@@ -34,6 +34,7 @@
 	let online = $state(true);
 	let updateAvailable = $state(false);
 	let waitingWorker = $state<ServiceWorker | null>(null);
+	let quarantined = $derived((($demoState?.recoveryQuarantine ?? []) as Array<{ id: string; reason: string }>));
 
 	onMount(() => {
 		// The shared workspace shell hydrates the one browser-local state owner.
@@ -122,6 +123,12 @@
 			<div><strong>Workspace data needs recovery.</strong><span>Reset restores the bundled sample and removes only this browser's local changes.</span></div>
 			<WornButton size="sm" variant="primary" type="button" onclick={recoverWorkspace} disabled={recoveryBusy}>{recoveryBusy ? 'Restoring…' : 'Reset local workspace'}</WornButton>
 			{#if recoveryError}<span class="demo-recovery-error">{recoveryError}</span>{/if}
+		</section>
+	{/if}
+	{#if quarantined.length > 0}
+		<section class="demo-recovery" role="alert" aria-label="Quarantined workspace records">
+			<div><strong>{quarantined.length} workspace record{quarantined.length === 1 ? '' : 's'} quarantined.</strong><span>Valid work remains available. Reset restores the bundled sample and removes this browser's local changes.</span><ul>{#each quarantined as item}<li>{item.id}: {item.reason}</li>{/each}</ul></div>
+			<WornButton size="sm" variant="primary" type="button" onclick={recoverWorkspace} disabled={recoveryBusy}>{recoveryBusy ? 'Restoring…' : 'Reset local workspace'}</WornButton>
 		</section>
 	{/if}
 
