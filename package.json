@@ -12,7 +12,7 @@
     "preflight:recording": "node scripts/webmcp-recording-preflight.mjs",
     "test:manifest": "node scripts/generate-public-manifest.mjs",
     "test:artifact": "node --test scripts/webmcp-recording-preflight-contract.test.mjs scripts/static-artifact-contract.test.mjs",
-    "test:browser": "node scripts/work-interaction-polish-smoke.mjs && node scripts/webmcp-header-responsive-smoke.mjs",
+    "test:browser": "node scripts/work-interaction-polish-smoke.mjs && node scripts/webmcp-header-responsive-smoke.mjs && node scripts/offline-browser-smoke.mjs",
     "test:webmcp": "node scripts/run-webmcp-contracts.mjs",
     "verify": "npm run test:manifest && npm run check && npm run test:webmcp && npm run build && npm run test:artifact"
   },
