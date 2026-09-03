@@ -21,6 +21,7 @@ try {
 		localStorage.setItem('projects-webmcp-challenge-state-v1', JSON.stringify({ packs: seed, manualOrder: seed.map((pack) => pack.id).reverse(), pendingNextActionDrafts: [] }));
 	});
 	await page.reload({ waitUntil: 'networkidle' });
+	await page.locator('summary, button').filter({ hasText: 'Workspace portability' }).first().click();
 	await page.getByRole('button', { name: 'Prepare export' }).click();
 	const downloadPromise = page.waitForEvent('download');
 	await page.getByRole('link', { name: 'Download export' }).click();
