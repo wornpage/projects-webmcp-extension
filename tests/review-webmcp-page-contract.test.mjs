@@ -416,9 +416,6 @@ test('every visible Review to Next activation uses one canonical focused handoff
 	assert.equal(routeSource.match(/await goto\(`\/next\?pack=/gu)?.length, 1);
 	assert.equal(routeSource.match(/^\s*(?:await\s+)?goto\(/gmu)?.length, 1);
 
-	// Focusable card keyboard activation.
-	assert.match(routeSource, /async function handleCardKeys\(e: KeyboardEvent\)[\s\S]*?e\.key === ' '[^\n]*await handoffToNext\(packId\)[\s\S]*?e\.key === 'Enter'[^\n]*await handoffToNext\(packId\)/u);
-
 	// Review always hands both card types to Next. It never promotes the shared
 	// Review-blocker command, which would only return to this same route.
 	assert.match(routeSource, /data-review-priority-navigation variant="primary" href=\{`\/next\?pack=\$\{encodeURIComponent\(firstReview\.id \|\| ''\)\}`\} onclick=\{\(event\) => handoffToNext\(firstReview\.id, event\)\}>Set next action<\/WornButton>/u);
@@ -427,9 +424,12 @@ test('every visible Review to Next activation uses one canonical focused handoff
 	assert.match(workflowSource, /export function primaryCommand\(pack: DemoPack\): PrimaryCommand \{[\s\S]*?\{ label: 'Review blocker', action: 'review', targetPackId: pack\.id \}/u);
 	assert.match(workflowSource, /export function primaryCommandNavigation\(pack: DemoPack\): string \{[\s\S]*?const id = encodeURIComponent\(pack\.id \|\| ''\);[\s\S]*?if \(action === 'review'\) return `\/review\?focus=\$\{id\}`;/u);
 
-	// Priority and list titles use the same focused Next handoff.
-	assert.match(routeSource, /review-priority-title[\s\S]*?onclick=\{\(event\) => handoffToNext\(firstReview\.id, event\)\}/u);
-	assert.match(routeSource, /class="demo-card-title"[^\n]*data-pack=\{pack\.id\}[^\n]*onclick=\{\(event\) => handoffToNext\(pack\.id, event\)\}/u);
+	// The explicit primary button is the only Review-to-Next activation path.
+	assert.doesNotMatch(routeSource, /async function handleCardKeys\(/u);
+	assert.doesNotMatch(routeSource, /aria-keyshortcuts="ArrowUp ArrowDown Enter Space"|tabindex=\{0\}/u);
+	assert.doesNotMatch(routeSource, /<a class="demo-card-title"[\s\S]*?href=\{`\/next\?pack=/u);
+	assert.match(routeSource, /review-priority-title[\s\S]*?<div class="demo-card-title review-static-title">\{workTitle\(firstReview\)\}<\/div>/u);
+	assert.match(routeSource, /<div class="demo-card-title review-static-title">\{workTitle\(pack\)\}<\/div>/u);
 });
 
 test('Review cards do not advertise an unowned drag interaction', () => {

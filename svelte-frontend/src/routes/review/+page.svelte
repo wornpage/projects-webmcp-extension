@@ -419,27 +419,6 @@
 			if (focus?.target === 'item' && focus.itemId === target) focusedReviewId = target;
 		});
 	});
-
-async function handleCardKeys(e: KeyboardEvent) {
-  // Ignore keys aimed at inner controls (buttons, inputs): space on a focused
-  // button must activate it, not navigate the card.
-  const target = e.target as HTMLElement | null;
-  if (target && target.closest?.('button, input, textarea, select, a, [role="button"]')) return;
-  // Alt+Space is a window-menu gesture in some browsers; repeated keys would
-  // fire goto() per repeat.
-  if (e.altKey || e.shiftKey || e.repeat) return;
-	const cards = document.querySelectorAll('[data-review-list] .demo-review-card');
-  if (!cards.length) return;
-  const current = Array.from(cards).indexOf(document.activeElement as Element);
-  if (e.key === 'ArrowDown') { e.preventDefault(); const next = (current + 1) % cards.length; (cards[next] as HTMLElement)?.focus(); return; }
-  if (e.key === 'ArrowUp') { e.preventDefault(); const prev = (current - 1 + cards.length) % cards.length; (cards[prev] as HTMLElement)?.focus(); return; }
-  if (current < 0) return;
-  const packId = (cards[current] as HTMLElement)?.dataset?.packId;
-  if (!packId) return;
-  if (e.key === ' ' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); await handoffToNext(packId); return; }
-  if (e.key === 'Enter') { e.preventDefault(); await handoffToNext(packId); return; }
-}
-
 	async function handoffToNext(packId: string | undefined, event?: MouseEvent) {
 		if (!packId) return;
 		event?.preventDefault();
@@ -528,7 +507,7 @@ async function handleCardKeys(e: KeyboardEvent) {
 		<article class="review-priority demo-focus-surface" data-pack-id={firstReview.id}>
 			<div class="review-priority-head">
 				<div>
-					<div class="review-priority-title"><a class="demo-card-title" data-action="select" data-pack={firstReview.id} title="Set the next action for {workTitle(firstReview)}" aria-label="Set the next action for {workTitle(firstReview)}" href={`/next?pack=${encodeURIComponent(firstReview.id || '')}`} onclick={(event) => handoffToNext(firstReview.id, event)}>{workTitle(firstReview)}</a></div>
+					<div class="review-priority-title"><div class="demo-card-title review-static-title">{workTitle(firstReview)}</div></div>
 				</div>
 				<WornBadge label={workflowLabel(firstReview)} />
 				{#if firstValidation}<WornBadge variant="warn" label={firstValidation.label} title={firstValidation.title} />{/if}
@@ -576,15 +555,9 @@ async function handleCardKeys(e: KeyboardEvent) {
 				{@const workflow = workflowLabel(pack)}
 				{@const cardCls = workflowCardClass(pack, false, false)}
 				{@const validation = validationSummary(pack)}
-				<!-- Focusable card units: each card is a Tab stop and the Arrow
-				     keys move focus between cards, Enter opens — matching the work
-				     list's arrow navigation. Buttons inside remain reachable by
-				     Tab; key events aimed at them are ignored by handleCardKeys. -->
-				<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-				<WornFoldedSurface as="article" reveal="hover" tabindex={0} class={`demo-review-card demo-focus-surface ${cardCls}${pack.id === $demoState?.selectedId ? ' selected' : ''}`} data-review-card data-pack-id={pack.id} onkeydown={handleCardKeys}
-					aria-label="Review {workTitle(pack)}" aria-keyshortcuts="ArrowUp ArrowDown Enter Space">
+				<WornFoldedSurface as="article" reveal="hover" class={`demo-review-card demo-focus-surface ${cardCls}${pack.id === $demoState?.selectedId ? ' selected' : ''}`} data-review-card data-pack-id={pack.id}>
 					<div class="demo-card-head demo-review-card-head">
-						<a class="demo-card-title" data-action="select" data-pack={pack.id} title="Set the next action for {workTitle(pack)}" aria-label="Set the next action for {workTitle(pack)}" href={`/next?pack=${encodeURIComponent(pack.id || '')}`} onclick={(event) => handoffToNext(pack.id, event)}>{workTitle(pack)}</a>
+						<div class="demo-card-title review-static-title">{workTitle(pack)}</div>
 						<WornBadge label={workflow} />
 						{#if validation}<WornBadge variant="warn" label={validation.label} title={validation.title} />{/if}
 					</div>
@@ -713,6 +686,9 @@ async function handleCardKeys(e: KeyboardEvent) {
 		overflow: hidden;
 		overflow-wrap: anywhere;
 		white-space: normal;
+	}
+	.review-static-title {
+		cursor: default;
 	}
 	.review-priority-actions {
 		border-top: 1px solid var(--worn-border);

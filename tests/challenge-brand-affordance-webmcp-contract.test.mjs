@@ -68,6 +68,8 @@ test('the single activity strip stays in regular flow without restoring route-lo
 test('challenge motion is visible by default and removed for reduced motion', () => {
 	assert.match(layoutSource, /animation: challenge-route-arrive 380ms/u);
 	assert.match(layoutSource, /animation: challenge-receipt-arrive 440ms/u);
+	const routeArrival = layoutSource.match(/@keyframes challenge-route-arrive \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.doesNotMatch(routeArrival, /opacity:/u, 'route arrival must not hide first-painted content');
 	assert.match(
 		layoutSource,
 		/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?data-webmcp-receipt[\s\S]*?animation: none;/u
