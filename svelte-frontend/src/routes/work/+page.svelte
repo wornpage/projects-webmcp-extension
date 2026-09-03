@@ -1178,6 +1178,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 </WornPage>
 
 <style>
+	.manual-order-toolbar { margin-top: 12px; }
 	.work-head-actions {
 		align-items: center;
 		display: flex;
