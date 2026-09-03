@@ -772,7 +772,7 @@ test('custom workers create only bounded Draft-status work with visible human au
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Bad date', due: '2026-02-30' }] },
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Bad energy', energy: 'urgent' }] },
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Null owner', owner: null }] },
-		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Raw over limit', owner: `${' '.repeat(120)}A` }] },
+		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Raw over limit', owner: 'A'.repeat(121) }] },
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Extra', secret: 'no' }] },
 		{ expectedWorkspaceCount: 8, drafts: [{ title: 'Control\u0000character' }] }
 	]) {
@@ -847,20 +847,21 @@ test('Work Focus mode requires selected work before claiming an active state', (
 });
 
 test('Quick Add and the canonical create owner share one explicit title-length boundary', () => {
-	assert.match(demoClientSource, /export const DEMO_WORK_TITLE_MAX_LENGTH = 200;/u);
+	assert.match(demoClientSource, /export const DEMO_WORK_TITLE_MAX_LENGTH = WORK_TITLE_MAX_LENGTH;/u);
 	assert.match(
 		demoClientSource,
-		/export async function createPack[\s\S]*?const title = normalizeText\(payload\.title, DEMO_WORK_TITLE_MAX_LENGTH\);/u
+		/export async function createPack[\s\S]*?const title = normalizeWorkTitle\(payload\.title\);/u
 	);
 	assert.match(workQuickAddSource, /DEMO_WORK_TITLE_MAX_LENGTH,[\s\S]*?\} from '\$lib\/demo-client';/u);
 	assert.match(
 		workQuickAddSource,
-		/function setHumanQuickTitle\(event: Event\) \{[\s\S]*?const input = event\.currentTarget as HTMLInputElement;[\s\S]*?const nextTitle = input\.value\.slice\(0, DEMO_WORK_TITLE_MAX_LENGTH\);[\s\S]*?input\.value = nextTitle;[\s\S]*?title = nextTitle;[\s\S]*?\}/u
+		/function setHumanQuickTitle\(event: Event\) \{[\s\S]*?normalizeWorkTitle\(input\.value\) === null[\s\S]*?input\.value = title;[\s\S]*?return;[\s\S]*?title = input\.value;[\s\S]*?\}/u
 	);
 	assert.match(
 		workQuickAddSource,
-		/<WornInput[\s\S]*?class="quick-create-input"[\s\S]*?maxlength=\{DEMO_WORK_TITLE_MAX_LENGTH\}[\s\S]*?bind:value=\{title\}[\s\S]*?oninput=\{setHumanQuickTitle\}/u
+		/<WornInput[\s\S]*?class="quick-create-input"[\s\S]*?bind:value=\{title\}[\s\S]*?oninput=\{setHumanQuickTitle\}[\s\S]*?aria-describedby="quick-create-title-help"/u
 	);
+	assert.doesNotMatch(workQuickAddSource, /input\.value\.slice\(/u);
 });
 
 test('expanded Recent activity follows the Work page heading hierarchy', () => {

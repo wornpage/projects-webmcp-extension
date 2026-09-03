@@ -3,6 +3,8 @@
 import { browser } from '$app/environment';
 import { get, writable } from 'svelte/store';
 import type { DemoPack, DemoReceipt, DemoState } from '$lib/demo-workflow';
+import { normalizeWorkTitle, WORK_TITLE_MAX_LENGTH } from '$lib/canonical-text.mjs';
+import { nextStateEnvelope, readStateEnvelope, withExclusiveStateStorageLock } from '$lib/browser-state-envelope.mjs';
 import {
 	formatWorkTitle,
 	nextChoiceForwardPath,
@@ -25,10 +27,11 @@ import {
 	unblockPacksBlockedBy,
 	unblockedReceiptSentence
 } from './workflow-rules.mjs';
-import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, hydrateSerializedState, pendingDraftFingerprint as fingerprintPendingDraft, resetPersistedState, restorePendingDraft, revisePendingDraftChoice, upsertPendingDraft } from './pending-next-action.mjs';
+import { approvePendingDraft, discardPendingDraft, pendingDraftFingerprint as fingerprintPendingDraft, resetPersistedState, restorePendingDraft, revisePendingDraftChoice, upsertPendingDraft } from './pending-next-action.mjs';
 import { planBatchAction, removePacksAndReferences, repairActiveSelection } from './batch-actions.mjs';
 
 const STORAGE_KEY = 'projects-webmcp-challenge-state-v1';
+const STORAGE_LOCK_NAME = `${STORAGE_KEY}-write`;
 const SEED_URL = '/data/demo-packs.json';
 const FORWARD_PATH_FIELDS = [
 	'title',
@@ -42,7 +45,7 @@ const FORWARD_PATH_FIELDS = [
 	'purpose'
 ] as const;
 
-export const DEMO_WORK_TITLE_MAX_LENGTH = 200;
+export const DEMO_WORK_TITLE_MAX_LENGTH = WORK_TITLE_MAX_LENGTH;
 const CREATE_PACK_FIELDS = new Set([
 	'title',
 	'status',
@@ -104,17 +107,15 @@ export class ChallengeStateError extends Error {
 
 let toastCounter = 0;
 let stateRevision = 0;
+let storageRevision: string | null = null;
 let refreshFlight: Promise<DemoState | null> | null = null;
 
 function errorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error && error.message ? error.message : fallback;
 }
 
-function stableStateFingerprint(state: DemoState): string {
-	return JSON.stringify(state);
-}
-
-function installDemoState(state: DemoState): DemoState {
+function installDemoState(state: DemoState, revision: string | null): DemoState {
+	storageRevision = revision;
 	demoState.set(state);
 	demoStateError.set('');
 	return state;
@@ -133,11 +134,35 @@ function assertDemoState(value: unknown): asserts value is DemoState {
 			throw new ChallengeStateError(`Saved workspace data contains duplicate id "${pack.id}".`);
 		}
 		ids.add(pack.id);
+		if (pack.title !== undefined) {
+			const title = normalizeWorkTitle(pack.title);
+			if (title === null || title !== pack.title) {
+				throw new ChallengeStateError('Saved workspace data contains a non-canonical or overlong work title.');
+			}
+		}
 	}
 	const pending = (value as DemoState).pendingNextActionDrafts;
 	if (pending !== undefined && (!Array.isArray(pending) || pending.some((draft) => !isPendingNextActionDraft(draft)))) {
 		throw new ChallengeStateError('Saved pending approvals are invalid. Clear this site\'s local data to restart.');
 	}
+}
+
+function migrateLegacyState(value: DemoState): DemoState {
+	const state = structuredClone(value);
+	for (const pack of state.packs) {
+		if (pack.title === undefined) continue;
+		const title = normalizeWorkTitle(pack.title);
+		if (title === null) throw new ChallengeStateError('Saved workspace data contains an invalid work title.');
+		pack.title = title;
+	}
+	return state;
+}
+
+function createStorageRevision(): string {
+	if (!globalThis.crypto?.randomUUID) {
+		throw new ChallengeStateError('This browser cannot create a collision-safe workspace revision.');
+	}
+	return globalThis.crypto.randomUUID();
 }
 
 function isPendingNextActionDraft(value: unknown): value is PendingNextActionDraft {
@@ -232,34 +257,85 @@ function cloneState(state: DemoState): DemoState {
 	}
 }
 
-function readStoredState(): DemoState | null {
+type DemoStateSnapshot = { state: DemoState; revision: string };
+
+function readStoredStateUnlocked(): DemoStateSnapshot | null {
 	let serialized: string | null;
 	try {
 		serialized = localStorage.getItem(STORAGE_KEY);
 	} catch {
 		throw new ChallengeStateError('Browser storage is unavailable. Local changes cannot be loaded.');
 	}
+	let result: { envelope: { state: DemoState; revision: string }; migrated: boolean } | null;
 	try {
-		return hydrateSerializedState(serialized, assertDemoState) as DemoState | null;
+		result = readStateEnvelope(serialized, {
+			assertState: assertDemoState,
+			migrateLegacyState,
+			createRevision: createStorageRevision
+		}) as { envelope: { state: DemoState; revision: string }; migrated: boolean } | null;
 	} catch (error) {
 		if (error instanceof ChallengeStateError) throw error;
-		throw new ChallengeStateError('Saved workspace data is invalid JSON. Clear this site\'s local data to restart.');
+		if (error instanceof SyntaxError) {
+			throw new ChallengeStateError('Saved workspace data is invalid JSON. Clear this site\'s local data to restart.');
+		}
+		throw new ChallengeStateError(error instanceof Error ? error.message : 'Saved workspace data is invalid.');
 	}
+	if (!result) return null;
+	if (result.migrated) {
+		try {
+			if (localStorage.getItem(STORAGE_KEY) !== serialized) {
+				throw new ChallengeStateError('Workspace changed by another tab. Refresh this tab and try again.');
+			}
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(result.envelope));
+		} catch (error) {
+			if (error instanceof ChallengeStateError) throw error;
+			throw new ChallengeStateError('Browser storage is full or unavailable. Existing workspace data could not be migrated.');
+		}
+	}
+	return { state: result.envelope.state, revision: result.envelope.revision };
 }
 
-function persistState(state: DemoState): void {
-	assertDemoState(state);
-	let serialized: string;
+function withStateStorageLock<T>(operation: () => T | Promise<T>): Promise<T> {
+	if (!globalThis.navigator?.locks?.request) {
+		throw new ChallengeStateError('This browser cannot coordinate safe workspace writes across tabs.');
+	}
+	return withExclusiveStateStorageLock(globalThis.navigator.locks, STORAGE_LOCK_NAME, operation) as Promise<T>;
+}
+
+function readStoredState(): Promise<DemoStateSnapshot | null> {
+	return withStateStorageLock(readStoredStateUnlocked);
+}
+
+function persistState(state: DemoState, expectedRevision: string | null): DemoStateSnapshot {
+	let currentSerialized: string | null;
 	try {
-		serialized = JSON.stringify(state);
+		currentSerialized = localStorage.getItem(STORAGE_KEY);
 	} catch {
+		throw new ChallengeStateError('Browser storage is unavailable. Local changes cannot be saved.');
+	}
+	let envelope: { state: DemoState; revision: string };
+	try {
+		envelope = nextStateEnvelope({
+			serialized: currentSerialized,
+			expectedRevision,
+			state,
+			assertState: assertDemoState,
+			migrateLegacyState,
+			createRevision: createStorageRevision
+		}) as { state: DemoState; revision: string };
+	} catch (error) {
+		if (error instanceof ChallengeStateError) throw error;
+		if (error instanceof TypeError && error.message === 'Workspace revision conflict.') {
+			throw new ChallengeStateError('Workspace changed by another tab. Refresh this tab and try again.');
+		}
 		throw new ChallengeStateError('Workspace data could not be serialized for a local save.');
 	}
 	try {
-		localStorage.setItem(STORAGE_KEY, serialized);
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(envelope));
 	} catch {
 		throw new ChallengeStateError('Browser storage is full or unavailable. The change was not saved.');
 	}
+	return { state: envelope.state, revision: envelope.revision };
 }
 
 async function loadSeedState(): Promise<DemoState> {
@@ -290,9 +366,10 @@ async function runDemoStateRefresh(): Promise<DemoState | null> {
 	const startingRevision = stateRevision;
 	demoStateLoading.set(true);
 	try {
-		const state = readStoredState() ?? (await loadSeedState());
+		const stored = await readStoredState();
+		const state = stored?.state ?? (await loadSeedState());
 		if (startingRevision !== stateRevision) return get(demoState);
-		installDemoState(state);
+		installDemoState(state, stored?.revision ?? null);
 		return state;
 	} catch (error) {
 		if (startingRevision !== stateRevision) return get(demoState);
@@ -303,9 +380,9 @@ async function runDemoStateRefresh(): Promise<DemoState | null> {
 	}
 }
 
-function replaceDemoState(state: DemoState): DemoState {
+function replaceDemoState(state: DemoState, revision: string | null): DemoState {
 	stateRevision += 1;
-	return installDemoState(state);
+	return installDemoState(state, revision);
 }
 
 export function displayToast(
@@ -341,11 +418,11 @@ export async function resetDemoSampleState(): Promise<DemoState | null> {
 	if (!browser) return null;
 	stateRevision += 1;
 	try {
-		return await resetPersistedState({
+		return await withStateStorageLock(() => resetPersistedState({
 			remove: () => localStorage.removeItem(STORAGE_KEY),
 			loadSeed: loadSeedState,
-			install: replaceDemoState
-		});
+			install: (state) => replaceDemoState(state, null)
+		}));
 	} catch (error) {
 		if (error instanceof ChallengeStateError) throw error;
 		throw new ChallengeStateError('Browser storage is unavailable. The live sample could not be reset.');
@@ -358,12 +435,19 @@ export async function saveBrowserState(
 	if (!browser) return null;
 	const current = get(demoState) ?? (await refreshDemoState());
 	if (!current) return null;
-	const persistedState = readStoredState();
-	if (persistedState && stableStateFingerprint(persistedState) !== stableStateFingerprint(current)) {
-		replaceDemoState(persistedState);
-		throw new ChallengeStateError('Workspace changed by another tab. Refresh this tab and try again.');
+	const next = cloneState(current);
+	mutate(next);
+	const expectedRevision = storageRevision;
+	try {
+		const written = await withStateStorageLock(() => persistState(next, expectedRevision));
+		return replaceDemoState(written.state, written.revision);
+	} catch (error) {
+		if (error instanceof ChallengeStateError && error.message === 'Workspace changed by another tab. Refresh this tab and try again.') {
+			const latest = await readStoredState();
+			if (latest) replaceDemoState(latest.state, latest.revision);
+		}
+		throw error;
 	}
-	return cloneMutatePersist({ current, clone: cloneState, mutate, persist: persistState, install: replaceDemoState });
 }
 
 function appendActivity(pack: DemoPack, detail: string): boolean {
@@ -582,8 +666,8 @@ function normalizedCreatePackFields(payload: Record<string, unknown>): Normalize
 	if (unsupportedFields.length > 0) {
 		throw new ChallengeStateError(`Work creation does not support field "${unsupportedFields[0]}".`);
 	}
-	const title = normalizeText(payload.title, DEMO_WORK_TITLE_MAX_LENGTH);
-	if (!title) throw new ChallengeStateError('A work title is required.');
+	const title = normalizeWorkTitle(payload.title);
+	if (!title) throw new ChallengeStateError('A work title is required and must be 200 characters or fewer.');
 	const requestedStatus = normalizeText(payload.status, 40) || 'draft';
 	if (!VALID_PACK_STATUSES.has(requestedStatus)) {
 		throw new ChallengeStateError('Work path status is not supported.');
@@ -630,7 +714,16 @@ export async function savePackPath(
 
 		for (const field of FORWARD_PATH_FIELDS) {
 			if (!Object.prototype.hasOwnProperty.call(values, field)) continue;
-			const value = normalizeText(values[field], field === 'purpose' || field === 'doneWhen' ? 1000 : 200);
+			let value: string;
+			if (field === 'title') {
+				const title = normalizeWorkTitle(values[field]);
+				if (title === null) {
+					throw new ChallengeStateError('A work title is required and must be 200 characters or fewer.');
+				}
+				value = title;
+			} else {
+				value = normalizeText(values[field], field === 'purpose' || field === 'doneWhen' ? 1000 : 200);
+			}
 			if (field === 'status') {
 				if (!VALID_PACK_STATUSES.has(value)) throw new ChallengeStateError('Work path status is not supported.');
 				pack.status = value;

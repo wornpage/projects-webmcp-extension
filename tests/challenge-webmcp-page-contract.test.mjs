@@ -404,13 +404,19 @@ test('the live sample can be explicitly reset through the single browser-state o
 	assert.match(pageSource, /onclick=\{resetLiveSample\}/u);
 	assert.match(pageSource, /Explicitly restores this browser’s bundled sample and clears its prior local results\./u);
 	assert.match(pageSource, /import \{ ChallengeStateError, demoState, displayToast, resetDemoSampleState \} from '\$lib\/demo-client';/u);
-	assert.match(demoClientSource, /export async function resetDemoSampleState\(\): Promise<DemoState \| null> \{[\s\S]*?if \(!browser\) return null;[\s\S]*?stateRevision \+= 1;[\s\S]*?resetPersistedState\([\s\S]*?remove: \(\) => localStorage\.removeItem\(STORAGE_KEY\),[\s\S]*?loadSeed: loadSeedState,[\s\S]*?install: replaceDemoState/u);
+	assert.match(demoClientSource, /export async function resetDemoSampleState\(\): Promise<DemoState \| null> \{[\s\S]*?if \(!browser\) return null;[\s\S]*?stateRevision \+= 1;[\s\S]*?withStateStorageLock\(\(\) => resetPersistedState\([\s\S]*?remove: \(\) => localStorage\.removeItem\(STORAGE_KEY\),[\s\S]*?loadSeed: loadSeedState,[\s\S]*?install: \(state\) => replaceDemoState\(state, null\)/u);
 	assert.doesNotMatch(pageSource, /localStorage|sessionStorage|fetch\(/u);
 });
 
-test('Challenge demo-state writes detect cross-tab local mutations before save', () => {
-	assert.match(demoClientSource, /function stableStateFingerprint\(state: DemoState\): string \{[\s\S]*?return JSON\.stringify\(state\);[\s\S]*?\}/u);
-	assert.match(demoClientSource, /export async function saveBrowserState\([\s\S]*?const persistedState = readStoredState\(\);[\s\S]*?if \(persistedState && stableStateFingerprint\(persistedState\) !== stableStateFingerprint\(current\)\)[\s\S]*?throw new ChallengeStateError\('Workspace changed by another tab\. Refresh this tab and try again\.'\);[\s\S]*?return cloneMutatePersist\(/u);
+test('Challenge demo-state writes use a versioned envelope and explicit cross-tab revision', () => {
+	assert.doesNotMatch(demoClientSource, /stableStateFingerprint|JSON\.stringify\(state\) !== JSON\.stringify\(current\)/u);
+	assert.match(demoClientSource, /let storageRevision: string \| null = null;/u);
+	assert.match(demoClientSource, /readStateEnvelope\(serialized,[\s\S]*?migrateLegacyState,[\s\S]*?createRevision: createStorageRevision/u);
+	assert.match(demoClientSource, /result\.migrated[\s\S]*?localStorage\.getItem\(STORAGE_KEY\) !== serialized[\s\S]*?localStorage\.setItem\(STORAGE_KEY, JSON\.stringify\(result\.envelope\)\)/u);
+	assert.match(demoClientSource, /function readStoredState\(\): Promise<DemoStateSnapshot \| null> \{[\s\S]*?withStateStorageLock\(readStoredStateUnlocked\)/u);
+	assert.match(demoClientSource, /nextStateEnvelope\(\{[\s\S]*?expectedRevision,[\s\S]*?state,[\s\S]*?localStorage\.setItem\(STORAGE_KEY, JSON\.stringify\(envelope\)\)/u);
+	assert.match(demoClientSource, /function withStateStorageLock<T>\([\s\S]*?withExclusiveStateStorageLock\(globalThis\.navigator\.locks, STORAGE_LOCK_NAME, operation\)/u);
+	assert.match(demoClientSource, /export async function saveBrowserState\([\s\S]*?mutate\(next\);[\s\S]*?const expectedRevision = storageRevision;[\s\S]*?withStateStorageLock\(\(\) => persistState\(next, expectedRevision\)\)[\s\S]*?replaceDemoState\(written\.state, written\.revision\)/u);
 });
 
 test('wide Guide layout keeps the existing steps in the left rail beside the editor without a dead quadrant', () => {
