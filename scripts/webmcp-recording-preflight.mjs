@@ -72,7 +72,7 @@ export const RECORDING_PREFLIGHT_SPEC = deepFreeze({
 	hardStopMs: 120_000,
 	routeSettleMs: 2_250,
 	browser: {
-		name: 'Microsoft Edge',
+		name: 'Google Chrome',
 		headed: true,
 		viewport: null,
 		presentation: 'fullscreen',
@@ -252,9 +252,9 @@ export function recordingCueProjectionFromSpec(spec = RECORDING_PREFLIGHT_SPEC) 
  */
 export function parseRecordingCueSheet(markdown) {
 	if (typeof markdown !== 'string') throw new TypeError('Recording cue sheet must be Markdown text.');
-	const browser = cueMatch(markdown, /Put the captured tab in Edge fullscreen so the browser toolbar is hidden[\s\S]*?native fullscreen Edge viewport; do not apply a viewport override/u, 'fullscreen browser presentation');
+	const browser = cueMatch(markdown, /Put the captured tab in Chrome fullscreen so the browser toolbar is hidden[\s\S]*?native fullscreen Chrome viewport; do not apply a viewport override/u, 'fullscreen browser presentation');
 	const productionUrl = cueMatch(markdown, /Production URL: `([^`]+)`\./u, 'production URL');
-	const nativeGeometry = cueMatch(markdown, /fullscreen Edge Dev inner viewport (\d+) × (\d+), document client viewport (\d+) × (\d+) and scroll width (\d+)/u, 'native fullscreen geometry');
+	const nativeGeometry = cueMatch(markdown, /fullscreen Google Chrome inner viewport (\d+) × (\d+), document client viewport (\d+) × (\d+) and scroll width (\d+)/u, 'native fullscreen geometry');
 	const duration = cueMatch(markdown, /Target final length: \*\*(\d+):(\d{2})\*\*\. Hard stop: \*\*(\d+):(\d{2})\*\*\./u, 'target and hard-stop duration');
 	const settle = cueMatch(markdown, /fixed \*\*(\d+(?:\.\d+)?)-second settle window\*\*/u, 'route-settle boundary');
 	const catalogs = cueMatch(markdown, /Exact current-page catalogs:\s*Guide\s+(\d+)\s*\/\s*Priority\s+(\d+)\s*\/\s*Work\s+(\d+)\s*\/\s*Review\s+(\d+)\s*\/\s*Next\s+(\d+)\./u, 'route catalog denominator');
@@ -472,26 +472,27 @@ export function buildModelContextProbeInitScript() {
 	};
 }
 
-export function edgeExecutableCandidates(environment = process.env) {
+export function chromeExecutableCandidates(environment = process.env) {
 	const programFilesX86 = environment['PROGRAMFILES(X86)'] || environment['ProgramFiles(x86)'];
 	return [
-		programFilesX86 && path.join(programFilesX86, 'Microsoft', 'Edge Dev', 'Application', 'msedge.exe'),
-		environment.ProgramFiles && path.join(environment.ProgramFiles, 'Microsoft', 'Edge Dev', 'Application', 'msedge.exe'),
-		environment.LOCALAPPDATA && path.join(environment.LOCALAPPDATA, 'Microsoft', 'Edge Dev', 'Application', 'msedge.exe'),
-		programFilesX86 && path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-		environment.ProgramFiles && path.join(environment.ProgramFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-		environment.LOCALAPPDATA && path.join(environment.LOCALAPPDATA, 'Microsoft', 'Edge', 'Application', 'msedge.exe')
+		environment.CHROME_EXECUTABLE_PATH,
+		environment.ProgramFiles && path.join(environment.ProgramFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+		programFilesX86 && path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+		environment.LOCALAPPDATA && path.join(environment.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+		environment.ProgramFiles && path.join(environment.ProgramFiles, 'Google', 'Chrome Dev', 'Application', 'chrome.exe'),
+		programFilesX86 && path.join(programFilesX86, 'Google', 'Chrome Dev', 'Application', 'chrome.exe'),
+		environment.LOCALAPPDATA && path.join(environment.LOCALAPPDATA, 'Google', 'Chrome Dev', 'Application', 'chrome.exe')
 	].filter(Boolean);
 }
 
-export async function findInstalledEdge(environment = process.env) {
-	for (const candidate of edgeExecutableCandidates(environment)) {
+export async function findInstalledChrome(environment = process.env) {
+	for (const candidate of chromeExecutableCandidates(environment)) {
 		try {
 			const stat = await fs.stat(candidate);
 			if (stat.isFile()) return candidate;
 		} catch {}
 	}
-	throw new Error(`Microsoft Edge was not found at the supported installed locations: ${edgeExecutableCandidates(environment).join(', ')}`);
+	throw new Error(`Google Chrome was not found at the configured or supported installed locations: ${chromeExecutableCandidates(environment).join(', ')}`);
 }
 
 export async function removeVerifiedTempProfile(profilePath) {
@@ -1277,7 +1278,7 @@ function createDiagnostics(context) {
 }
 
 export async function runRecordingPreflight() {
-	const edgeExecutable = await findInstalledEdge();
+	const chromeExecutable = await findInstalledChrome();
 	const profilePath = await fs.mkdtemp(path.join(os.tmpdir(), RECORDING_PREFLIGHT_SPEC.browser.profilePrefix));
 	let context;
 	let browser;
@@ -1288,7 +1289,7 @@ export async function runRecordingPreflight() {
 	try {
 		const { chromium } = await import('playwright-core');
 		context = await chromium.launchPersistentContext(profilePath, {
-			executablePath: edgeExecutable,
+			executablePath: chromeExecutable,
 			headless: false,
 			viewport: null,
 			acceptDownloads: false,

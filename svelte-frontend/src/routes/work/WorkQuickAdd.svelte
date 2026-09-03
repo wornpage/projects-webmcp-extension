@@ -101,7 +101,7 @@
 			<WornInput id="work-quick-owner" bind:value={owner} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Owner" aria-label="Quick-add owner" aria-describedby="quick-create-details-help" disabled={busy} />
 			<WornInput id="work-quick-area" bind:value={area} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Area" aria-label="Quick-add area" aria-describedby="quick-create-details-help" disabled={busy} />
 			<WornInput id="work-quick-type" bind:value={type} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Type" aria-label="Quick-add type" disabled={busy} />
-			<WornInput id="work-quick-due" type="date" bind:value={due} aria-label="Quick-add due date" disabled={busy} />
+			<WornInput id="work-quick-due" class="quick-due-input" type="date" bind:value={due} aria-label="Quick-add due date" disabled={busy} />
 			<WornSelect id="work-quick-energy" bind:value={energy} aria-label="Quick-add energy" options={[{ value: '', label: 'Energy' }, ...ENERGY_OPTIONS]} disabled={busy} />
 			<WornInput id="work-quick-recurrence" bind:value={recurrence} maxlength={QUICK_METADATA_MAX_LENGTH} placeholder="Recurrence" aria-label="Quick-add recurrence" aria-describedby="quick-create-details-help" disabled={busy} />
 			<WornInput id="work-quick-proof-target" class="quick-proof-input" bind:value={proofTarget} maxlength={1000} placeholder="What will prove this is done?" aria-label="Quick-add proof target" disabled={busy} />
@@ -114,11 +114,16 @@
 	:global(.quick-create-input){flex:1;min-width:0}
 	.quick-create-row :global(.quick-create-submit){flex:0 0 auto;min-inline-size:max-content;white-space:nowrap}
 	.quick-create-options{grid-column:1 / -1;min-width:0}
-	.quick-create-options summary{align-items:center;color:var(--worn-text-secondary);cursor:pointer;display:flex;font-size:13px;font-weight:700;gap:8px;min-block-size:36px;width:max-content}
+	.quick-create-options summary{align-items:center;background:var(--worn-surface);border:1px solid var(--worn-border-strong);border-radius:var(--worn-radius-sm);color:var(--worn-text-secondary);cursor:pointer;display:flex;font-size:13px;font-weight:700;gap:8px;min-block-size:36px;padding:6px 10px;width:max-content}
+	.quick-create-options summary::after{content:'›';font-size:18px;line-height:1;transition:transform .12s ease}
+	.quick-create-options[open] summary::after{transform:rotate(90deg)}
+	.quick-create-options summary:focus-visible{outline:2px dashed var(--worn-focus);outline-offset:2px}
+	.quick-create-options summary:hover{background:var(--worn-bg-secondary)}
 	.quick-create-options summary span{color:var(--worn-text-muted);font-family:var(--font-typewriter);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 	.quick-create-details-help{color:var(--worn-text-muted);font-size:12px;margin:0 0 8px}
 	.quick-create-details-grid{display:grid;gap:8px;grid-template-columns:repeat(3,minmax(0,1fr))}
 	.quick-create-details-grid :global(.worn-input),.quick-create-details-grid :global(.worn-select){min-width:0;width:100%}
+	.quick-create-details-grid :global(.quick-due-input){max-inline-size:200px}
 	.quick-create-details-grid :global(.quick-proof-input){grid-column:1 / -1}
 	@media(max-width:500px){
 		.quick-create-row{margin-inline:4px}

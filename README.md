@@ -94,7 +94,7 @@ Run the focused production recording preflight separately:
 npm run preflight:recording
 ```
 
-It launches installed Edge in a temporary isolated profile, executes the exact 1:50 cue through a test-only native registration probe, prints actual/expected receipts, and removes the isolated 11-item rehearsal state on exit. It does not modify the deployed UI or the normal Edge profile.
+It launches installed Google Chrome (or the explicit `CHROME_EXECUTABLE_PATH`) in a temporary isolated profile, executes the exact 1:50 cue through a test-only native registration probe, prints actual/expected receipts, and removes the isolated 11-item rehearsal state on exit. It does not modify the deployed UI or the normal Chrome profile.
 
 `npm run build` creates the complete static deployment in `dist/static-publish`. That directory can be uploaded directly to Cloudflare Pages; no Pages Functions or Worker are required.
 
