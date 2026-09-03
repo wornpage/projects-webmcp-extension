@@ -16,14 +16,26 @@ try {
 		const seed = await (await fetch('/data/demo-packs.json')).json();
 		localStorage.setItem('projects-webmcp-challenge-state-v1', JSON.stringify({ packs: seed, pendingNextActionDrafts: [{ workId: seed[0].id, choice: 'Clear the garage floor', mode: 'preset', evidenceNote: 'Smoke test', evidence: [{ workId: seed[0].id, field: 'workflow', expectedValue: 'Blocked' }], originFingerprint: 'smoke', source: 'webmcp' }] }));
 	});
-	await page.reload({ waitUntil: 'networkidle' });
-	await page.waitForSelector('.pending-approval-link', { state: 'visible' });
-	const result = await page.locator('.challenge-shell-nav').evaluate((header) => { const nav = header.querySelector('nav'); const links = [...header.querySelectorAll('nav a')]; const navRect = nav.getBoundingClientRect(); const headerRect = header.getBoundingClientRect(); return { linkCount: links.length, labels: links.map((link) => link.textContent.trim()), navTop: navRect.top, pendingTop: header.querySelector('.pending-approval-link').getBoundingClientRect().top, headerHeight: headerRect.height, statusTop: header.querySelector('.webmcp-status-pill').getBoundingClientRect().top, saveBoundary: [...document.querySelectorAll('button')].some((button) => button.textContent.trim() === 'Approve and save') }; });
-	assert.equal(result.linkCount, 6);
-	assert.deepEqual(result.labels, ['Guide', 'Priority', '1 Work', '2 Review', '3 Next', 'Pending 1']);
-	assert.equal(result.pendingTop, result.navTop);
-	assert.ok(result.headerHeight < 150, `header should remain compact, got ${result.headerHeight}px`);
-	assert.ok(result.statusTop < result.navTop, 'WebMCP status should remain grouped above the workflow links');
-	assert.equal(result.saveBoundary, true, 'human-only Approve and save boundary remains visible');
-	console.log(JSON.stringify({ viewport: '768x900', ...result }));
+	async function checkViewport(width) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.reload({ waitUntil: 'networkidle' });
+		await page.waitForSelector('.pending-approval-link', { state: 'visible' });
+		const result = await page.locator('.challenge-shell-nav').evaluate((header) => { const nav = header.querySelector('nav'); const links = [...header.querySelectorAll('nav a')]; const navRect = nav.getBoundingClientRect(); const headerRect = header.getBoundingClientRect(); const brandRect = header.querySelector('.challenge-brand').getBoundingClientRect(); const pendingRect = header.querySelector('.pending-approval-link').getBoundingClientRect(); return { linkCount: links.length, labels: links.map((link) => link.textContent.trim()), navTop: navRect.top, navWidth: navRect.width, pendingTop: pendingRect.top, pendingWidth: pendingRect.width, brandWidth: brandRect.width, headerHeight: headerRect.height, statusTop: header.querySelector('.webmcp-status-pill').getBoundingClientRect().top, documentWidth: document.documentElement.scrollWidth, viewportWidth: document.documentElement.clientWidth, saveBoundary: [...document.querySelectorAll('button')].some((button) => button.textContent.trim() === 'Approve and save') }; });
+		assert.equal(result.linkCount, 6);
+		assert.deepEqual(result.labels, ['Guide', 'Priority', '1 Work', '2 Review', '3 Next', 'Pending 1']);
+		assert.ok(result.headerHeight < 180, `header should remain compact, got ${result.headerHeight}px`);
+		assert.ok(result.statusTop < result.navTop, 'WebMCP status should remain grouped above the workflow links');
+		assert.ok(result.navWidth > 0, 'navigation should use the full available row');
+		assert.ok(result.documentWidth <= result.viewportWidth, `header should not overflow horizontally: ${result.documentWidth}px > ${result.viewportWidth}px`);
+		assert.ok(result.brandWidth > 200, 'Wornpage Projects brand should retain readable width');
+		if (width === 768) assert.equal(result.pendingTop, result.navTop);
+		if (width === 700) {
+			assert.ok(result.pendingTop > result.navTop, 'compact Pending link should occupy its own navigation row');
+			assert.ok(result.pendingWidth >= result.navWidth - 2, 'compact Pending row should use the full available width');
+		}
+		assert.equal(result.saveBoundary, true, 'human-only Approve and save boundary remains visible');
+		console.log(JSON.stringify({ viewport: `${width}x900`, ...result }));
+	}
+	await checkViewport(700);
+	await checkViewport(768);
 } finally { await browser?.close(); server.kill(); }

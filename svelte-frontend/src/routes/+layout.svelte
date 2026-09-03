@@ -356,10 +356,15 @@
 			align-items: stretch;
 			display: grid;
 			gap: 6px;
+			grid-template-columns: minmax(0, 1fr) auto;
 		}
+		.challenge-brand { grid-column: 1; grid-row: 1; }
+		.challenge-shell-nav :global(.webmcp-status-pill) { grid-column: 2; grid-row: 1; }
 
 		.challenge-shell-nav nav {
 			display: grid;
+			grid-column: 1 / -1;
+			grid-row: 2;
 			grid-template-columns: repeat(5, minmax(0, 1fr));
 		}
 
