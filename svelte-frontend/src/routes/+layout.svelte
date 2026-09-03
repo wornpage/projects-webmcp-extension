@@ -252,12 +252,10 @@
 
 	@keyframes challenge-route-arrive {
 		from {
-			opacity: 0;
 			scale: 0.992;
 			translate: 0 12px;
 		}
 		to {
-			opacity: 1;
 			scale: 1;
 			translate: 0 0;
 		}
