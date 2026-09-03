@@ -1,15 +1,15 @@
-# Edge-only WebMCP recording cue sheet
+# Chrome-only WebMCP recording cue sheet
 
-Target final length: **1:50**. Hard stop: **2:00**. Record one continuous Microsoft Edge clip. Do not speed up footage, remove pauses inside the accepted take, or hide a failed state transition with an edit.
+Target final length: **1:50**. Hard stop: **2:00**. Record one continuous Google Chrome clip. Do not speed up footage, remove pauses inside the accepted take, or hide a failed state transition with an edit.
 
 ## Fixed setup
 
-- Use Microsoft Edge at 100% zoom in one clean profile window with the installed recording extension. Put the captured tab in Edge fullscreen so the browser toolbar is hidden. Keep the Codex task outside the captured Edge tab; this workflow does not assume an Edge browser-agent side panel.
-- Keep the laptop's native fullscreen Edge viewport; do not apply a viewport override. Record its observed dimensions and require zero horizontal overflow before T0.
+- Use Google Chrome at 100% zoom in one clean profile window with the installed recording extension. Put the captured tab in Chrome fullscreen so the browser toolbar is hidden. Keep the Codex task outside the captured Chrome tab; this workflow does not assume a Chrome browser-agent side panel.
+- Keep the laptop's native fullscreen Chrome viewport; do not apply a viewport override. Record its observed dimensions and require zero horizontal overflow before T0.
 - Production URL: `https://projects-webmcp-extension.pages.dev/`.
 - Before the take, use Guide **Reset live sample**. Require exactly 8 workspace items, no Pending link, and a clean **Verified action trail** showing `Ready for one bounded run` and `No action recorded`.
 - Keep the safe default Guide brief for the opening Guide and Priority shots. After returning from Priority, activate **Use fast-create brief** with Shift+Tab and Enter; do not load it before navigating away because this page-local state does not survive Guide → Priority → Guide.
-- Codex controller instruction: `Follow the brief on this page.` Arm that instruction before T0, but do not invoke the Guide reader until **Use fast-create brief** is visibly active. No prompt is typed in Edge during the take. Codex then uses only the current page's native `RegisteredTool` objects from `document.modelContext.getTools()` and invokes them with serialized input through `document.modelContext.executeTool(...)`; it must stop without Save or Start.
+- Codex controller instruction: `Follow the brief on this page.` Arm that instruction before T0, but do not invoke the Guide reader until **Use fast-create brief** is visibly active. No prompt is typed in Chrome during the take. Codex then uses only the current page's native `RegisteredTool` objects from `document.modelContext.getTools()` and invokes them with serialized input through `document.modelContext.executeTool(...)`; it must stop without Save or Start.
 - Exact current-page catalogs: Guide 1 / Priority 1 / Work 3 / Review 2 / Next 2.
 - Registered tool sequence: `get_projects_handoff_guide` → `get_current_work_view` → `show_work_search` → `get_current_review_queue` → `set_review_scope` → `get_current_next_editor` → `prepare_next_action` → `get_current_work_view` → `create_work_drafts`.
 - Exact bounded inputs: Work/Review query `Garage reset`; Review filter `blocked`; Next choice `Confirm storage bin delivery`.
@@ -19,7 +19,7 @@ Target final length: **1:50**. Hard stop: **2:00**. Record one continuous Micros
 
 ## Browser-control ownership
 
-- Codex browser control launches Edge fullscreen, suppresses the Playwright automation infobar, and requires the toolbar-hidden viewport to remain stable before T0. It observes—but does not override—that native viewport and owns the monotonic timeline, route navigation, fixed holds, DOM checkpoints, focus checks, native WebMCP calls, and abort decision.
+- Codex browser control launches Chrome fullscreen, suppresses the Playwright automation infobar, and requires the toolbar-hidden viewport to remain stable before T0. It observes—but does not override—that native viewport and owns the monotonic timeline, route navigation, fixed holds, DOM checkpoints, focus checks, native WebMCP calls, and abort decision.
 - Every timed route change—including Guide → Work → Review → Next → Work—uses real Tab or Shift+Tab focus movement to an existing visible link, followed by Enter.
 - Vertical reveals are keyboard-only and body-owned: Guide uses one PageDown, the prepared Next hold uses four ArrowDown presses, and the restored final Next hold uses eight ArrowDown presses so the receipt and human controls remain together in the native fullscreen viewport. The pointer stays parked; do not use the wheel or drag a scrollbar.
 - Visible focus is required when each presentation-changing or Draft-creation WebMCP receipt first appears. The Guide reader must return the exact brief and render its read-only receipt, but it does not invent an action-focus promise. Only after an action receipt's focus proof may the page body own the reveal keys; acceptance depends on the named action receipt and controls remaining simultaneously visible, not on claiming the receipt retained focus during the scroll.
@@ -34,6 +34,8 @@ Complete this exact path once immediately before recording. Any mismatch cancels
 Measured rehearsal baseline (September 1, 2026): production app commit `32a4d0ee`, fullscreen Edge Dev inner viewport 1116 × 698, document client viewport 1101 × 698 and scroll width 1101, exact backward counts 7/3/7/3/5/10 for Priority→Guide / Guide→fast brief / Work→Review / Review→Next / Next→Work / Draft→Pending, and zero browser warnings or errors. The command emits the final receipt/control geometry and requires both to fit after the eight body-owned ArrowDown presses. This evidence does not replace a fresh preflight: any change to the header, activity receipt, Work controls, or Pending navigation focus order invalidates the counts and requires the cue plus its static contract to change together.
 
 Post-#74 comparison (September 2, 2026): production app commit `2729e30` retained the post-#72 baseline viewport, complete target timeline, exact backward counts, catalogs, denominators, receipts, and final human-only state with zero browser warnings or errors. The new Guide authority relay remained non-interactive. The final receipt remained fully visible from 82.09–285.23 CSS px, and both human controls remained fully visible from 570.64–606.64 CSS px after the eight body-owned ArrowDown presses. The measured Guide reader → Work path is one body-owned Tab plus exactly nine additional Tabs.
+
+Chrome cutover rehearsal (September 3, 2026): production app commit `d3a0839`, Google Chrome for Testing `152.0.7977.75`, fullscreen Google Chrome inner viewport 1116 × 698, document client viewport 1101 × 698 and scroll width 1101. The 109,506 ms Chrome run retained the September 1 reference timeline, focus counts, catalogs, denominators, receipts, diagnostics, and final human-only geometry; an Edge or Chromium-branded substitute does not satisfy this current-browser contract.
 
 The preflight requires stable focus across two consecutive rendered frames after every exact Tab or Shift+Tab press, including the body-owned focus reclaims, so page-owned focus recovery completes before the next key. After each settled key, it aborts if the declared destination arrives before the declared count. It still requires the declared count and destination; it never searches for an alternate target.
 
@@ -62,7 +64,7 @@ After the Guide reader inserts its receipt, reclaim page focus with one body-own
 
 Use a fixed **2.25-second settle window** after every route activation. Abort instead of retrying, double-activating, clicking, or relaxing a checkpoint.
 
-## One continuous Edge clip — 00:00–01:50
+## One continuous Chrome clip — 00:00–01:50
 
 | Final time | Keyboard/WebMCP action | Required visible checkpoint | Narration track |
 | --- | --- | --- | --- |
@@ -95,11 +97,11 @@ Abort the take immediately if any of these occurs:
 - Focus is not visible at a required receipt or destination.
 - A browser error, warning, CSP violation, duplicate tool, unexpected request, or horizontal overflow appears.
 
-The video is accepted only when this one continuous Edge clip passes every checkpoint, ends no later than 02:00 on the human approval frame, and remains below the official three-minute limit after narration.
+The video is accepted only when this one continuous Chrome clip passes every checkpoint, ends no later than 02:00 on the human approval frame, and remains below the official three-minute limit after narration.
 
 ## Post-capture cleanup and edit
 
-1. In the same Edge profile, use Guide **Reset live sample**; confirm the pending Next proposal and all three recording Drafts are absent, no Pending link remains, and the workspace is exactly 8.
+1. In the same Chrome profile, use Guide **Reset live sample**; confirm the pending Next proposal and all three recording Drafts are absent, no Pending link remains, and the workspace is exactly 8.
 2. Trim only the four-second setup pad. Do not add a route cut, speed up the clip, or remove an in-take pause.
-3. Add narration and export MP4 with H.264 video and AAC audio on a 1920 × 1080, 30 fps canvas. Preserve the native Edge aspect ratio without cropping; letterbox when needed. Target approximately -16 LUFS integrated audio with a peak no higher than -1.5 dB.
+3. Add narration and export MP4 with H.264 video and AAC audio on a 1920 × 1080, 30 fps canvas. Preserve the native Chrome aspect ratio without cropping; letterbox when needed. Target approximately -16 LUFS integrated audio with a peak no higher than -1.5 dB.
 4. Watch the complete export twice. Confirm intelligible audio, readable URL and receipts, no private tabs or notifications, and a final duration below three minutes before public YouTube upload.

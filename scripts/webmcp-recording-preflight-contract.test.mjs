@@ -9,7 +9,7 @@ import {
 	RECORDING_PREFLIGHT_SPEC,
 	RECORDING_PREFLIGHT_TIMELINE_AT_MS,
 	buildModelContextProbeInitScript,
-	edgeExecutableCandidates,
+	chromeExecutableCandidates,
 	parseRecordingCueSheet,
 	recordingCueProjectionFromSpec,
 	removeVerifiedTempProfile
@@ -18,7 +18,7 @@ import {
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.dirname(scriptsDirectory);
 const harnessPath = path.join(scriptsDirectory, 'webmcp-recording-preflight.mjs');
-const cuePath = path.join(repositoryRoot, 'docs', 'submission', 'webmcp', 'edge-recording-script.md');
+const cuePath = path.join(repositoryRoot, 'docs', 'submission', 'webmcp', 'chrome-recording-script.md');
 const [harnessSource, cueSource] = await Promise.all([
 	fs.readFile(harnessPath, 'utf8'),
 	fs.readFile(cuePath, 'utf8')
@@ -37,7 +37,7 @@ test('one deep-frozen recording specification owns the exact 1:50 choreography',
 	assert.equal(RECORDING_PREFLIGHT_SPEC.hardStopMs, 120_000);
 	assert.equal(RECORDING_PREFLIGHT_SPEC.routeSettleMs, 2_250);
 	assert.deepEqual(RECORDING_PREFLIGHT_SPEC.browser, {
-		name: 'Microsoft Edge', headed: true, viewport: null, presentation: 'fullscreen', toolbar: 'hidden',
+		name: 'Google Chrome', headed: true, viewport: null, presentation: 'fullscreen', toolbar: 'hidden',
 		startFullscreen: true, nativeInnerWidth: 1_116, nativeInnerHeight: 698,
 		nativeClientWidth: 1_101, nativeClientHeight: 698, nativeScrollWidth: 1_101,
 		profilePrefix: 'projects-webmcp-recording-preflight-'
@@ -199,7 +199,7 @@ test('the human cue sheet parses to the exact executable recording specification
 		() => parseRecordingCueSheet(cueSource.replaceAll('8 → 11', '8 → 10')),
 		/missing its exact Draft 8 to 11 denominator/u
 	);
-	assert.notDeepEqual(parseRecordingCueSheet(cueSource.replace('1116 × 698', '1115 × 698')), expected);
+	assert.notDeepEqual(parseRecordingCueSheet(cueSource.replace('fullscreen Google Chrome inner viewport 1116 × 698', 'fullscreen Google Chrome inner viewport 1115 × 698')), expected);
 	assert.notDeepEqual(parseRecordingCueSheet(cueSource.replace('8 visible of 8', '7 visible of 8')), expected);
 	assert.notDeepEqual(parseRecordingCueSheet(cueSource.replace('Review filter `blocked`', 'Review filter `all`')), expected);
 	assert.notDeepEqual(parseRecordingCueSheet(cueSource.replace('title `Garden study: log interviews`', 'title `Different work`')), expected);
@@ -221,11 +221,11 @@ test('the test-only modelContext probe preserves descriptor identity, serializat
 	assert.doesNotMatch(probeSource, /localStorage|sessionStorage|fetch\(|XMLHttpRequest|querySelector\('\[data-work-item/u);
 });
 
-test('the CLI owns installed Edge, native viewport, exact keyboard order, diagnostics, and bounded cleanup', () => {
+test('the CLI owns installed Chrome, native viewport, exact keyboard order, diagnostics, and bounded cleanup', () => {
 	assert.match(harnessSource, /await import\('playwright-core'\)/u);
 	assert.doesNotMatch(harnessSource.split("await import('playwright-core')")[0], /from ['"]playwright-core['"]/u);
 	assert.match(harnessSource, /fs\.mkdtemp\(path\.join\(os\.tmpdir\(\), RECORDING_PREFLIGHT_SPEC\.browser\.profilePrefix\)\)/u);
-	assert.match(harnessSource, /chromium\.launchPersistentContext\(profilePath, \{[\s\S]*?executablePath: edgeExecutable[\s\S]*?headless: false[\s\S]*?viewport: null[\s\S]*?ignoreDefaultArgs: \['--enable-automation'\][\s\S]*?'--kiosk'[\s\S]*?'--disable-infobars'/u);
+	assert.match(harnessSource, /chromium\.launchPersistentContext\(profilePath, \{[\s\S]*?executablePath: chromeExecutable[\s\S]*?headless: false[\s\S]*?viewport: null[\s\S]*?ignoreDefaultArgs: \['--enable-automation'\][\s\S]*?'--kiosk'[\s\S]*?'--disable-infobars'/u);
 	assert.match(harnessSource, /assertFullscreenSettled\(page\)[\s\S]*?outerWidth === window\.screen\.width[\s\S]*?outerHeight === window\.screen\.height[\s\S]*?Math\.abs\(window\.innerHeight - window\.screen\.height\) <= 1[\s\S]*?emit\('browser-presentation-rejection'[\s\S]*?throw error[\s\S]*?index < 4[\s\S]*?for \(const sample of samples\)[\s\S]*?assert\.deepEqual\(sample, samples\[0\]\)[\s\S]*?sample\.innerWidth, RECORDING_PREFLIGHT_SPEC\.browser\.nativeInnerWidth[\s\S]*?sample\.innerHeight, RECORDING_PREFLIGHT_SPEC\.browser\.nativeInnerHeight[\s\S]*?sample\.outerWidth, RECORDING_PREFLIGHT_SPEC\.browser\.nativeInnerWidth[\s\S]*?sample\.screenWidth, RECORDING_PREFLIGHT_SPEC\.browser\.nativeInnerWidth[\s\S]*?sample\.clientWidth, RECORDING_PREFLIGHT_SPEC\.browser\.nativeClientWidth[\s\S]*?sample\.clientHeight, RECORDING_PREFLIGHT_SPEC\.browser\.nativeClientHeight[\s\S]*?sample\.scrollWidth, RECORDING_PREFLIGHT_SPEC\.browser\.nativeScrollWidth[\s\S]*?emit\('browser-presentation'/u);
 	assert.match(harnessSource, /page\.goto\(spec\.productionUrl[\s\S]*?locator\('h1'[\s\S]*?assertFullscreenSettled\(page\)[\s\S]*?assertZeroOverflow\(page, 'landing-ready'\)[\s\S]*?assertLandingFrame\(page\)[\s\S]*?const startedAt = performance\.now\(\)/u);
 	assert.match(harnessSource, /RECORDING_PREFLIGHT_TIMELINE_AT_MS = Object\.freeze\(Object\.fromEntries\([\s\S]*?RECORDING_PREFLIGHT_SPEC\.timeline\.map\(\(\{ id, atMs \}\) => \[id, atMs\]\)[\s\S]*?timeline ids must be unique/u);
@@ -296,18 +296,20 @@ test('runtime assertions substantively own catalogs, bounded actions, authority,
 	assert.match(harnessSource, /const choreography = runChoreography\(page, diagnostics\)[\s\S]*?bounded\(choreography, RECORDING_PREFLIGHT_SPEC\.hardStopMs, 'Recording preflight hard stop'\)/u);
 });
 
-test('Edge lookup has supported installed paths only and temp deletion rejects any broad target', async () => {
-	assert.deepEqual(edgeExecutableCandidates({
+test('Chrome lookup has one explicit override, supported installed paths, and bounded temp deletion', async () => {
+	assert.deepEqual(chromeExecutableCandidates({
+		CHROME_EXECUTABLE_PATH: 'D:\\Chrome for Testing\\chrome.exe',
 		'PROGRAMFILES(X86)': 'C:\\Program Files (x86)',
 		ProgramFiles: 'C:\\Program Files',
 		LOCALAPPDATA: 'C:\\Users\\tester\\AppData\\Local'
 	}), [
-		'C:\\Program Files (x86)\\Microsoft\\Edge Dev\\Application\\msedge.exe',
-		'C:\\Program Files\\Microsoft\\Edge Dev\\Application\\msedge.exe',
-		'C:\\Users\\tester\\AppData\\Local\\Microsoft\\Edge Dev\\Application\\msedge.exe',
-		'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-		'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-		'C:\\Users\\tester\\AppData\\Local\\Microsoft\\Edge\\Application\\msedge.exe'
+		'D:\\Chrome for Testing\\chrome.exe',
+		'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+		'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+		'C:\\Users\\tester\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe',
+		'C:\\Program Files\\Google\\Chrome Dev\\Application\\chrome.exe',
+		'C:\\Program Files (x86)\\Google\\Chrome Dev\\Application\\chrome.exe',
+		'C:\\Users\\tester\\AppData\\Local\\Google\\Chrome Dev\\Application\\chrome.exe'
 	]);
 
 	await assert.rejects(() => removeVerifiedTempProfile(repositoryRoot), /Refusing to remove unverified recording profile/u);
