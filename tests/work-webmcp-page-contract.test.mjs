@@ -738,6 +738,9 @@ test('Quick Add stays available through the one createPack path in both Work den
 	assert.equal((workQuickAddSource.match(/await createPack\(/gu) ?? []).length, 1);
 	assert.match(quickCreateSource, /finally \{[\s\S]*?busy = false;[\s\S]*?setTimeout\(\(\) => form\?\.querySelector<HTMLInputElement>\('\.quick-create-input'\)\?\.focus\(\), 0\);/u);
 	assert.match(workQuickAddSource, /<summary>Work details <span>Optional<\/span><\/summary>[\s\S]*?Quick-add owner[\s\S]*?Quick-add area[\s\S]*?Quick-add type[\s\S]*?Quick-add due date[\s\S]*?Quick-add energy[\s\S]*?Quick-add recurrence[\s\S]*?Quick-add proof target/u);
+	assert.match(workQuickAddSource, /<WornInput id="work-quick-due" class="quick-due-input" type="date"/u);
+	assert.match(workQuickAddSource, /\.quick-create-options summary\{[\s\S]*?background:var\(--worn-surface\)[\s\S]*?border:1px solid var\(--worn-border-strong\)[\s\S]*?cursor:pointer[\s\S]*?\.quick-create-options summary::after\{content:'›'[\s\S]*?\.quick-create-options\[open\] summary::after\{transform:rotate\(90deg\)[\s\S]*?\.quick-create-options summary:focus-visible\{outline:2px dashed var\(--worn-focus\)/u);
+	assert.match(workQuickAddSource, /\.quick-create-details-grid :global\(\.quick-due-input\)\{max-inline-size:200px\}/u);
 	assert.match(workListCardSource, /\{#if pack\.energy \|\| pack\.location \|\| pack\.milestone \|\| pack\.doneWhen\}[\s\S]*?<dt>Proof target<\/dt><dd>\{pack\.doneWhen\}<\/dd>/u);
 	assert.match(workQuickAddSource, /\.quick-create-details-grid\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)[\s\S]*?@media\(max-width:420px\)[\s\S]*?\.quick-create-details-grid\{grid-template-columns:minmax\(0,1fr\)\}/u);
 	assert.match(workQuickAddSource, /@media\(max-width:500px\)\{\s*\.quick-create-row\{margin-inline:4px\}\s*\}/u);
