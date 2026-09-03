@@ -39,6 +39,8 @@ svelte-frontend/src/app.html
 svelte-frontend/src/lib/activity.ts
 svelte-frontend/src/lib/AgentBriefEditor.svelte
 svelte-frontend/src/lib/batch-actions.mjs
+svelte-frontend/src/lib/browser-state-envelope.mjs
+svelte-frontend/src/lib/canonical-text.mjs
 svelte-frontend/src/lib/components/index.ts
 svelte-frontend/src/lib/components/WorkGridCard.svelte
 svelte-frontend/src/lib/components/WorkListCard.svelte
@@ -104,6 +106,7 @@ tests/next-webmcp-page-contract.test.mjs
 tests/priority-webmcp-page-contract.test.mjs
 tests/public-manifest-webmcp-contract.test.mjs
 tests/review-webmcp-page-contract.test.mjs
+tests/state-integrity-webmcp-contract.test.mjs
 tests/toast-lifecycle-webmcp-contract.test.mjs
 tests/webmcp-registration-contract.test.mjs
 tests/work-webmcp-page-contract.test.mjs

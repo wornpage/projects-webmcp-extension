@@ -2,6 +2,8 @@
 // Pure workflow rules shared by the browser-local Projects state owner and
 // the Svelte views. The surface models the durable workflow used by the demo.
 
+import { canonicalizeText } from './canonical-text.mjs';
+
 const DAY_MS = 86_400_000;
 const SEED_DUE_ANCHOR = '2026-08-10';
 const ISO_CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/u;
@@ -15,7 +17,7 @@ const STATE_FILTERS = Object.freeze(['all', 'active', 'blocked', 'draft', 'done'
 const VALID_PACK_STATUSES = Object.freeze(['draft', 'active', 'blocked', 'done']);
 
 function normalizeText(value, maxLength = 2000) {
-	return String(value ?? '').replace(/\s+/gu, ' ').trim().slice(0, maxLength);
+	return [...canonicalizeText(value)].slice(0, maxLength).join('');
 }
 
 function normalizeStoredBlocker(value) {

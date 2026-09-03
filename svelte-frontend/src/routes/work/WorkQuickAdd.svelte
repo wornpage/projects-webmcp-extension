@@ -4,6 +4,7 @@
 		DEMO_WORK_TITLE_MAX_LENGTH,
 		displayToast
 	} from '$lib/demo-client';
+	import { normalizeWorkTitle } from '$lib/canonical-text.mjs';
 	import { ENERGY_OPTIONS, PACK_ENERGIES } from '$lib/demo-workflow';
 	import { WornButton, WornInput, WornSelect } from '$lib/components';
 
@@ -37,9 +38,11 @@
 
 	function setHumanQuickTitle(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
-		const nextTitle = input.value.slice(0, DEMO_WORK_TITLE_MAX_LENGTH);
-		input.value = nextTitle;
-		title = nextTitle;
+		if (normalizeWorkTitle(input.value) === null) {
+			input.value = title;
+			return;
+		}
+		title = input.value;
 	}
 
 	async function quickCreate() {
@@ -89,13 +92,14 @@
 <form bind:this={form} class="quick-create-row" aria-label="Quick add a work item" onsubmit={(event) => { event.preventDefault(); quickCreate(); }}>
 	<WornInput
 		class="quick-create-input"
-		maxlength={DEMO_WORK_TITLE_MAX_LENGTH}
 		bind:value={title}
 		oninput={setHumanQuickTitle}
 		placeholder="Quick-add a work item…"
 		aria-label="Quick-add a work item"
+		aria-describedby="quick-create-title-help"
 		disabled={busy}
 	/>
+	<span class="quick-create-title-help" id="quick-create-title-help">Up to {DEMO_WORK_TITLE_MAX_LENGTH} Unicode characters.</span>
 	<WornButton class="quick-create-submit" data-work-quick-create-submit type="submit" variant="primary" size="sm" disabled={busy || !title.trim()}>{busy ? 'Adding…' : 'Add'}</WornButton>
 	<details class="quick-create-options">
 		<summary>Work details <span>Optional</span></summary>
@@ -115,6 +119,7 @@
 <style>
 	.quick-create-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-block:8px 6px}
 	:global(.quick-create-input){flex:1;min-width:0}
+	.quick-create-title-help{clip:rect(0 0 0 0);clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px}
 	.quick-create-row :global(.quick-create-submit){flex:0 0 auto;min-inline-size:max-content;white-space:nowrap}
 	.quick-create-options{grid-column:1 / -1;min-width:0}
 	.quick-create-options summary{align-items:center;background:var(--worn-surface);border:1px solid var(--worn-border-strong);border-radius:var(--worn-radius-sm);color:var(--worn-text-secondary);cursor:pointer;display:flex;font-size:13px;font-weight:700;gap:8px;min-block-size:36px;padding:6px 10px;width:max-content}

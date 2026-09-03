@@ -1,4 +1,5 @@
 import { decisionWorkspaceNextHref, decisionWorkspaceReviewHref, exactWorkId } from '../../lib/decision-workspace-navigation.mjs';
+import { normalizeBoundedText, normalizeWorkTitle, WORK_TITLE_MAX_LENGTH } from '../../lib/canonical-text.mjs';
 
 export const WORK_CURRENT_TOOL_NAME = 'get_current_work_view';
 export const WORK_SEARCH_TOOL_NAME = 'show_work_search';
@@ -175,7 +176,7 @@ export function createShowWorkSearchTool(showSearch) {
 export function createWorkDraftsTool(createDrafts) {
 	if (typeof createDrafts !== 'function') throw new TypeError('Work WebMCP requires a draft-work creator.');
 	const draftProperties = {
-		title: { type: 'string', minLength: 1, maxLength: 200, description: 'Required work title.' },
+		title: { type: 'string', minLength: 1, maxLength: WORK_TITLE_MAX_LENGTH, description: 'Required NFC-normalized work title, bounded by Unicode characters.' },
 		owner: { type: 'string', maxLength: 120 },
 		area: { type: 'string', maxLength: 120 },
 		type: { type: 'string', maxLength: 120 },
@@ -256,7 +257,8 @@ function workCreationDraft(input) {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError('Each Work draft must be an object.');
 	const candidate = /** @type {Record<string, unknown>} */ (input);
 	if (Object.keys(candidate).some((key) => !WORK_DRAFT_FIELDS.has(key))) throw new TypeError('Work drafts contain an unsupported field.');
-	const title = workDraftText(candidate.title, 200, true);
+	const title = normalizeWorkTitle(candidate.title);
+	if (!title) throw new TypeError('Work draft title is outside its allowed length.');
 	const owner = workDraftText(candidate.owner, 120);
 	const area = workDraftText(candidate.area, 120);
 	const type = workDraftText(candidate.type, 120);
@@ -266,19 +268,14 @@ function workCreationDraft(input) {
 	const proofTarget = workDraftText(candidate.proofTarget, 1000);
 	if (due && !exactCalendarDay(due)) throw new TypeError('Work draft due date must be a valid calendar date.');
 	if (energy && !WORK_DRAFT_ENERGIES.has(energy)) throw new TypeError('Work draft energy is not supported.');
-	return { title: /** @type {string} */ (title), owner, area, type, due, energy, recurrence, proofTarget };
+	return { title, owner, area, type, due, energy, recurrence, proofTarget };
 }
 
-/** @param {unknown} value @param {number} maxLength @param {boolean} [required] */
-function workDraftText(value, maxLength, required = false) {
-	if (value === undefined) {
-		if (required) throw new TypeError('Work draft title is required.');
-		return null;
-	}
-	if (typeof value !== 'string' || /\p{Cc}/u.test(value)) throw new TypeError('Work draft text is invalid.');
-	if ([...value].length > maxLength) throw new TypeError('Work draft text is outside its allowed length.');
-	const text = value.trim().replace(/\s+/gu, ' ');
-	if (required && !text) throw new TypeError('Work draft text is outside its allowed length.');
+/** @param {unknown} value @param {number} maxLength */
+function workDraftText(value, maxLength) {
+	if (value === undefined) return null;
+	const text = normalizeBoundedText(value, maxLength);
+	if (text === null) throw new TypeError('Work draft text is outside its allowed length.');
 	return text || null;
 }
 
