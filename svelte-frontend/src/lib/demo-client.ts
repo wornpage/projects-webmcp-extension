@@ -187,6 +187,37 @@ function assertDemoState(value: unknown): asserts value is DemoState {
 	}
 }
 
+function recoverPersistedState(value: unknown): DemoState {
+	if (!value || typeof value !== 'object' || !Array.isArray((value as DemoState).packs)) {
+		throw new ChallengeStateError('Saved workspace data is not a recoverable work-item state.');
+	}
+	const source = value as DemoState;
+	const quarantined: Array<{ id: string; reason: string }> = [];
+	const packs: DemoPack[] = [];
+	for (const [index, pack] of source.packs.entries()) {
+		try {
+			assertDemoState({ ...source, packs: [pack], pendingNextActionDrafts: [] });
+			packs.push(structuredClone(pack));
+		} catch (error) {
+			quarantined.push({ id: typeof pack?.id === 'string' && pack.id.trim() ? pack.id : `record-${index + 1}`, reason: errorMessage(error, 'Invalid work-item record.') });
+		}
+	}
+	const ids = new Set(packs.map((pack) => pack.id));
+	for (const pack of packs) {
+		if (pack.blockedBy && !ids.has(pack.blockedBy)) {
+			quarantined.push({ id: pack.id, reason: 'Unresolved dependency was cleared.' });
+			pack.blockedBy = '';
+			pack.blocker = DEMO_BLOCKER_NONE;
+		}
+	}
+	const pending = (source.pendingNextActionDrafts || []).filter((draft) => {
+		const valid = isPendingNextActionDraft(draft) && ids.has(draft.workId) && draft.evidence.every((fact) => ids.has(fact.workId));
+		if (!valid) quarantined.push({ id: draft?.workId || 'pending-approval', reason: 'Pending approval referenced an invalid or missing record.' });
+		return valid;
+	});
+	return { ...structuredClone(source), packs, pendingNextActionDrafts: pending, recoveryQuarantine: quarantined };
+}
+
 function migrateLegacyState(value: DemoState): DemoState {
 	const state = structuredClone(value);
 	for (const pack of state.packs) {
@@ -306,13 +337,14 @@ function readStoredStateUnlocked(): DemoStateSnapshot | null {
 	} catch {
 		throw new ChallengeStateError('Browser storage is unavailable. Local changes cannot be loaded.');
 	}
-	let result: { envelope: { state: DemoState; revision: string }; migrated: boolean } | null;
+	let result: { envelope: { state: DemoState; revision: string }; migrated: boolean; recovered?: boolean } | null;
 	try {
 		result = readStateEnvelope(serialized, {
 			assertState: assertDemoState,
 			migrateLegacyState,
-			createRevision: createStorageRevision
-		}) as { envelope: { state: DemoState; revision: string }; migrated: boolean } | null;
+			createRevision: createStorageRevision,
+			recoverState: recoverPersistedState
+		}) as { envelope: { state: DemoState; revision: string }; migrated: boolean; recovered?: boolean } | null;
 	} catch (error) {
 		if (error instanceof ChallengeStateError) throw error;
 		if (error instanceof SyntaxError) {
@@ -321,7 +353,7 @@ function readStoredStateUnlocked(): DemoStateSnapshot | null {
 		throw new ChallengeStateError(error instanceof Error ? error.message : 'Saved workspace data is invalid.');
 	}
 	if (!result) return null;
-	if (result.migrated) {
+	if (result.migrated || result.recovered) {
 		try {
 			if (localStorage.getItem(STORAGE_KEY) !== serialized) {
 				throw new ChallengeStateError('Workspace changed by another tab. Refresh this tab and try again.');

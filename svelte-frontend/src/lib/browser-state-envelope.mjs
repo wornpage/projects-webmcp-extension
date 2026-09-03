@@ -35,10 +35,10 @@ function looksLikeEnvelope(value) {
  *
  * @template T
  * @param {string | null} serialized
- * @param {{ assertState: (value: unknown) => asserts value is T, migrateLegacyState: (value: T) => T, createRevision: () => string }} options
+ * @param {{ assertState: (value: unknown) => asserts value is T, migrateLegacyState: (value: T) => T, createRevision: () => string, recoverState?: (value: T) => T }} options
  * @returns {{ envelope: { schemaVersion: 1, revision: string, state: T }, migrated: boolean } | null}
  */
-export function readStateEnvelope(serialized, { assertState, migrateLegacyState, createRevision }) {
+export function readStateEnvelope(serialized, { assertState, migrateLegacyState, createRevision, recoverState }) {
 	if (serialized === null) return null;
 	const parsed = JSON.parse(serialized);
 	if (!Array.isArray(parsed?.packs) && looksLikeEnvelope(parsed)) {
@@ -51,8 +51,9 @@ export function readStateEnvelope(serialized, { assertState, migrateLegacyState,
 		) {
 			throw new TypeError('Saved workspace envelope is invalid or uses an unsupported schema version.');
 		}
-		assertState(parsed.state);
-		return { envelope: parsed, migrated: false };
+		const recoveredState = recoverState ? recoverState(parsed.state) : parsed.state;
+		assertState(recoveredState);
+		return { envelope: { ...parsed, state: recoveredState }, migrated: false, recovered: recoveredState !== parsed.state };
 	}
 	const state = migrateLegacyState(/** @type {T} */ (parsed));
 	assertState(state);

@@ -182,6 +182,14 @@ test('persisted-state decoder rejects malformed records instead of deferring fai
 	assert.match(layout, /resetDemoSampleState[\s\S]*?Workspace data needs recovery[\s\S]*?Reset local workspace/u);
 });
 
+test('persisted recovery quarantines invalid records while keeping valid work visible', () => {
+	const client = readFileSync(new URL('../svelte-frontend/src/lib/demo-client.ts', import.meta.url), 'utf8');
+	assert.match(client, /function recoverPersistedState[\s\S]*?quarantined[\s\S]*?packs[\s\S]*?recoveryQuarantine/u);
+	assert.match(client, /recoverState: recoverPersistedState[\s\S]*?result\.recovered/u);
+	const layout = readFileSync(new URL('../svelte-frontend/src/routes/+layout.svelte', import.meta.url), 'utf8');
+	assert.match(layout, /Quarantined workspace records[\s\S]*?Valid work remains available[\s\S]*?Reset local workspace/u);
+});
+
 test('pending approvals center exposes every proposal with evidence status and recovery actions', () => {
 	const center = readFileSync(new URL('../svelte-frontend/src/lib/PendingApprovalsCenter.svelte', import.meta.url), 'utf8');
 	assert.match(center, /Pending approvals \(\$\{drafts\.length\}\)[\s\S]*?Every proposal remains unsaved until you approve it on Next/u);
