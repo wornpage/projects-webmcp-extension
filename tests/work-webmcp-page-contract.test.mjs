@@ -124,6 +124,7 @@ test('Manual sort owns a stable persisted order and keyboard controls', () => {
 	assert.match(workflowSource, /orderPacks\(packs: DemoPack\[\], sortBy = 'urgency', manualOrder: string\[\] = \[\]\)/u);
 	assert.match(routeSource, /sortBy === 'manual' && e\.altKey[\s\S]*?moveFocusedManual/u);
 	assert.match(routeSource, /Manual ordering controls[\s\S]*?Move focused up[\s\S]*?Move focused down[\s\S]*?aria-live="polite"/u);
+	assert.match(routeSource, /Card to reorder[\s\S]*?manualTargetId[\s\S]*?moveFocusedManual/u);
 	assert.match(workFilterControlsSource, /value: 'manual', label: 'Manual'/u);
 	assert.match(workInteractionSmokeSource, /#sort-work[\s\S]*?selectOption\('manual'\)[\s\S]*?Move focused down[\s\S]*?manualOrder/u);
 });
