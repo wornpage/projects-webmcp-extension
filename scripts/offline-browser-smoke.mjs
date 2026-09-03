@@ -27,7 +27,7 @@ try {
 		]);
 	});
 	await page.reload({ waitUntil: 'networkidle' });
-	assert.ok(await page.evaluate(async () => (await caches.keys()).includes('projects-webmcp-v1')), 'offline cache is installed');
+	assert.ok(await page.evaluate(async () => (await caches.keys()).includes('projects-webmcp-v2')), 'offline cache is installed');
 	for (const route of ['priority', 'work', 'review', 'next']) {
 		await page.goto(`${origin}/${route}`, { waitUntil: 'networkidle' });
 	}
@@ -38,7 +38,7 @@ try {
 	assert.equal(await page.locator('main.challenge-route').count(), 1, 'Work route loads offline from the service worker cache');
 	const cachedSeed = await page.evaluate(async () => (await (await fetch('/data/demo-packs.json')).json()).length);
 	assert.ok(cachedSeed > 0, 'bundled seed data is available offline');
-	console.log(JSON.stringify({ cache: 'projects-webmcp-v1', offline: true, routes: ['webmcp-challenge', 'work'], cachedSeed }));
+	console.log(JSON.stringify({ cache: 'projects-webmcp-v2', offline: true, routes: ['webmcp-challenge', 'work'], cachedSeed }));
 } finally {
 	await browser?.close();
 	server.kill();
