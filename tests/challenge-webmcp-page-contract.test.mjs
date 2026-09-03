@@ -408,6 +408,11 @@ test('the live sample can be explicitly reset through the single browser-state o
 	assert.doesNotMatch(pageSource, /localStorage|sessionStorage|fetch\(/u);
 });
 
+test('Challenge demo-state writes detect cross-tab local mutations before save', () => {
+	assert.match(demoClientSource, /function stableStateFingerprint\(state: DemoState\): string \{[\s\S]*?return JSON\.stringify\(state\);[\s\S]*?\}/u);
+	assert.match(demoClientSource, /export async function saveBrowserState\([\s\S]*?const persistedState = readStoredState\(\);[\s\S]*?if \(persistedState && stableStateFingerprint\(persistedState\) !== stableStateFingerprint\(current\)\)[\s\S]*?throw new ChallengeStateError\('Workspace changed by another tab\. Refresh this tab and try again\.'\);[\s\S]*?return cloneMutatePersist\(/u);
+});
+
 test('wide Guide layout keeps the existing steps in the left rail beside the editor without a dead quadrant', () => {
 	const railStart = pageSource.indexOf('<div class="challenge-guide-rail">');
 	const introStart = pageSource.indexOf('<div class="challenge-intro">');

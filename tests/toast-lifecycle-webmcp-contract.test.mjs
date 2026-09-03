@@ -83,7 +83,11 @@ test('shared WornToast dismissal is the only toast-removal owner', () => {
 	assert.match(undoSource, /import \{ demoState, displayToast, savePackPath \} from '\$lib\/demo-client';/u);
 	assert.match(undoSource, /displayToast\(`Undo complete\.[\s\S]*?'success'\);/u);
 	assert.match(undoSource, /displayToast\([\s\S]*?'Undo failed — the local state is unchanged\.'[\s\S]*?'error'/u);
+	assert.match(undoSource, /export function commitActionUndo\(snapshot: ReceiptUndo \| null\): void \{\s*receiptUndo\.set\(snapshot\);\s*\}/u);
 	assert.doesNotMatch(undoSource, /function notify|\btoasts\b|setTimeout/u);
+	const runPackActionSource = demoClientSource.match(/export async function runPackAction\([\s\S]*?^\}/mu)?.[0] ?? '';
+	assert.match(runPackActionSource, /displayToast\(receipt\.summary, 'success'\)/u);
+	assert.doesNotMatch(runPackActionSource, /Undo is available/u);
 
 	for (const routeSource of producerRouteSources) {
 		assert.match(routeSource, /import[\s\S]*?displayToast[\s\S]*?from '\$lib\/demo-client';/u);

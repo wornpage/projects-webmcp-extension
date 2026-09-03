@@ -89,6 +89,7 @@ export function recentPackActivity(packs: DemoPack[], limit = 6): PackActivityEn
 	if (!Array.isArray(packs) || !Number.isInteger(limit) || limit <= 0) return [];
 	const entries: PackActivityEntry[] = [];
 	for (const pack of packs) {
+		if (pack?.archived) continue;
 		const packId = typeof pack?.id === 'string' ? pack.id.trim() : '';
 		const packTitle = typeof pack?.title === 'string' ? pack.title.trim() : '';
 		if (!packId || !packTitle) continue;

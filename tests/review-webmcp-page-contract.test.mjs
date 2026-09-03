@@ -93,6 +93,11 @@ test('one Review selector excludes terminal work and includes explicit Review ac
 	assert.doesNotMatch(`${routeSource}\n${nextRouteSource}\n${nextCandidatePickerSource}\n${workRouteSource}`, /(?:review|candidate)[^\n]*status\s*!==?\s*'done'/u);
 });
 
+test('Review no-match guidance describes this route, not Work', () => {
+	assert.match(routeSource, /description="Try clearing filters or updating the search term on this route\."/u);
+	assert.doesNotMatch(routeSource, /on the Work route\./u);
+});
+
 test('Review projects only its explicit rendered queue and denominators', () => {
 	assert.deepEqual(reviewItemPageView({
 		id: 'garage / one',

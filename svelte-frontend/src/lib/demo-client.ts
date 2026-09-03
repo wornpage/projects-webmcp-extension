@@ -26,6 +26,7 @@ import {
 	unblockedReceiptSentence
 } from './workflow-rules.mjs';
 import { approvePendingDraft, cloneMutatePersist, discardPendingDraft, hydrateSerializedState, pendingDraftFingerprint as fingerprintPendingDraft, resetPersistedState, restorePendingDraft, revisePendingDraftChoice, upsertPendingDraft } from './pending-next-action.mjs';
+import { planBatchAction, removePacksAndReferences, repairActiveSelection } from './batch-actions.mjs';
 
 const STORAGE_KEY = 'projects-webmcp-challenge-state-v1';
 const SEED_URL = '/data/demo-packs.json';
@@ -107,6 +108,16 @@ let refreshFlight: Promise<DemoState | null> | null = null;
 
 function errorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function stableStateFingerprint(state: DemoState): string {
+	return JSON.stringify(state);
+}
+
+function installDemoState(state: DemoState): DemoState {
+	demoState.set(state);
+	demoStateError.set('');
+	return state;
 }
 
 function assertDemoState(value: unknown): asserts value is DemoState {
@@ -281,8 +292,7 @@ async function runDemoStateRefresh(): Promise<DemoState | null> {
 	try {
 		const state = readStoredState() ?? (await loadSeedState());
 		if (startingRevision !== stateRevision) return get(demoState);
-		demoState.set(state);
-		demoStateError.set('');
+		installDemoState(state);
 		return state;
 	} catch (error) {
 		if (startingRevision !== stateRevision) return get(demoState);
@@ -295,9 +305,7 @@ async function runDemoStateRefresh(): Promise<DemoState | null> {
 
 function replaceDemoState(state: DemoState): DemoState {
 	stateRevision += 1;
-	demoState.set(state);
-	demoStateError.set('');
-	return state;
+	return installDemoState(state);
 }
 
 export function displayToast(
@@ -350,6 +358,11 @@ export async function saveBrowserState(
 	if (!browser) return null;
 	const current = get(demoState) ?? (await refreshDemoState());
 	if (!current) return null;
+	const persistedState = readStoredState();
+	if (persistedState && stableStateFingerprint(persistedState) !== stableStateFingerprint(current)) {
+		replaceDemoState(persistedState);
+		throw new ChallengeStateError('Workspace changed by another tab. Refresh this tab and try again.');
+	}
 	return cloneMutatePersist({ current, clone: cloneState, mutate, persist: persistState, install: replaceDemoState });
 }
 
@@ -402,6 +415,8 @@ export async function runPackAction(packId: string, rawAction: string): Promise<
 			changed = pack.archived !== true;
 			pack.archived = true;
 			if (changed && pack.status !== 'done') appendActivity(pack, 'Archived.');
+			draft.pendingNextActionDrafts = (draft.pendingNextActionDrafts || [])
+				.filter((pending) => pending.workId !== pack.id);
 		} else if (action === 'open') {
 			changed = appendActivity(pack, 'Opened.');
 		} else {
@@ -426,15 +441,64 @@ export async function runPackAction(packId: string, rawAction: string): Promise<
 			.filter(Boolean)
 			.join(' ');
 		const receipt: DemoReceipt = { summary, pack };
-		draft.selectedId = pack.id;
+		draft.selectedId = action === 'archive' ? repairActiveSelection(draft) : pack.id;
 		draft.status = summary;
 		draft.actionReceipt = receipt;
 	});
 	const receipt = written?.actionReceipt || null;
 	if (receipt?.summary) {
-		displayToast(receipt.summary.replace(/(\.)?$/u, ' · Undo is available in the receipt.'), 'success');
+		displayToast(receipt.summary, 'success');
 	}
 	return receipt;
+}
+
+export type BatchPackAction = 'done' | 'start' | 'block' | 'delete';
+
+export async function runPackBatchAction(
+	selectedIds: string[],
+	action: BatchPackAction
+): Promise<{ receipt: DemoReceipt; appliedCount: number; skippedCount: number } | null> {
+	let appliedCount = 0;
+	let skippedCount = 0;
+	const written = await saveBrowserState((draft) => {
+		const plan = planBatchAction(draft.packs, selectedIds, action);
+		if (plan.eligibleIds.length === 0) {
+			throw new ChallengeStateError('None of the selected work items can use that batch action.');
+		}
+		appliedCount = plan.eligibleIds.length;
+		skippedCount = plan.skippedCount;
+
+		let secondarySummary = '';
+		if (action === 'delete') {
+			const cleanup = removePacksAndReferences(draft, plan.eligibleIds);
+			const effects = [
+				cleanup.discardedDrafts ? `Discarded ${cleanup.discardedDrafts} orphaned pending ${cleanup.discardedDrafts === 1 ? 'draft' : 'drafts'}.` : '',
+				cleanup.repairedDependencies ? `Repaired ${cleanup.repairedDependencies} ${cleanup.repairedDependencies === 1 ? 'dependency' : 'dependencies'}.` : ''
+			].filter(Boolean);
+			secondarySummary = effects.join(' ');
+		} else {
+			for (const id of plan.eligibleIds) {
+				const pack = draft.packs.find((candidate) => candidate.id === id)!;
+				const wasDone = pack.status === 'done';
+				Object.assign(pack, packActionEffect(pack, action));
+				appendActivity(pack, action === 'start' ? 'Started.' : action === 'block' ? 'Blocked.' : proofActivity(pack));
+				if (action === 'done' && !wasDone) {
+					unblockPacksBlockedBy(draft.packs, pack, { onActivity: appendActivity, workTitle });
+				}
+			}
+		}
+
+		const label = { done: 'done', start: 'started', block: 'blocked', delete: 'deleted' }[action];
+		const completed = `${appliedCount} ${appliedCount === 1 ? 'item' : 'items'} ${label}.`;
+		const skipped = skippedCount
+			? `${skippedCount} ineligible ${skippedCount === 1 ? 'item was' : 'items were'} skipped.`
+			: '';
+		const summary = [completed, skipped, secondarySummary].filter(Boolean).join(' ');
+		draft.status = summary;
+		draft.actionReceipt = { summary };
+	});
+	if (!written?.actionReceipt?.summary) return null;
+	return { receipt: written.actionReceipt, appliedCount, skippedCount };
 }
 
 export async function createPack(payload: Record<string, unknown>): Promise<{

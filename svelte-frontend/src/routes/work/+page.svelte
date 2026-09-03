@@ -134,7 +134,7 @@
 	let recentIds = $state<string[]>([]);
 	let recentPacks = $derived(recentIds
 		.map((id) => packs.find((pack) => pack.id === id))
-		.filter((pack): pack is DemoPack => Boolean(pack)));
+		.filter((pack): pack is DemoPack => Boolean(pack && !pack.archived)));
 	let snoozeDays = $state<Record<string, string>>({});
 	let quickAddBusy = $state(false);
 	let sortBy = $state('urgency');
@@ -390,7 +390,7 @@
 	function countByFilter(list: DemoPack[]): Record<string, number> {
 		const next: Record<string, number> = Object.fromEntries(FILTERS.map(([key]) => [key, 0]));
 		for (const pack of list) {
-			next[pack.status || ''] = (next[pack.status || ''] ?? 0) + 1;
+			if (!pack.archived) next[pack.status || ''] = (next[pack.status || ''] ?? 0) + 1;
 			if (isReview(pack)) next.review += 1;
 			if (pack.archived) next.archived += 1;
 			if (!pack.archived) next.all += 1;

@@ -23,7 +23,9 @@ import {
 import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
 import { decisionWorkspaceReviewFocusRequest, decisionWorkspaceReviewHref } from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
 import { summarizeWorkMetadata } from '../svelte-frontend/src/lib/work-metadata.mjs';
-import { primaryCommand, primaryCommandNavigation } from '../svelte-frontend/src/lib/demo-workflow.ts';
+import { filterPacks, primaryCommand, primaryCommandNavigation } from '../svelte-frontend/src/lib/demo-workflow.ts';
+import { planBatchAction, removePacksAndReferences, repairActiveSelection } from '../svelte-frontend/src/lib/batch-actions.mjs';
+import { recentPackActivity } from '../svelte-frontend/src/lib/activity.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
@@ -101,6 +103,18 @@ test('Work overdue scope and due labels exclude terminal work', () => {
 	for (const source of [routeSource, workGridCardSource, workListCardSource, reviewRouteSource]) {
 		assert.doesNotMatch(source, /dueUrgency\([^)]*\.due\)|dueDateLabel\([^)]*\.due\)/u);
 	}
+});
+
+test('archived work appears only in the archived status view', () => {
+	const packs = [
+		{ id: 'active', status: 'active', archived: false },
+		{ id: 'archived-active', status: 'active', archived: true }
+	];
+	assert.deepEqual(filterPacks(packs, 'active', '').map((pack) => pack.id), ['active']);
+	assert.deepEqual(filterPacks(packs, 'all', '').map((pack) => pack.id), ['active']);
+	assert.deepEqual(filterPacks(packs, 'archived', '').map((pack) => pack.id), ['archived-active']);
+	assert.match(routeSource, /let recentPacks = \$derived\([\s\S]*?Boolean\(pack && !pack\.archived\)/u);
+	assert.match(routeSource, /if \(!pack\.archived\) next\[pack\.status \|\| ''\]/u);
 });
 
 test('Work focus mode implements and documents its advertised F shortcut', () => {
@@ -553,7 +567,7 @@ test('successful Work batch delete restores focus through an enabled durable fal
 	assert.match(workBatchActionsSource, /active: boolean;[\s\S]*?packs: DemoPack\[\];[\s\S]*?selected: SvelteSet<string>;[\s\S]*?busyId: string;[\s\S]*?errorText: string;[\s\S]*?busyId = \$bindable\(\)[\s\S]*?errorText = \$bindable\(\)/u);
 	assert.match(routeSource, /let batchMode = \$state\(false\);[\s\S]*?let batchSelected = new SvelteSet<string>\(\);[\s\S]*?function toggleBatchMode\(\)[\s\S]*?function toggleBatchSelection\(packId: string\)[\s\S]*?<WorkBatchActions[\s\S]*?active=\{batchMode\}[\s\S]*?selected=\{batchSelected\}/u);
 	assert.match(routeSource, /\{#snippet batchCheckbox\(pack: DemoPack\)\}[\s\S]*?checked=\{batchSelected\.has\(pack\.id!\)\}[\s\S]*?onchange=\{\(\) => toggleBatchSelection\(pack\.id!\)\}[\s\S]*?<WorkGridCard[\s\S]*?batchSelected=\{batchSelected\.has\(pack\.id!\)\}[\s\S]*?\{batchCheckbox\}[\s\S]*?<WorkListCard[\s\S]*?\{batchMode\}[\s\S]*?\{batchCheckbox\}/u);
-	assert.match(workBatchActionsSource, /actionBusy,[\s\S]*?displayToast,[\s\S]*?runPackAction,[\s\S]*?saveBrowserState,[\s\S]*?ChallengeStateError[\s\S]*?from '\$lib\/demo-client';/u);
+	assert.match(workBatchActionsSource, /actionBusy,[\s\S]*?displayToast,[\s\S]*?runPackBatchAction,[\s\S]*?ChallengeStateError[\s\S]*?from '\$lib\/demo-client';/u);
 	assert.match(workBatchActionsSource, /let deleteFallbackFocus = \$state<HTMLElement \| null>\(null\);/u);
 	const deleteRequest = workBatchActionsSource.match(/function requestDelete\(event: MouseEvent\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
 	assert.match(deleteRequest, /const ids = \[\.\.\.selected\];[\s\S]*?deleteTarget = \{ ids, count: ids\.length \};[\s\S]*?deleteReturnFocus = event\.currentTarget as HTMLElement;[\s\S]*?deleteFallbackFocus = document\.querySelector<HTMLElement>\('\[data-action="batch-mode"\]'\);[\s\S]*?deleteDialogOpen = true;/u);
@@ -580,25 +594,71 @@ test('Work batch toolbar disables empty Deselect and hands completed Deselect fo
 	assert.doesNotMatch(routeSource, /demo-batch-bar|demo-batch-count|clearBatchSelection|focusBatchModeToggle/u);
 });
 
-test('Work batch Done excludes completed work, reports skips, and restores durable focus', () => {
-	assert.match(workBatchActionsSource, /let hasIncompleteSelected = \$derived\([\s\S]*?selected\.size > 0 && packs\.some\(\(pack\) => selected\.has\(pack\.id!\) && pack\.status !== 'done'\)[\s\S]*?\);/u);
+test('Work batch actions are planned by eligibility, committed once, and restore durable focus', () => {
+	assert.match(workBatchActionsSource, /let hasIncompleteSelected = \$derived\([\s\S]*?selected\.size > 0 && packs\.some\(\(pack\) => selected\.has\(pack\.id!\) && !pack\.archived && pack\.status !== 'done'\)[\s\S]*?\);/u);
+	assert.match(workBatchActionsSource, /let hasDraftSelected = \$derived\([\s\S]*?!pack\.archived && pack\.status === 'draft'[\s\S]*?let hasBlockableSelected = \$derived\([\s\S]*?!pack\.archived && pack\.status !== 'done' && pack\.status !== 'blocked'/u);
 	const batchToolbar = workBatchActionsSource.match(/<div class="demo-batch-bar"[\s\S]*?<\/div>/u)?.[0] ?? '';
 	assert.match(batchToolbar, /data-action="batch-done" disabled=\{!hasIncompleteSelected \|\| busyId === 'batch'\}/u);
+	assert.match(batchToolbar, /data-action="batch-start" disabled=\{!hasDraftSelected \|\| busyId === 'batch'\}/u);
+	assert.match(batchToolbar, /data-action="batch-block" disabled=\{!hasBlockableSelected \|\| busyId === 'batch'\}/u);
 	const batchAction = workBatchActionsSource.match(/async function runBatchAction\([\s\S]*?\n\t\}/u)?.[0] ?? '';
 	const beforeFirstMutation = batchAction.match(/async function runBatchAction\([\s\S]*?\n\t\ttry \{/u)?.[0] ?? '';
-	assert.match(beforeFirstMutation, /if \(!ids\.length \|\| busyId\) return;[\s\S]*?busyId = 'batch';[\s\S]*?busyAction = action;[\s\S]*?errorText = '';[\s\S]*?try \{/u);
+	assert.match(beforeFirstMutation, /if \(selectedIds\.length === 0 \|\| busyId\) return;[\s\S]*?busyId = 'batch';[\s\S]*?busyAction = action;[\s\S]*?errorText = '';[\s\S]*?try \{/u);
 	assert.doesNotMatch(beforeFirstMutation, /await /u);
-	assert.match(batchAction, /if \(action === 'delete'\) \{[\s\S]*?await saveBrowserState\(\(draft\) => \{[\s\S]*?draft\.packs = draft\.packs\.filter[\s\S]*?draft\.selectedId = draft\.packs\[0\]\?\.id \|\| '';[\s\S]*?\}\);[\s\S]*?\} else \{[\s\S]*?for \(const id of ids\) \{[\s\S]*?await runPackAction\(id, action\);/u);
-	assert.match(batchAction, /const requestedIds = \[\.\.\.selectedIds\];[\s\S]*?const alreadyDoneCount = action === 'done'[\s\S]*?pack\.status === 'done'/u);
-	assert.match(batchAction, /const ids = action === 'done'[\s\S]*?pack\.status !== 'done'[\s\S]*?: requestedIds;/u);
-	assert.match(batchAction, /const skipped = alreadyDoneCount > 0[\s\S]*?already done[\s\S]*?displayToast\(\[completed, skipped\]\.filter\(Boolean\)\.join\(' '\), 'success'\)/u);
-	assert.match(batchAction, /catch \(error\) \{[\s\S]*?error instanceof ChallengeStateError[\s\S]*?\? error\.message[\s\S]*?: 'The batch action failed partway — check the list\.';[\s\S]*?if \(reportError\) errorText = message;[\s\S]*?else throw new Error\(message\);/u);
+	assert.match(batchAction, /const result = await runPackBatchAction\(selectedIds, action\);[\s\S]*?commitActionUndo\(null\);[\s\S]*?displayToast\(result\.receipt\.summary \|\| 'Batch action complete\.', 'success'\)/u);
+	assert.doesNotMatch(batchAction, /for \(const id|runPackAction|saveBrowserState/u);
+	assert.match(batchAction, /catch \(error\) \{[\s\S]*?error instanceof ChallengeStateError[\s\S]*?\? error\.message[\s\S]*?: 'The batch action failed — the local state is unchanged\.';[\s\S]*?if \(reportError\) errorText = message;[\s\S]*?else throw new Error\(message\);/u);
 	assert.match(batchAction, /finally \{[\s\S]*?busyAction = null;[\s\S]*?busyId = '';[\s\S]*?actionBusy\.set\(''\);/u);
 	assert.match(batchAction, /completedBatchAction = true;[\s\S]*?finally[\s\S]*?busyId = '';[\s\S]*?if \(completedBatchAction && action !== 'delete'\) await focusBatchModeToggle\(\);/u);
 	const focusBatchModeToggle = workBatchActionsSource.match(/async function focusBatchModeToggle\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
 	assert.match(focusBatchModeToggle, /await tick\(\);[\s\S]*?\[data-action="batch-mode"\][\s\S]*?isConnected[\s\S]*?getClientRects\(\)\.length > 0[\s\S]*?:disabled[\s\S]*?aria-disabled="true"[\s\S]*?focus\(\{ preventScroll: true \}\)/u);
 	assert.doesNotMatch(routeSource, /batchBusyAction|hasDraftSelected|hasIncompleteSelected|batchAction\(/u);
 	assert.doesNotMatch(workBatchActionsSource, /registerPageTools|modelContext|fetch\(|goto\(|onBatch/u);
+});
+
+test('batch plans reject mixed ineligible transitions and deletion repairs references', () => {
+	const packs = [
+		{ id: 'draft', status: 'draft' },
+		{ id: 'active', status: 'active' },
+		{ id: 'blocked', status: 'blocked' },
+		{ id: 'done', status: 'done' },
+		{ id: 'archived', status: 'active', archived: true }
+	];
+	assert.deepEqual(planBatchAction(packs, packs.map((pack) => pack.id), 'start'), {
+		requestedCount: 5,
+		eligibleIds: ['draft'],
+		skippedCount: 4
+	});
+	assert.deepEqual(planBatchAction(packs, packs.map((pack) => pack.id), 'done').eligibleIds, ['draft', 'active', 'blocked']);
+	assert.deepEqual(planBatchAction(packs, packs.map((pack) => pack.id), 'block').eligibleIds, ['draft', 'active']);
+	assert.deepEqual(planBatchAction(packs, ['archived'], 'delete').eligibleIds, ['archived']);
+
+	const state = {
+		packs: [
+			{ id: 'removed', status: 'done' },
+			{ id: 'dependent', status: 'blocked', blocker: 'Waiting', blockedBy: 'removed', next: 'Open' },
+			{ id: 'archived', status: 'active', archived: true }
+		],
+		selectedId: 'removed',
+		pendingNextActionDrafts: [
+			{ workId: 'removed', evidence: [] },
+			{ workId: 'dependent', evidence: [{ workId: 'removed' }] }
+		],
+		actionReceipt: { pack: { id: 'removed' } }
+	};
+	assert.deepEqual(removePacksAndReferences(state, ['removed']), {
+		deletedCount: 1,
+		discardedDrafts: 2,
+		repairedDependencies: 1
+	});
+	assert.deepEqual(state.packs.map((pack) => pack.id), ['dependent', 'archived']);
+	assert.equal(state.packs[0].blockedBy, '');
+	assert.equal(state.packs[0].status, 'active');
+	assert.equal(state.selectedId, 'dependent');
+	assert.deepEqual(state.pendingNextActionDrafts, []);
+	assert.equal(state.actionReceipt, null);
+	state.packs[0].archived = true;
+	assert.equal(repairActiveSelection(state), '');
 });
 
 test('compact Work grid cards remain readable and contained for fine and coarse pointers', () => {
@@ -818,4 +878,8 @@ test('expanded Recent activity follows the Work page heading hierarchy', () => {
 	assert.doesNotMatch(recentTimeline, /headingLevel=\{3\}/u);
 	assert.match(workRecentActivitySource, /:global\(\.demo-work-recent-timeline\)\{--worn-timeline-max-inline-size:100%;margin-top:6px\}/u);
 	assert.doesNotMatch(workRecentActivitySource, /fetch\(|localStorage|sessionStorage|saveBrowserState|createPack|runPackAction/u);
+	assert.deepEqual(recentPackActivity([
+		{ id: 'active', title: 'Active', archived: false, activity: ['[2026-09-03 12:00:00] Started.'] },
+		{ id: 'archived', title: 'Archived', archived: true, activity: ['[2026-09-03 13:00:00] Started.'] }
+	]), [{ at: '2026-09-03 12:00:00', text: 'Started.', packId: 'active', packTitle: 'Active' }]);
 });
