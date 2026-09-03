@@ -191,20 +191,6 @@
 						</WornButton>
 						<span>Explicitly restores this browser’s bundled sample and clears its prior local results.</span>
 					</div>
-					<section class="challenge-portability" aria-labelledby="workspace-portability-title">
-						<h2 id="workspace-portability-title">Workspace portability</h2>
-						<p>Export a validated local backup or preview an export before replacing or merging it.</p>
-						<div class="challenge-portability-actions">
-							<WornButton type="button" size="sm" onclick={prepareWorkspaceExport}>Prepare export</WornButton>
-							{#if exportHref}<a class="challenge-export-link" href={exportHref} download="projects-workspace.json">Download export</a>{/if}
-							<label class="challenge-import-label">Import export<input bind:this={importInput} type="file" accept="application/json" onchange={selectWorkspaceFile} /></label>
-						</div>
-					{#if importError}<p class="challenge-import-error" role="alert">{importError}</p>{/if}
-						{#if importPreview}
-							<div class="challenge-import-preview" aria-live="polite"><strong>Preview:</strong> {importPreview.packs} work items · {importPreview.pendingApprovals} pending approvals · {importPreview.collisions} existing ID collisions{importPreview.collisionIds.length ? ` (${importPreview.collisionIds.join(', ')})` : ''}.</div>
-							<div class="challenge-portability-actions"><WornButton size="sm" variant="primary" disabled={importBusy} onclick={() => requestWorkspaceImport('merge')}>Merge</WornButton><WornButton size="sm" variant="danger" disabled={importBusy} onclick={() => requestWorkspaceImport('replace')}>Replace</WornButton></div>
-						{/if}
-					</section>
 				</div>
 				<ol class="challenge-steps" aria-label="Three-step Projects handoff workflow">
 					{#each steps as step, index (step.href)}
@@ -242,6 +228,23 @@
 						<li>{guarantee}</li>
 					{/each}
 				</ul>
+			</section>
+		</WornAccordion>
+
+		<WornAccordion label="Workspace portability">
+			<section class="challenge-portability" aria-labelledby="workspace-portability-title">
+				<h2 id="workspace-portability-title">Workspace portability</h2>
+				<p>Export a validated local backup or preview an export before replacing or merging it.</p>
+				<div class="challenge-portability-actions">
+					<WornButton type="button" size="sm" onclick={prepareWorkspaceExport}>Prepare export</WornButton>
+					{#if exportHref}<a class="challenge-export-link" href={exportHref} download="projects-workspace.json">Download export</a>{/if}
+					<label class="challenge-import-label">Import export<input bind:this={importInput} type="file" accept="application/json" onchange={selectWorkspaceFile} /></label>
+				</div>
+				{#if importError}<p class="challenge-import-error" role="alert">{importError}</p>{/if}
+				{#if importPreview}
+					<div class="challenge-import-preview" aria-live="polite"><strong>Preview:</strong> {importPreview.packs} work items · {importPreview.pendingApprovals} pending approvals · {importPreview.collisions} existing ID collisions{importPreview.collisionIds.length ? ` (${importPreview.collisionIds.join(', ')})` : ''}.</div>
+					<div class="challenge-portability-actions"><WornButton size="sm" variant="primary" disabled={importBusy} onclick={() => requestWorkspaceImport('merge')}>Merge</WornButton><WornButton size="sm" variant="danger" disabled={importBusy} onclick={() => requestWorkspaceImport('replace')}>Replace</WornButton></div>
+				{/if}
 			</section>
 		</WornAccordion>
 	</div>
@@ -322,7 +325,7 @@
 	.challenge-portability h2 { font-size: 16px; margin: 0; }
 	.challenge-portability p { color: var(--worn-text-secondary); font-size: 13px; line-height: 1.45; margin: 0; }
 	.challenge-portability-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
-	.challenge-import-label { align-items: center; border: 1px solid var(--worn-border-strong); border-radius: var(--worn-radius-sm); cursor: pointer; display: inline-flex; font-size: 13px; padding: 9px 10px; }
+	.challenge-import-label { align-items: center; border: 1px solid var(--worn-border-strong); border-radius: var(--worn-radius-sm); cursor: pointer; display: inline-flex; font-family: var(--font-typewriter); font-size: 13px; font-weight: 650; padding: 9px 10px; }
 	.challenge-import-label input { max-width: 1px; opacity: 0; position: absolute; }
 	.challenge-import-preview { color: var(--worn-text-secondary); font-size: 13px; }
 	.challenge-import-error { color: var(--worn-danger) !important; }
