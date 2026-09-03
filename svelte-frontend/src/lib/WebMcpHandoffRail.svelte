@@ -30,7 +30,6 @@
 
 <section
 	class="webmcp-handoff-rail"
-	class:has-steps={hasSteps}
 	class:has-pending={trail.pendingCount > 0}
 	data-webmcp-handoff-session
 	aria-label="Verified action trail"
@@ -38,10 +37,8 @@
 >
 	<div class="webmcp-handoff-summary">
 		<p>Verified action trail</p>
-		<strong>Agent finds. Evidence proves. You decide.</strong>
-		<span class="webmcp-handoff-run-state">
-			{currentStep ? `${trail.completedCount} verified${trail.pendingCount ? ` · ${trail.pendingCount} pending` : ''}` : 'Ready for one bounded run'}
-		</span>
+		<span class="webmcp-handoff-thesis">Agent finds. Evidence proves. You decide.</span>
+		<strong>{currentStep ? `${trail.completedCount} verified${trail.pendingCount ? ` · ${trail.pendingCount} pending` : ''} · ${currentStep.title}` : 'Ready for one bounded run'}</strong>
 		<small title={currentStep?.summary || undefined}>{currentStep?.summary || 'No agent action recorded.'}</small>
 	</div>
 
@@ -98,6 +95,10 @@
 		position: relative;
 	}
 
+	.webmcp-handoff-rail.has-pending {
+		border-color: var(--worn-accent);
+	}
+
 	.webmcp-handoff-summary,
 	.webmcp-handoff-authority {
 		display: grid;
@@ -108,6 +109,7 @@
 	.webmcp-handoff-summary p,
 	.webmcp-handoff-summary strong,
 	.webmcp-handoff-summary small,
+	.webmcp-handoff-thesis,
 	.webmcp-handoff-authority span,
 	.webmcp-handoff-authority strong,
 	.webmcp-handoff-authority small,
@@ -126,18 +128,20 @@
 		text-transform: uppercase;
 	}
 
-	.webmcp-handoff-summary > strong {
+	.webmcp-handoff-thesis {
 		color: var(--worn-text);
 		font-size: clamp(17px, 2vw, 22px);
+		font-weight: 760;
 		letter-spacing: -0.02em;
 		line-height: 1.15;
 	}
 
-	.webmcp-handoff-run-state {
+	.webmcp-handoff-summary > strong {
 		color: var(--worn-text-secondary);
 		font-family: var(--font-typewriter);
 		font-size: 11px;
 		font-weight: 700;
+		line-height: 1.35;
 	}
 
 	.webmcp-handoff-summary small,
