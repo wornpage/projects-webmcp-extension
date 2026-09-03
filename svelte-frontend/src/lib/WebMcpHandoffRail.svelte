@@ -86,7 +86,7 @@
 		align-items: start;
 		background:
 			linear-gradient(135deg, color-mix(in srgb, var(--worn-selected-bg) 58%, var(--worn-surface)), var(--worn-surface));
-		border: 1px solid var(--worn-border-strong);
+		border: 1px solid color-mix(in srgb, var(--worn-accent) 34%, var(--worn-border-strong));
 		border-radius: var(--worn-radius);
 		box-shadow: var(--worn-shadow-sm);
 		display: grid;
@@ -96,15 +96,6 @@
 		overflow: hidden;
 		padding: 12px 14px;
 		position: relative;
-	}
-
-	.webmcp-handoff-rail::before {
-		background: var(--worn-accent);
-		content: '';
-		inset-block: 0;
-		inset-inline-start: 0;
-		position: absolute;
-		width: 4px;
 	}
 
 	.webmcp-handoff-summary,
@@ -266,9 +257,9 @@
 	}
 
 	.webmcp-handoff-promise > span {
-		grid-template-columns: auto minmax(0, 1fr);
 		align-items: baseline;
 		gap: 4px 9px;
+		grid-template-columns: auto minmax(0, 1fr);
 	}
 
 	.webmcp-handoff-progress {
