@@ -39,7 +39,7 @@ async function assertCardCommands(page, density) {
 
 try {
 	await waitForServer();
-	browser = await chromium.launch({ headless: true });
+	browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined });
 	const page = await browser.newPage({ viewport: { width: 900, height: 800 } });
 	await page.addInitScript(() => {
 		window.__workToolRegistrations = [];
@@ -75,6 +75,16 @@ try {
 	await page.getByRole('button', { name: 'Additional work filters' }).click();
 	await page.getByRole('tab', { name: 'Cards' }).click();
 	await assertCardCommands(page, 'card');
+	await page.locator('#sort-work').selectOption('manual');
+	const manualCard = page.locator('[data-pack-id="same-destination"]');
+	await manualCard.focus();
+	await page.getByRole('button', { name: 'Move focused down' }).click();
+	await page.waitForFunction((key) => {
+		const raw = localStorage.getItem(key);
+		if (!raw) return false;
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed.state?.manualOrder) && parsed.state.manualOrder.includes('same-destination');
+	}, storageKey);
 
 	const title = 'Quick add receipt smoke';
 	await page.locator('.quick-create-input').fill(title);

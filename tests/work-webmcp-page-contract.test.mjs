@@ -48,6 +48,7 @@ const activityStripSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend
 const activitySource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/activity.ts'), 'utf8');
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 const decisionNavigationSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/decision-workspace-navigation.mjs'), 'utf8');
+const workInteractionSmokeSource = fs.readFileSync(path.join(repoRoot, 'scripts/work-interaction-polish-smoke.mjs'), 'utf8');
 
 function workView({ search = '', items = null, workspace = 4, matching = 3, blocked = 1, recommendation = null } = {}) {
 	const projectedItems = items ?? [
@@ -124,6 +125,7 @@ test('Manual sort owns a stable persisted order and keyboard controls', () => {
 	assert.match(routeSource, /sortBy === 'manual' && e\.altKey[\s\S]*?moveFocusedManual/u);
 	assert.match(routeSource, /Manual ordering controls[\s\S]*?Move focused up[\s\S]*?Move focused down[\s\S]*?aria-live="polite"/u);
 	assert.match(workFilterControlsSource, /value: 'manual', label: 'Manual'/u);
+	assert.match(workInteractionSmokeSource, /#sort-work[\s\S]*?selectOption\('manual'\)[\s\S]*?Move focused down[\s\S]*?manualOrder/u);
 });
 
 test('Work focus mode implements and documents its advertised F shortcut', () => {

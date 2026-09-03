@@ -9,7 +9,7 @@ const server = spawn(process.execPath, [path.resolve('svelte-frontend/node_modul
 let browser;
 try {
 	for (let attempt = 0; attempt < 30; attempt += 1) { try { await fetch(`${origin}/next`); break; } catch { await new Promise((resolve) => setTimeout(resolve, 250)); } }
-	browser = await chromium.launch({ headless: true });
+	browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined });
 	const page = await browser.newPage({ viewport: { width: 768, height: 900 } });
 	await page.goto(`${origin}/next`, { waitUntil: 'domcontentloaded' });
 	await page.evaluate(async () => {
