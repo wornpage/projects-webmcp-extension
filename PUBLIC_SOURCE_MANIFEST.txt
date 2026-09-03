@@ -38,6 +38,7 @@ svelte-frontend/package.json
 svelte-frontend/src/app.html
 svelte-frontend/src/lib/activity.ts
 svelte-frontend/src/lib/AgentBriefEditor.svelte
+svelte-frontend/src/lib/batch-actions.mjs
 svelte-frontend/src/lib/components/index.ts
 svelte-frontend/src/lib/components/WorkGridCard.svelte
 svelte-frontend/src/lib/components/WorkListCard.svelte

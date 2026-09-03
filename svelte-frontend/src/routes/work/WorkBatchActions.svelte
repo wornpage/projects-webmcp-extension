@@ -4,10 +4,10 @@
 	import {
 		actionBusy,
 		displayToast,
-		runPackAction,
-		saveBrowserState,
+		runPackBatchAction,
 		ChallengeStateError
 	} from '$lib/demo-client';
+	import { commitActionUndo } from '$lib/undo';
 	import { WornButton } from '$lib/components';
 	import type { DemoPack } from '$lib/demo-workflow';
 	import WorkDeleteConfirmDialog from '$lib/WorkDeleteConfirmDialog.svelte';
@@ -36,10 +36,13 @@
 	let deleteReturnFocus = $state<HTMLElement | null>(null);
 	let deleteFallbackFocus = $state<HTMLElement | null>(null);
 	let hasDraftSelected = $derived(
-		selected.size > 0 && packs.some((pack) => selected.has(pack.id!) && pack.status === 'draft')
+		selected.size > 0 && packs.some((pack) => selected.has(pack.id!) && !pack.archived && pack.status === 'draft')
 	);
 	let hasIncompleteSelected = $derived(
-		selected.size > 0 && packs.some((pack) => selected.has(pack.id!) && pack.status !== 'done')
+		selected.size > 0 && packs.some((pack) => selected.has(pack.id!) && !pack.archived && pack.status !== 'done')
+	);
+	let hasBlockableSelected = $derived(
+		selected.size > 0 && packs.some((pack) => selected.has(pack.id!) && !pack.archived && pack.status !== 'done' && pack.status !== 'blocked')
 	);
 
 	async function focusBatchModeToggle() {
@@ -81,43 +84,22 @@
 		selectedIds = [...selected],
 		reportError = true
 	) {
-		const requestedIds = [...selectedIds];
-		const alreadyDoneCount = action === 'done'
-			? requestedIds.filter((id) => packs.some((pack) => pack.id === id && pack.status === 'done')).length
-			: 0;
-		const ids = action === 'done'
-			? requestedIds.filter((id) => packs.some((pack) => pack.id === id && pack.status !== 'done'))
-			: requestedIds;
-		if (!ids.length || busyId) return;
+		if (selectedIds.length === 0 || busyId) return;
 		busyId = 'batch';
 		busyAction = action;
 		errorText = '';
 		let completedBatchAction = false;
 		try {
-			if (action === 'delete') {
-				await saveBrowserState((draft) => {
-					draft.packs = draft.packs.filter((pack) => !ids.includes(pack.id || ''));
-					if (!draft.packs.some((pack) => pack.id === draft.selectedId)) {
-						draft.selectedId = draft.packs[0]?.id || '';
-					}
-				});
-			} else {
-				for (const id of ids) {
-					await runPackAction(id, action);
-				}
-			}
-			const label = { done: 'done', start: 'started', block: 'blocked', delete: 'deleted' }[action];
-			const completed = `${ids.length} ${ids.length === 1 ? 'item' : 'items'} ${label}.`;
-			const skipped = alreadyDoneCount > 0
-				? `${alreadyDoneCount} ${alreadyDoneCount === 1 ? 'item is' : 'items are'} already done.`
-				: '';
-			displayToast([completed, skipped].filter(Boolean).join(' '), 'success');
+			const result = await runPackBatchAction(selectedIds, action);
+			if (!result) throw new ChallengeStateError('The batch action returned no receipt.');
+			commitActionUndo(null);
+			displayToast(result.receipt.summary || 'Batch action complete.', 'success');
 			selected.clear();
 			completedBatchAction = true;
 		} catch (error) {
 			const message = error instanceof ChallengeStateError
 				? error.message
-				: 'The batch action failed partway — check the list.';
+				: 'The batch action failed — the local state is unchanged.';
 			if (reportError) errorText = message;
 			else throw new Error(message);
 		} finally {
@@ -134,7 +116,7 @@
 		<span class="demo-batch-count" aria-live="polite" aria-atomic="true">{selected.size} selected</span>
 		<WornButton size="sm" type="button" data-action="batch-done" disabled={!hasIncompleteSelected || busyId === 'batch'} onclick={() => runBatchAction('done')}>{busyAction === 'done' ? 'Finishing…' : 'Done'}</WornButton>
 		<WornButton size="sm" type="button" data-action="batch-start" disabled={!hasDraftSelected || busyId === 'batch'} onclick={() => runBatchAction('start')}>{busyAction === 'start' ? 'Starting…' : 'Start'}</WornButton>
-		<WornButton size="sm" type="button" data-action="batch-block" disabled={selected.size === 0 || busyId === 'batch'} onclick={() => runBatchAction('block')}>{busyAction === 'block' ? 'Blocking…' : 'Block'}</WornButton>
+		<WornButton size="sm" type="button" data-action="batch-block" disabled={!hasBlockableSelected || busyId === 'batch'} onclick={() => runBatchAction('block')}>{busyAction === 'block' ? 'Blocking…' : 'Block'}</WornButton>
 		<WornButton variant="danger" size="sm" type="button" data-action="batch-delete" disabled={selected.size === 0 || busyId === 'batch'} onclick={requestDelete}>Delete</WornButton>
 		<WornButton size="sm" type="button" data-action="batch-clear" disabled={selected.size === 0 || busyId === 'batch'} onclick={clearSelection}>Deselect</WornButton>
 	</div>

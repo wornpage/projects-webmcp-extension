@@ -618,7 +618,7 @@
 		{:else if filteredVisible.length === 0 && reviewTotal > 0}
 			<WornEmpty
 				title="No matches"
-				description="Try clearing filters or updating the search term on the Work route."
+				description="Try clearing filters or updating the search term on this route."
 			>
 				<WornButton type="button" onclick={clearReviewFilters}>Clear filters</WornButton>
 			</WornEmpty>

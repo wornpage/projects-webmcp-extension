@@ -64,7 +64,7 @@ export function buildActionUndoSnapshot(
 }
 
 export function commitActionUndo(snapshot: ReceiptUndo | null): void {
-	if (snapshot) receiptUndo.set(snapshot);
+	receiptUndo.set(snapshot);
 }
 
 export async function undoReceipt(): Promise<void> {

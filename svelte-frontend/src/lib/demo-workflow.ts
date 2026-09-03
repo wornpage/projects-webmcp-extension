@@ -416,7 +416,7 @@ export function filterPacks(
 				? pack.archived
 				: filter === 'review'
 					? isReview(pack)
-					: pack.status === filter;
+					: !pack.archived && pack.status === filter;
 		if (!filterMatch || (hideDone && filter === 'all' && pack.status === 'done')) return false;
 		if (energyFilter !== 'all' && pack.energy !== energyFilter) return false;
 		if (areaFilter !== 'all' && (areaFilter === '_none' ? !!pack.area : pack.area !== areaFilter)) return false;
