@@ -9,7 +9,8 @@ import {
 import {
 	DEMO_STATE_SCHEMA_VERSION,
 	nextStateEnvelope,
-	readStateEnvelope
+	readStateEnvelope,
+	withExclusiveStateStorageLock
 } from '../svelte-frontend/src/lib/browser-state-envelope.mjs';
 import { normalizeText } from '../svelte-frontend/src/lib/workflow-rules.mjs';
 import {
@@ -25,6 +26,25 @@ const migrateLegacyState = (state) => structuredClone(state);
 function revisions(...values) {
 	let index = 0;
 	return () => values[index++];
+}
+
+function deferred() {
+	let resolve;
+	const promise = new Promise((settle) => { resolve = settle; });
+	return { promise, resolve };
+}
+
+function deterministicLockManager() {
+	let tail = Promise.resolve();
+	return {
+		request(name, options, operation) {
+			assert.equal(name, 'demo-state-write');
+			assert.deepEqual(options, { mode: 'exclusive' });
+			const result = tail.then(operation);
+			tail = result.then(() => undefined, () => undefined);
+			return result;
+		}
+	};
 }
 
 function draftReceipt(input) {
@@ -152,4 +172,152 @@ test('explicit revisions rotate on success and a stale tab cannot overwrite the 
 	assert.equal(third.revision, 'revision-c');
 	assert.notEqual(third.revision, second.revision);
 	assert.deepEqual(third.state, stateC);
+});
+
+test('exclusive migration interleaving cannot overwrite a queued normal write or deadlock', { timeout: 1_000 }, async () => {
+	const locks = deterministicLockManager();
+	const migrationStarted = deferred();
+	const allowMigration = deferred();
+	const events = [];
+	let serialized = JSON.stringify({ packs: [{ id: 'legacy', title: 'Legacy' }] });
+
+	const migration = withExclusiveStateStorageLock(locks, 'demo-state-write', async () => {
+		events.push('migration-read');
+		const result = readStateEnvelope(serialized, {
+			assertState,
+			migrateLegacyState,
+			createRevision: revisions('revision-migrated')
+		});
+		migrationStarted.resolve();
+		await allowMigration.promise;
+		if (result.migrated) serialized = JSON.stringify(result.envelope);
+		events.push('migration-write');
+	});
+	await migrationStarted.promise;
+
+	const normalWrite = withExclusiveStateStorageLock(locks, 'demo-state-write', () => {
+		events.push('normal-write');
+		const next = nextStateEnvelope({
+			serialized,
+			expectedRevision: 'revision-migrated',
+			state: { packs: [{ id: 'normal', title: 'Normal winner' }] },
+			assertState,
+			migrateLegacyState,
+			createRevision: revisions('revision-normal')
+		});
+		serialized = JSON.stringify(next);
+	});
+	allowMigration.resolve();
+	await Promise.all([migration, normalWrite]);
+
+	assert.deepEqual(events, ['migration-read', 'migration-write', 'normal-write']);
+	assert.equal(JSON.parse(serialized).revision, 'revision-normal');
+	assert.equal(JSON.parse(serialized).state.packs[0].id, 'normal');
+
+	const secondLocks = deterministicLockManager();
+	const writerStarted = deferred();
+	const allowWriter = deferred();
+	const secondEvents = [];
+	serialized = JSON.stringify({ packs: [{ id: 'legacy-again', title: 'Legacy again' }] });
+	const writerFirst = withExclusiveStateStorageLock(secondLocks, 'demo-state-write', async () => {
+		secondEvents.push('normal-write');
+		serialized = JSON.stringify({
+			schemaVersion: DEMO_STATE_SCHEMA_VERSION,
+			revision: 'revision-winner',
+			state: { packs: [{ id: 'winner', title: 'Winner' }] }
+		});
+		writerStarted.resolve();
+		await allowWriter.promise;
+	});
+	await writerStarted.promise;
+	const migrationAfterWriter = withExclusiveStateStorageLock(secondLocks, 'demo-state-write', () => {
+		secondEvents.push('migration-reread');
+		const result = readStateEnvelope(serialized, {
+			assertState,
+			migrateLegacyState,
+			createRevision: revisions('must-not-be-used')
+		});
+		assert.equal(result.migrated, false);
+		if (result.migrated) serialized = JSON.stringify(result.envelope);
+	});
+	allowWriter.resolve();
+	await Promise.all([writerFirst, migrationAfterWriter]);
+	assert.deepEqual(secondEvents, ['normal-write', 'migration-reread']);
+	assert.equal(JSON.parse(serialized).revision, 'revision-winner');
+	assert.equal(JSON.parse(serialized).state.packs[0].id, 'winner');
+});
+
+test('exclusive reset interleaving cannot revive removed state and both operations settle', { timeout: 1_000 }, async () => {
+	const locks = deterministicLockManager();
+	const resetRemoved = deferred();
+	const allowReset = deferred();
+	const events = [];
+	let serialized = JSON.stringify({
+		schemaVersion: DEMO_STATE_SCHEMA_VERSION,
+		revision: 'revision-before-reset',
+		state: { packs: [{ id: 'before-reset', title: 'Before reset' }] }
+	});
+
+	const reset = withExclusiveStateStorageLock(locks, 'demo-state-write', async () => {
+		events.push('reset-remove');
+		serialized = null;
+		resetRemoved.resolve();
+		await allowReset.promise;
+		events.push('reset-install-seed');
+		return { packs: [{ id: 'seed', title: 'Seed' }] };
+	});
+	await resetRemoved.promise;
+
+	const staleWrite = withExclusiveStateStorageLock(locks, 'demo-state-write', () => {
+		events.push('stale-write-check');
+		const next = nextStateEnvelope({
+			serialized,
+			expectedRevision: 'revision-before-reset',
+			state: { packs: [{ id: 'revived', title: 'Must not revive' }] },
+			assertState,
+			migrateLegacyState,
+			createRevision: revisions('revision-revived')
+		});
+		serialized = JSON.stringify(next);
+	});
+	allowReset.resolve();
+
+	const [resetResult, writeResult] = await Promise.allSettled([reset, staleWrite]);
+	assert.equal(resetResult.status, 'fulfilled');
+	assert.equal(writeResult.status, 'rejected');
+	assert.match(writeResult.reason.message, /revision conflict/u);
+	assert.deepEqual(events, ['reset-remove', 'reset-install-seed', 'stale-write-check']);
+	assert.equal(serialized, null);
+
+	const secondLocks = deterministicLockManager();
+	const writerStarted = deferred();
+	const allowWriter = deferred();
+	const secondEvents = [];
+	serialized = JSON.stringify({
+		schemaVersion: DEMO_STATE_SCHEMA_VERSION,
+		revision: 'revision-before-write',
+		state: { packs: [{ id: 'before-write', title: 'Before write' }] }
+	});
+	const writerFirst = withExclusiveStateStorageLock(secondLocks, 'demo-state-write', async () => {
+		secondEvents.push('normal-write');
+		serialized = JSON.stringify(nextStateEnvelope({
+			serialized,
+			expectedRevision: 'revision-before-write',
+			state: { packs: [{ id: 'newer', title: 'Newer' }] },
+			assertState,
+			migrateLegacyState,
+			createRevision: revisions('revision-newer')
+		}));
+		writerStarted.resolve();
+		await allowWriter.promise;
+	});
+	await writerStarted.promise;
+	const resetAfterWriter = withExclusiveStateStorageLock(secondLocks, 'demo-state-write', () => {
+		secondEvents.push('reset-remove');
+		serialized = null;
+	});
+	allowWriter.resolve();
+	await Promise.all([writerFirst, resetAfterWriter]);
+	assert.deepEqual(secondEvents, ['normal-write', 'reset-remove']);
+	assert.equal(serialized, null);
 });

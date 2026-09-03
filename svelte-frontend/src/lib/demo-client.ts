@@ -4,7 +4,7 @@ import { browser } from '$app/environment';
 import { get, writable } from 'svelte/store';
 import type { DemoPack, DemoReceipt, DemoState } from '$lib/demo-workflow';
 import { normalizeWorkTitle, WORK_TITLE_MAX_LENGTH } from '$lib/canonical-text.mjs';
-import { nextStateEnvelope, readStateEnvelope } from '$lib/browser-state-envelope.mjs';
+import { nextStateEnvelope, readStateEnvelope, withExclusiveStateStorageLock } from '$lib/browser-state-envelope.mjs';
 import {
 	formatWorkTitle,
 	nextChoiceForwardPath,
@@ -259,7 +259,7 @@ function cloneState(state: DemoState): DemoState {
 
 type DemoStateSnapshot = { state: DemoState; revision: string };
 
-function readStoredState(): DemoStateSnapshot | null {
+function readStoredStateUnlocked(): DemoStateSnapshot | null {
 	let serialized: string | null;
 	try {
 		serialized = localStorage.getItem(STORAGE_KEY);
@@ -295,6 +295,17 @@ function readStoredState(): DemoStateSnapshot | null {
 	return { state: result.envelope.state, revision: result.envelope.revision };
 }
 
+function withStateStorageLock<T>(operation: () => T | Promise<T>): Promise<T> {
+	if (!globalThis.navigator?.locks?.request) {
+		throw new ChallengeStateError('This browser cannot coordinate safe workspace writes across tabs.');
+	}
+	return withExclusiveStateStorageLock(globalThis.navigator.locks, STORAGE_LOCK_NAME, operation) as Promise<T>;
+}
+
+function readStoredState(): Promise<DemoStateSnapshot | null> {
+	return withStateStorageLock(readStoredStateUnlocked);
+}
+
 function persistState(state: DemoState, expectedRevision: string | null): DemoStateSnapshot {
 	let currentSerialized: string | null;
 	try {
@@ -327,17 +338,6 @@ function persistState(state: DemoState, expectedRevision: string | null): DemoSt
 	return { state: envelope.state, revision: envelope.revision };
 }
 
-async function persistStateLocked(state: DemoState, expectedRevision: string | null): Promise<DemoStateSnapshot> {
-	if (!globalThis.navigator?.locks?.request) {
-		throw new ChallengeStateError('This browser cannot coordinate safe workspace writes across tabs.');
-	}
-	return globalThis.navigator.locks.request(
-		STORAGE_LOCK_NAME,
-		{ mode: 'exclusive' },
-		() => persistState(state, expectedRevision)
-	);
-}
-
 async function loadSeedState(): Promise<DemoState> {
 	let response: Response;
 	try {
@@ -366,7 +366,7 @@ async function runDemoStateRefresh(): Promise<DemoState | null> {
 	const startingRevision = stateRevision;
 	demoStateLoading.set(true);
 	try {
-		const stored = readStoredState();
+		const stored = await readStoredState();
 		const state = stored?.state ?? (await loadSeedState());
 		if (startingRevision !== stateRevision) return get(demoState);
 		installDemoState(state, stored?.revision ?? null);
@@ -418,11 +418,11 @@ export async function resetDemoSampleState(): Promise<DemoState | null> {
 	if (!browser) return null;
 	stateRevision += 1;
 	try {
-		return await resetPersistedState({
+		return await withStateStorageLock(() => resetPersistedState({
 			remove: () => localStorage.removeItem(STORAGE_KEY),
 			loadSeed: loadSeedState,
 			install: (state) => replaceDemoState(state, null)
-		});
+		}));
 	} catch (error) {
 		if (error instanceof ChallengeStateError) throw error;
 		throw new ChallengeStateError('Browser storage is unavailable. The live sample could not be reset.');
@@ -437,12 +437,13 @@ export async function saveBrowserState(
 	if (!current) return null;
 	const next = cloneState(current);
 	mutate(next);
+	const expectedRevision = storageRevision;
 	try {
-		const written = await persistStateLocked(next, storageRevision);
+		const written = await withStateStorageLock(() => persistState(next, expectedRevision));
 		return replaceDemoState(written.state, written.revision);
 	} catch (error) {
 		if (error instanceof ChallengeStateError && error.message === 'Workspace changed by another tab. Refresh this tab and try again.') {
-			const latest = readStoredState();
+			const latest = await readStoredState();
 			if (latest) replaceDemoState(latest.state, latest.revision);
 		}
 		throw error;

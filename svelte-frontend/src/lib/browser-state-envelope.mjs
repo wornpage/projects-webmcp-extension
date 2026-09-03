@@ -5,6 +5,24 @@ export const DEMO_STATE_SCHEMA_VERSION = 1;
 const ENVELOPE_FIELDS = new Set(['schemaVersion', 'revision', 'state']);
 const REVISION_PATTERN = /^[A-Za-z0-9._@+/-]{1,200}$/u;
 
+/**
+ * Execute one complete storage operation under the browser-wide exclusive
+ * lock. Callers must perform their read, comparison, and mutation inside the
+ * callback so queued operations always re-read after acquiring the lock.
+ *
+ * @template T
+ * @param {{ request: (name: string, options: { mode: 'exclusive' }, operation: () => T | Promise<T>) => Promise<T> }} lockManager
+ * @param {string} lockName
+ * @param {() => T | Promise<T>} operation
+ * @returns {Promise<T>}
+ */
+export function withExclusiveStateStorageLock(lockManager, lockName, operation) {
+	if (!lockManager || typeof lockManager.request !== 'function' || typeof lockName !== 'string' || !lockName || typeof operation !== 'function') {
+		throw new TypeError('Browser state storage requires an exclusive lock manager.');
+	}
+	return lockManager.request(lockName, { mode: 'exclusive' }, operation);
+}
+
 /** @param {unknown} value */
 function looksLikeEnvelope(value) {
 	return Boolean(value && typeof value === 'object' && !Array.isArray(value) &&
