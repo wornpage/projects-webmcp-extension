@@ -326,7 +326,7 @@
 	.challenge-portability p { color: var(--worn-text-secondary); font-size: 13px; line-height: 1.45; margin: 0; }
 	.challenge-portability-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
 	:global(.challenge-export-primary.worn-btn), .challenge-import-label { inline-size: 114px; }
-	.challenge-import-label { align-items: center; block-size: 32px; border: 1px solid var(--worn-border-strong); border-radius: var(--worn-radius-sm); box-sizing: border-box; cursor: pointer; display: inline-flex; font-family: var(--font-typewriter); font-size: 12px; font-weight: 610; justify-content: center; line-height: 14.4px; padding: 4px 10px; }
+	.challenge-import-label { align-items: center; background: var(--worn-surface); block-size: 32px; border: 1px solid var(--worn-border); border-radius: var(--worn-radius); box-sizing: border-box; cursor: pointer; display: inline-flex; font-family: var(--font-typewriter); font-size: 12px; font-weight: 610; justify-content: center; line-height: 14.4px; padding: 4px 10px; }
 	.challenge-import-label input { max-width: 1px; opacity: 0; position: absolute; }
 	.challenge-import-preview { color: var(--worn-text-secondary); font-size: 13px; }
 	.challenge-import-error { color: var(--worn-danger) !important; }
