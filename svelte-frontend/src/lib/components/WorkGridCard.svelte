@@ -43,6 +43,7 @@
 	} = $props();
 	let cmd = $derived(primaryCommand(pack));
 	let commandHref = $derived(PACK_ACTIONS.has(cmd.action) ? undefined : primaryCommandNavigation(pack));
+	let titleHref = $derived(`/next?pack=${encodeURIComponent(pack.id || '')}`);
 	let statusLabel = $derived(packStatusLabel(pack.status));
 
 </script>
@@ -67,7 +68,7 @@
 	{#if batchMode}
 		{@render batchCheckbox(pack)}
 	{/if}
-	<a class="grid-card-title" href={`/next?pack=${encodeURIComponent(pack.id || '')}`} aria-label={`Set the next action for ${workTitle(pack)}`}>{workTitle(pack)}</a>
+	<a class="grid-card-title" href={titleHref} aria-label={`Set the next action for ${workTitle(pack)}`}>{workTitle(pack)}</a>
 	<div class="grid-card-meta">
 		{#if pack.owner}
 			<span>{pack.owner}</span>
@@ -85,8 +86,9 @@
 			</span>
 		</div>
 	{/if}
+	{#if !commandHref || commandHref !== titleHref}
 	<div class="grid-card-quick">
-	{#if commandHref}
+		{#if commandHref}
 			<WornButton data-work-primary-navigation href={commandHref} size="sm" variant="primary"
 				aria-label={`${cmd.label} for ${workTitle(pack)}`}
 				title={cmd.label}
@@ -103,6 +105,7 @@
 			>{busyId === pack.id ? '…' : cmd.label}</WornButton>
 		{/if}
 	</div>
+	{/if}
 </div>
 
 <style>

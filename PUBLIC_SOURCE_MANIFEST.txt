@@ -27,8 +27,10 @@ scripts/generate-public-manifest.mjs
 scripts/inline-script-bodies.mjs
 scripts/run-webmcp-contracts.mjs
 scripts/static-artifact-contract.test.mjs
+scripts/webmcp-header-responsive-smoke.mjs
 scripts/webmcp-recording-preflight-contract.test.mjs
 scripts/webmcp-recording-preflight.mjs
+scripts/work-interaction-polish-smoke.mjs
 SECURITY.md
 SOURCE_PROVENANCE.md
 svelte-frontend/package-lock.json

@@ -437,8 +437,11 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 					/^\.challenge-brand(?:\.[\w-]+)? span(?::where\([^)]*\))?$/u.test(selector)
 			)
 		);
+		const compactBrandLayoutOverrides = compactBrandRules.filter(({ declarations }) =>
+			['padding', 'padding-inline', 'overflow', 'text-overflow', 'white-space'].some((property) => declarations.has(property))
+		);
 		assert.deepEqual(
-			compactBrandRules,
+			compactBrandLayoutOverrides,
 			[],
 			`compact compiled Svelte CSS ${prelude} does not override challenge-brand padding or ellipsis containment`
 		);

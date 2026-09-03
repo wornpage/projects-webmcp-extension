@@ -23,6 +23,7 @@ import {
 import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
 import { decisionWorkspaceReviewFocusRequest, decisionWorkspaceReviewHref } from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
 import { summarizeWorkMetadata } from '../svelte-frontend/src/lib/work-metadata.mjs';
+import { primaryCommand, primaryCommandNavigation } from '../svelte-frontend/src/lib/demo-workflow.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
@@ -636,6 +637,21 @@ test('Work primary actions keep their visible command and add work-item context'
 	assert.match(workListCardSource, /<WornButton data-work-primary-mutation[^>]*aria-label=\{`\$\{command\.label\} for \$\{workTitle\(pack\)\}`\}/u);
 });
 
+test('Work titles own same-destination Next navigation while distinct commands remain available', () => {
+	const sameDestinationPack = { id: 'same destination', next: '' };
+	assert.equal(primaryCommand(sameDestinationPack).action, 'set-next');
+	assert.equal(primaryCommandNavigation(sameDestinationPack), '/next?pack=same%20destination');
+	assert.equal(primaryCommandNavigation({ id: 'blocked', blocker: 'Waiting', next: 'Open' }), '/review?focus=blocked');
+	assert.equal(primaryCommand({ id: 'finish', next: 'Done' }).action, 'done');
+	for (const source of [workGridCardSource, workListCardSource]) {
+		assert.match(source, /let titleHref = \$derived\(`\/next\?pack=\$\{encodeURIComponent\(pack\.id \|\| ''\)\}`\);/u);
+		assert.match(source, /\{#if !commandHref \|\| commandHref !== titleHref\}/u);
+		assert.doesNotMatch(source, /commandHref === titleHref/u);
+	}
+	assert.match(workGridCardSource, /<a class="grid-card-title" href=\{titleHref\}/u);
+	assert.match(workListCardSource, /class="demo-card-title"[\s\S]*?href=\{titleHref\}/u);
+});
+
 test('custom workers create only bounded Draft-status work with visible human authority', async () => {
 	let received = null;
 	const tool = createWorkDraftsTool(async (input) => {
@@ -719,6 +735,8 @@ test('Quick Add stays available through the one createPack path in both Work den
 	const densityPanelsIndex = routeSource.indexOf('{#each densityPanelTabs');
 	assert.ok(quickAddIndex >= 0 && quickAddIndex < densityPanelsIndex, 'Quick Add is owned once outside the density panels');
 	assert.match(routeSource, /import WorkQuickAdd from '\.\/WorkQuickAdd\.svelte';[\s\S]*?let quickAddBusy = \$state\(false\);[\s\S]*?if \(quickAddBusy \|\| busyId\)[\s\S]*?<WorkQuickAdd[\s\S]*?filters=\{\{ owner: ownerFilter, area: areaFilter, energy: energyFilter, recurrence: recurrenceFilter \}\}[\s\S]*?bind:busy=\{quickAddBusy\}/u);
+	assert.match(routeSource, /function revealQuickAddReceipt\(\) \{[\s\S]*?dismissedReceiptSummary = '';[\s\S]*?revealReceipt\(\);[\s\S]*?\}/u);
+	assert.match(routeSource, /<WorkQuickAdd[\s\S]*?onCreated=\{revealQuickAddReceipt\}[\s\S]*?bind:busy=\{quickAddBusy\}/u);
 	assert.match(routeSource, /\(e\.key === 'n' \|\| e\.key === 'c'\)[\s\S]*?document\.querySelector<HTMLInputElement>\('\.quick-create-input'\)[\s\S]*?input\.focus\(\)/u);
 	assert.doesNotMatch(workQuickAddSource, /@media\(max-width:420px\)\{[\s\S]*?\.quick-create-row\{display:none\}/u);
 	const quickCreateSource = workQuickAddSource.match(/async function quickCreate\(\) \{[\s\S]*?\n\t\}/u)?.[0] ?? '';
@@ -731,6 +749,8 @@ test('Quick Add stays available through the one createPack path in both Work den
 	assert.match(quickCreateSource, /normalizedEnergy = PACK_ENERGIES\.includes\(energy\)[\s\S]*?filters\.energy !== 'all' && PACK_ENERGIES\.includes\(filters\.energy\) \? filters\.energy : ''/u);
 	assert.match(quickCreateSource, /normalizedRecurrence = recurrence\.trim\(\) \|\| \(filters\.recurrence !== 'all' \? filters\.recurrence : ''\)/u);
 	assert.match(quickCreateSource, /if \(!normalizedTitle \|\| busy\) return;[\s\S]*?busy = true;[\s\S]*?try \{[\s\S]*?await createPack/u);
+	assert.match(workQuickAddSource, /onCreated\?: \(\) => void;/u);
+	assert.match(quickCreateSource, /await createPack\([\s\S]*?\}\);[\s\S]*?onCreated\?\.\(\);/u);
 	for (const field of ['title', 'proofTarget', 'owner', 'area', 'type', 'due', 'energy', 'recurrence']) {
 		assert.match(quickCreateSource, new RegExp(`${field} = '';`, 'u'));
 	}
@@ -749,6 +769,7 @@ test('Quick Add stays available through the one createPack path in both Work den
 	const createPackSource = demoClientSource.match(/export async function createPack[\s\S]*?\n\}\n\nfunction pathSignature/u)?.[0] ?? '';
 	assert.match(demoClientSource, /const CREATE_PACK_FIELDS = new Set\(\[[\s\S]*?'title',[\s\S]*?'status',[\s\S]*?'next',[\s\S]*?'blocker',[\s\S]*?'owner',[\s\S]*?'area',[\s\S]*?'type',[\s\S]*?'due',[\s\S]*?'energy',[\s\S]*?'recurrence',[\s\S]*?'purpose',[\s\S]*?'doneWhen'[\s\S]*?\]\);/u);
 	assert.match(createPackSource, /Object\.keys\(payload\)\.filter\(\(field\) => !CREATE_PACK_FIELDS\.has\(field\)\)\.sort\(\)[\s\S]*?Work creation does not support field/u);
+	assert.match(createPackSource, /const summary = `Created \$\{formatWorkTitle\(fields\.title\)\}\.`;[\s\S]*?const receipt: DemoReceipt = \{ summary, pack \};[\s\S]*?draft\.actionReceipt = receipt;[\s\S]*?if \(!state\?\.actionReceipt\?\.pack\) throw new ChallengeStateError\('Created work did not return a receipt\.'\);/u);
 	assert.match(createPackSource, /const due = normalizeText\(payload\.due, 40\);[\s\S]*?!parseDateOnly\(due\)[\s\S]*?const energy = normalizeText\(payload\.energy, 40\);[\s\S]*?!PACK_ENERGIES\.includes\(energy\)/u);
 	for (const [field, limit] of [['owner', 120], ['area', 120], ['type', 120], ['recurrence', 120], ['purpose', 1000], ['doneWhen', 1000]]) {
 		assert.match(createPackSource, new RegExp(`const ${field} = normalizeText\\(payload\\.${field}, ${limit}\\);`, 'u'));

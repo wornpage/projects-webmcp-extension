@@ -701,6 +701,11 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		}, 80);
 	}
 
+	function revealQuickAddReceipt() {
+		dismissedReceiptSummary = '';
+		revealReceipt();
+	}
+
 	function runPrimary(pack: DemoPack) {
 		const command = primaryCommand(pack);
 		if (PACK_ACTIONS.has(command.action)) {
@@ -1026,6 +1031,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 
 	<WorkQuickAdd
 		filters={{ owner: ownerFilter, area: areaFilter, energy: energyFilter, recurrence: recurrenceFilter }}
+		onCreated={revealQuickAddReceipt}
 		bind:busy={quickAddBusy}
 	/>
 
