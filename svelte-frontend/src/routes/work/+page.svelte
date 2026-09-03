@@ -138,10 +138,12 @@
 	let snoozeDays = $state<Record<string, string>>({});
 	let quickAddBusy = $state(false);
 	let sortBy = $state('urgency');
+	let manualOrderAnnouncement = $state('');
+	let manualOrder = $derived(($demoState?.manualOrder ?? []) as string[]);
 	let renderLimit = $state(WORK_RENDER_LIMIT);
 
 	let filter = $derived($demoState?.filter || 'all');
-	let visible = $derived((()=>{let v=orderPacks(filterPacks(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone), sortBy);if(dueUrgencyFilter!=='all'){v=v.filter(p=>dueUrgency(p)===dueUrgencyFilter)}const sel=$demoState?.selectedId;if(focusMode&&sel){return v.filter(p=>p.id===sel)}return v})());
+	let visible = $derived((()=>{let v=orderPacks(filterPacks(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone), sortBy, manualOrder);if(dueUrgencyFilter!=='all'){v=v.filter(p=>dueUrgency(p)===dueUrgencyFilter)}const sel=$demoState?.selectedId;if(focusMode&&sel){return v.filter(p=>p.id===sel)}return v})());
 	let decisionWorkspace = $derived(recommendedDecisionWork(visible));
 	let decisionWorkspaceDecider = $derived(
 		decisionWorkspace
@@ -487,7 +489,8 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
   if (e.key === 'ArrowDown') { e.preventDefault(); const next = (current + 1) % cards.length; (cards[next] as HTMLElement)?.focus(); focusedIndex = next; return; }
   if (e.key === 'ArrowUp') { e.preventDefault(); const prev = (current - 1 + cards.length) % cards.length; (cards[prev] as HTMLElement)?.focus(); focusedIndex = prev; return; }
   // Action shortcuts on focused cards
-  if (current < 0) return;
+	if (current < 0) return;
+	if (sortBy === 'manual' && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); void moveFocusedManual(e.key === 'ArrowUp' ? -1 : 1); return; }
   const packId = (cards[current] as HTMLElement)?.dataset?.packId;
   if (!packId) return;
   const pack = packs.find(p => p.id === packId);
@@ -855,6 +858,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	}
 	function handleDragOver(e: DragEvent, packId: string) {
 		if (batchMode) return;
+		if (sortBy !== 'manual') return;
 		if (!dragSrcId || packId === dragSrcId) return;
 		e.preventDefault();
 		e.dataTransfer!.dropEffect = 'move';
@@ -868,19 +872,41 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	}
 	function handleDrop(e: DragEvent, targetId: string) {
 		if (batchMode) { e.preventDefault(); return; }
+		if (sortBy !== 'manual') { e.preventDefault(); handleDragEnd(); return; }
 		e.preventDefault();
 		const sourceId = dragSrcId;
 		handleDragEnd();
 		if (!sourceId || sourceId === targetId) return;
 		saveBrowserState((draft) => {
-			const from = draft.packs.findIndex((p) => p.id === sourceId);
-			const to = draft.packs.findIndex((p) => p.id === targetId);
+			const order = [...((draft.manualOrder as string[] | undefined) || draft.packs.map((pack) => pack.id))];
+			const from = order.indexOf(sourceId);
+			const to = order.indexOf(targetId);
 			if (from < 0 || to < 0) return;
-			const [item] = draft.packs.splice(from, 1);
-			draft.packs.splice(to, 0, item);
+			order.splice(from, 1);
+			order.splice(order.indexOf(targetId), 0, sourceId);
+			draft.manualOrder = order;
 		}).catch(() => {
 			displayToast('Reorder did not save.', 'error');
 		});
+	}
+	async function moveFocusedManual(delta: -1 | 1) {
+		if (sortBy !== 'manual' || busyId) return;
+		const focusedId = (document.activeElement as HTMLElement | null)?.dataset.packId || '';
+		const currentIndex = visible.findIndex((pack) => pack.id === focusedId);
+		const target = visible[currentIndex + delta];
+		if (!focusedId || currentIndex < 0 || !target?.id) return;
+		try {
+			await saveBrowserState((draft) => {
+				const order = [...((draft.manualOrder as string[] | undefined) || draft.packs.map((pack) => pack.id))];
+				const from = order.indexOf(focusedId);
+				const to = order.indexOf(target.id);
+				if (from < 0 || to < 0) return;
+				order.splice(from, 1);
+				order.splice(order.indexOf(target.id) + (delta > 0 ? 1 : 0), 0, focusedId);
+				draft.manualOrder = order;
+			});
+			manualOrderAnnouncement = `${workTitle(packs.find((pack) => pack.id === focusedId) || target)} moved ${delta < 0 ? 'before' : 'after'} ${workTitle(target)}.`;
+		} catch { displayToast('Manual reorder did not save.', 'error'); }
 	}
 	// Drag-to-energy: drop a card on an energy chip to set its energy level
 	let energyDragTarget = $state('');
@@ -1013,13 +1039,21 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		bind:busyId
 		bind:errorText
 	/>
+	{#if sortBy === 'manual' && visible.length > 1}
+		<div class="manual-order-toolbar" role="toolbar" aria-label="Manual ordering controls">
+			<span>Manual order</span>
+			<WornButton size="sm" type="button" onclick={() => moveFocusedManual(-1)}>Move focused up</WornButton>
+			<WornButton size="sm" type="button" onclick={() => moveFocusedManual(1)}>Move focused down</WornButton>
+			<span class="sr-only" aria-live="polite">{manualOrderAnnouncement}</span>
+		</div>
+	{/if}
 
 	{#if receiptVisible && receipt}
 		<WornReceipt id="work-receipt"
 			summary={receipt.summary || ''}
 			announce={false}
 			cells={receipt.pack ? receiptCells(receipt.pack) : []}
-			undoAvailable={$receiptUndo && receipt.pack?.id ? $receiptUndo.packId === receipt.pack.id : false}
+			undoAvailable={receipt ? ($receiptUndo?.type === 'batch' || Boolean($receiptUndo && receipt.pack?.id && $receiptUndo.type === 'action' && $receiptUndo.packId === receipt.pack.id)) : false}
 			onundo={() => undoReceipt()}
 			ondone={() => (dismissedReceiptSummary = receipt?.summary || '')}
 		/>
@@ -1106,7 +1140,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				{busyAction}
 				{batchCheckbox}
 				{receipt}
-				receiptUndo={$receiptUndo}
+				receiptUndo={$receiptUndo?.type === 'action' ? $receiptUndo : null}
 				{snoozeDays}
 				onCardClick={handleCardClick}
 				onCardKeydown={handleCardKeys}

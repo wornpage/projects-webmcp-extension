@@ -7,7 +7,7 @@
 		runPackBatchAction,
 		ChallengeStateError
 	} from '$lib/demo-client';
-	import { commitActionUndo } from '$lib/undo';
+	import { buildBatchUndoSnapshot, commitActionUndo } from '$lib/undo';
 	import { WornButton } from '$lib/components';
 	import type { DemoPack } from '$lib/demo-workflow';
 	import WorkDeleteConfirmDialog from '$lib/WorkDeleteConfirmDialog.svelte';
@@ -89,10 +89,11 @@
 		busyAction = action;
 		errorText = '';
 		let completedBatchAction = false;
+		const undoSnapshot = action === 'delete' ? null : buildBatchUndoSnapshot(packs, selectedIds, action);
 		try {
 			const result = await runPackBatchAction(selectedIds, action);
 			if (!result) throw new ChallengeStateError('The batch action returned no receipt.');
-			commitActionUndo(null);
+			commitActionUndo(result.appliedCount > 0 ? undoSnapshot : null);
 			displayToast(result.receipt.summary || 'Batch action complete.', 'success');
 			selected.clear();
 			completedBatchAction = true;

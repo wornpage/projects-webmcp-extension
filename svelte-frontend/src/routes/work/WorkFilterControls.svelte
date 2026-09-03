@@ -172,7 +172,8 @@
 					{ value: 'title', label: 'Title' },
 					{ value: 'status', label: 'Status' },
 					{ value: 'energy', label: 'Energy' },
-					{ value: 'recent', label: 'Recent' }
+					{ value: 'recent', label: 'Recent' },
+					{ value: 'manual', label: 'Manual' }
 				]}
 			/>
 			{#if packCount > 1}

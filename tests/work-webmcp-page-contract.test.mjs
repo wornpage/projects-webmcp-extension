@@ -23,7 +23,7 @@ import {
 import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
 import { decisionWorkspaceReviewFocusRequest, decisionWorkspaceReviewHref } from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
 import { summarizeWorkMetadata } from '../svelte-frontend/src/lib/work-metadata.mjs';
-import { filterPacks, primaryCommand, primaryCommandNavigation } from '../svelte-frontend/src/lib/demo-workflow.ts';
+import { filterPacks, orderPacks, primaryCommand, primaryCommandNavigation } from '../svelte-frontend/src/lib/demo-workflow.ts';
 import { planBatchAction, removePacksAndReferences, repairActiveSelection } from '../svelte-frontend/src/lib/batch-actions.mjs';
 import { recentPackActivity } from '../svelte-frontend/src/lib/activity.ts';
 
@@ -115,6 +115,15 @@ test('archived work appears only in the archived status view', () => {
 	assert.deepEqual(filterPacks(packs, 'archived', '').map((pack) => pack.id), ['archived-active']);
 	assert.match(routeSource, /let recentPacks = \$derived\([\s\S]*?Boolean\(pack && !pack\.archived\)/u);
 	assert.match(routeSource, /if \(!pack\.archived\) next\[pack\.status \|\| ''\]/u);
+});
+
+test('Manual sort owns a stable persisted order and keyboard controls', () => {
+	const packs = [{ id: 'a', title: 'A' }, { id: 'b', title: 'B' }, { id: 'c', title: 'C' }];
+	assert.deepEqual(orderPacks(packs, 'manual', ['c', 'a', 'b']).map((pack) => pack.id), ['c', 'a', 'b']);
+	assert.match(workflowSource, /orderPacks\(packs: DemoPack\[\], sortBy = 'urgency', manualOrder: string\[\] = \[\]\)/u);
+	assert.match(routeSource, /sortBy === 'manual' && e\.altKey[\s\S]*?moveFocusedManual/u);
+	assert.match(routeSource, /Manual ordering controls[\s\S]*?Move focused up[\s\S]*?Move focused down[\s\S]*?aria-live="polite"/u);
+	assert.match(workFilterControlsSource, /value: 'manual', label: 'Manual'/u);
 });
 
 test('Work focus mode implements and documents its advertised F shortcut', () => {
@@ -605,7 +614,7 @@ test('Work batch actions are planned by eligibility, committed once, and restore
 	const beforeFirstMutation = batchAction.match(/async function runBatchAction\([\s\S]*?\n\t\ttry \{/u)?.[0] ?? '';
 	assert.match(beforeFirstMutation, /if \(selectedIds\.length === 0 \|\| busyId\) return;[\s\S]*?busyId = 'batch';[\s\S]*?busyAction = action;[\s\S]*?errorText = '';[\s\S]*?try \{/u);
 	assert.doesNotMatch(beforeFirstMutation, /await /u);
-	assert.match(batchAction, /const result = await runPackBatchAction\(selectedIds, action\);[\s\S]*?commitActionUndo\(null\);[\s\S]*?displayToast\(result\.receipt\.summary \|\| 'Batch action complete\.', 'success'\)/u);
+	assert.match(batchAction, /const undoSnapshot = action === 'delete' \? null : buildBatchUndoSnapshot\(packs, selectedIds, action\);[\s\S]*?const result = await runPackBatchAction\(selectedIds, action\);[\s\S]*?commitActionUndo\(result\.appliedCount > 0 \? undoSnapshot : null\);[\s\S]*?displayToast\(result\.receipt\.summary \|\| 'Batch action complete\.', 'success'\)/u);
 	assert.doesNotMatch(batchAction, /for \(const id|runPackAction|saveBrowserState/u);
 	assert.match(batchAction, /catch \(error\) \{[\s\S]*?error instanceof ChallengeStateError[\s\S]*?\? error\.message[\s\S]*?: 'The batch action failed — the local state is unchanged\.';[\s\S]*?if \(reportError\) errorText = message;[\s\S]*?else throw new Error\(message\);/u);
 	assert.match(batchAction, /finally \{[\s\S]*?busyAction = null;[\s\S]*?busyId = '';[\s\S]*?actionBusy\.set\(''\);/u);

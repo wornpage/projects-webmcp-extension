@@ -544,7 +544,7 @@
 			summary={receipt.summary}
 			announce={false}
 			cells={receiptCells(receipt.pack)}
-			undoAvailable={!!($receiptUndo && $receiptUndo.packId === receipt.pack.id)}
+		undoAvailable={!!($receiptUndo?.type === 'action' && $receiptUndo.packId === receipt.pack.id)}
 			onundo={() => undoReceipt()}
 		/>
 	{/if}
