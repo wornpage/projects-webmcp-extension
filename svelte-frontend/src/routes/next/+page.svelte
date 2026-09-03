@@ -737,8 +737,12 @@
 		{#if $demoStateError}
 			<WornError message="Could not load next actions" detail={$demoStateError} onretry={refreshNext} />
 		{/if}
-		<WornEmpty title="No sample work available">
+		<WornEmpty
+			title="No sample work available"
+			description="Choose a work item in Work or load the challenge sample before preparing next actions."
+		>
 			<WornButton variant="primary" href="/webmcp-challenge">Open guide</WornButton>
+			<WornButton href="/work">Open Work</WornButton>
 		</WornEmpty>
 	</WornPage>
 {/if}
