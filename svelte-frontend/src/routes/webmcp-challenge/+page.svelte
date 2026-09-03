@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { WornAccordion, WornBadge, WornButton, WornPage, WornReceipt } from '$lib/components';
+	import { WornAccordion, WornBadge, WornButton, WornDialog, WornPage, WornReceipt } from '$lib/components';
 	import AgentBriefEditor from '$lib/AgentBriefEditor.svelte';
 	import { ChallengeStateError, demoState, displayToast, exportWorkspaceState, importWorkspaceState, previewWorkspaceImport, resetDemoSampleState, type WorkspaceImportPreview } from '$lib/demo-client';
 	import { filterPacks, type DemoPack } from '$lib/demo-workflow';
@@ -60,6 +60,7 @@
 	let importError = $state('');
 	let importInput = $state<HTMLInputElement | null>(null);
 	let exportHref = $state('');
+	let replaceConfirmOpen = $state(false);
 
 	function prepareWorkspaceExport() {
 		if (exportHref) URL.revokeObjectURL(exportHref);
@@ -92,6 +93,14 @@
 		} finally {
 			importBusy = false;
 		}
+	}
+
+	function requestWorkspaceImport(mode: 'replace' | 'merge') {
+		if (mode === 'replace') {
+			replaceConfirmOpen = true;
+			return;
+		}
+		void applyWorkspaceImport(mode);
 	}
 
 	async function resetLiveSample() {
@@ -193,7 +202,7 @@
 					{#if importError}<p class="challenge-import-error" role="alert">{importError}</p>{/if}
 						{#if importPreview}
 							<div class="challenge-import-preview" aria-live="polite"><strong>Preview:</strong> {importPreview.packs} work items · {importPreview.pendingApprovals} pending approvals · {importPreview.collisions} existing ID collisions{importPreview.collisionIds.length ? ` (${importPreview.collisionIds.join(', ')})` : ''}.</div>
-							<div class="challenge-portability-actions"><WornButton size="sm" variant="primary" disabled={importBusy} onclick={() => applyWorkspaceImport('merge')}>Merge</WornButton><WornButton size="sm" variant="danger" disabled={importBusy} onclick={() => applyWorkspaceImport('replace')}>Replace</WornButton></div>
+							<div class="challenge-portability-actions"><WornButton size="sm" variant="primary" disabled={importBusy} onclick={() => requestWorkspaceImport('merge')}>Merge</WornButton><WornButton size="sm" variant="danger" disabled={importBusy} onclick={() => requestWorkspaceImport('replace')}>Replace</WornButton></div>
 						{/if}
 					</section>
 				</div>
@@ -237,6 +246,14 @@
 		</WornAccordion>
 	</div>
 </WornPage>
+
+<WornDialog bind:open={replaceConfirmOpen} title="Confirm workspace replacement" size="sm">
+	<p class="challenge-replace-warning">Replace will discard the current browser-local workspace and restore the imported file. This cannot be undone unless you export a backup first.</p>
+	<div class="challenge-portability-actions">
+		<WornButton type="button" onclick={() => (replaceConfirmOpen = false)}>Cancel</WornButton>
+		<WornButton type="button" variant="danger" disabled={importBusy} onclick={() => { replaceConfirmOpen = false; void applyWorkspaceImport('replace'); }}>Confirm Replace</WornButton>
+	</div>
+</WornDialog>
 
 <style>
 	.challenge-guide {
@@ -309,6 +326,7 @@
 	.challenge-import-label input { max-width: 1px; opacity: 0; position: absolute; }
 	.challenge-import-preview { color: var(--worn-text-secondary); font-size: 13px; }
 	.challenge-import-error { color: var(--worn-danger) !important; }
+	.challenge-replace-warning { color: var(--worn-text-secondary); line-height: 1.5; margin: 0 0 12px; }
 	.challenge-safety h2 {
 		font-size: 14px;
 		margin: 0 0 8px;
