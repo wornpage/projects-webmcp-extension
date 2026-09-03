@@ -16,9 +16,11 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm --prefix svelte-frontend ci --ignore-scripts
-      - uses: browser-actions/setup-chrome@v1
-        id: chrome
+      - name: Resolve hosted Chrome
+        shell: bash
+        run: |
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          test -n "$chrome"
+          echo "CHROME_EXECUTABLE_PATH=$chrome" >> "$GITHUB_ENV"
       - run: npm run verify
       - run: npm run test:browser
-        env:
-          CHROME_EXECUTABLE_PATH: ${{ steps.chrome.outputs.chrome-path }}
