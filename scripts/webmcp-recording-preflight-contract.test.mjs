@@ -297,12 +297,13 @@ test('runtime assertions substantively own catalogs, bounded actions, authority,
 });
 
 test('Chrome lookup has one explicit override, supported installed paths, and bounded temp deletion', async () => {
-	assert.deepEqual(chromeExecutableCandidates({
+	const candidates = chromeExecutableCandidates({
 		CHROME_EXECUTABLE_PATH: 'D:\\Chrome for Testing\\chrome.exe',
 		'PROGRAMFILES(X86)': 'C:\\Program Files (x86)',
 		ProgramFiles: 'C:\\Program Files',
 		LOCALAPPDATA: 'C:\\Users\\tester\\AppData\\Local'
-	}), [
+	}).map((candidate) => path.win32.normalize(candidate));
+	assert.deepEqual(candidates, [
 		'D:\\Chrome for Testing\\chrome.exe',
 		'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
 		'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
