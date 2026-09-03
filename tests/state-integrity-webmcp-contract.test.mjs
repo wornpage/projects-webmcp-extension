@@ -189,6 +189,14 @@ test('pending approvals center exposes every proposal with evidence status and r
 	assert.match(center, /Review on Next[\s\S]*?Discard/u);
 });
 
+test('workspace portability previews before explicit merge or replace', () => {
+	const client = readFileSync(new URL('../svelte-frontend/src/lib/demo-client.ts', import.meta.url), 'utf8');
+	assert.match(client, /exportWorkspaceState[\s\S]*?previewWorkspaceImport[\s\S]*?importWorkspaceState[\s\S]*?mode: WorkspaceImportMode/u);
+	assert.match(client, /delete copy\.status[\s\S]*?copy\.actionReceipt = null/u);
+	const guide = readFileSync(new URL('../svelte-frontend/src/routes/webmcp-challenge/+page.svelte', import.meta.url), 'utf8');
+	assert.match(guide, /Prepare export[\s\S]*?Download export[\s\S]*?Import export[\s\S]*?Preview:[\s\S]*?Merge[\s\S]*?Replace/u);
+});
+
 test('exclusive migration interleaving cannot overwrite a queued normal write or deadlock', { timeout: 1_000 }, async () => {
 	const locks = deterministicLockManager();
 	const migrationStarted = deferred();

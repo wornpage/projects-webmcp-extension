@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { WornAccordion, WornBadge, WornButton, WornPage, WornReceipt } from '$lib/components';
 	import AgentBriefEditor from '$lib/AgentBriefEditor.svelte';
-	import { ChallengeStateError, demoState, displayToast, resetDemoSampleState } from '$lib/demo-client';
+	import { ChallengeStateError, demoState, displayToast, exportWorkspaceState, importWorkspaceState, previewWorkspaceImport, resetDemoSampleState, type WorkspaceImportPreview } from '$lib/demo-client';
 	import { filterPacks, type DemoPack } from '$lib/demo-workflow';
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import { resetWebMcpHandoffSession } from '$lib/webmcp-handoff-store';
@@ -55,6 +55,44 @@
 		(query) => filterPacks(guidePacks, 'all', query).length
 	));
 	let selectedMatchingCount = $derived(filterPacks(guidePacks, 'all', workQuery).length);
+	let importBusy = $state(false);
+	let importPreview = $state<WorkspaceImportPreview | null>(null);
+	let importError = $state('');
+	let importInput = $state<HTMLInputElement | null>(null);
+	let exportHref = $state('');
+
+	function prepareWorkspaceExport() {
+		if (exportHref) URL.revokeObjectURL(exportHref);
+		exportHref = URL.createObjectURL(new Blob([exportWorkspaceState()], { type: 'application/json' }));
+		displayToast('Workspace export is ready to download.', 'success');
+	}
+
+	async function selectWorkspaceFile(event: Event) {
+		const file = (event.currentTarget as HTMLInputElement).files?.[0];
+		importPreview = null;
+		importError = '';
+		if (!file) return;
+		try {
+			importPreview = previewWorkspaceImport(await file.text());
+		} catch (error) {
+			importError = error instanceof Error ? error.message : 'The workspace export is invalid.';
+		}
+	}
+
+	async function applyWorkspaceImport(mode: 'replace' | 'merge') {
+		if (!importPreview || importBusy) return;
+		importBusy = true;
+		try {
+			const result = await importWorkspaceState(importPreview.serialized, mode);
+			displayToast(mode === 'replace' ? `Workspace replaced with ${result.packs} work items.` : `Workspace merged with ${result.packs} new work items${result.skipped ? ` (${result.skipped} existing skipped)` : ''}.`, 'success');
+			importPreview = null;
+			if (importInput) importInput.value = '';
+		} catch (error) {
+			importError = error instanceof Error ? error.message : 'The workspace could not be imported.';
+		} finally {
+			importBusy = false;
+		}
+	}
 
 	async function resetLiveSample() {
 		if (resettingSample) return;
@@ -144,6 +182,20 @@
 						</WornButton>
 						<span>Explicitly restores this browser’s bundled sample and clears its prior local results.</span>
 					</div>
+					<section class="challenge-portability" aria-labelledby="workspace-portability-title">
+						<h2 id="workspace-portability-title">Workspace portability</h2>
+						<p>Export a validated local backup or preview an export before replacing or merging it.</p>
+						<div class="challenge-portability-actions">
+							<WornButton type="button" size="sm" onclick={prepareWorkspaceExport}>Prepare export</WornButton>
+							{#if exportHref}<a class="challenge-export-link" href={exportHref} download="projects-workspace.json">Download export</a>{/if}
+							<label class="challenge-import-label">Import export<input bind:this={importInput} type="file" accept="application/json" onchange={selectWorkspaceFile} /></label>
+						</div>
+					{#if importError}<p class="challenge-import-error" role="alert">{importError}</p>{/if}
+						{#if importPreview}
+							<div class="challenge-import-preview" aria-live="polite"><strong>Preview:</strong> {importPreview.packs} work items · {importPreview.pendingApprovals} pending approvals · {importPreview.collisions} existing ID collisions.</div>
+							<div class="challenge-portability-actions"><WornButton size="sm" variant="primary" disabled={importBusy} onclick={() => applyWorkspaceImport('merge')}>Merge</WornButton><WornButton size="sm" variant="danger" disabled={importBusy} onclick={() => applyWorkspaceImport('replace')}>Replace</WornButton></div>
+						{/if}
+					</section>
 				</div>
 				<ol class="challenge-steps" aria-label="Three-step Projects handoff workflow">
 					{#each steps as step, index (step.href)}
@@ -249,6 +301,14 @@
 		gap: 8px;
 		line-height: 1.45;
 	}
+	.challenge-portability { background: var(--worn-surface); border: 1px solid var(--worn-border); border-radius: var(--worn-radius); display: grid; gap: 8px; padding: 14px; }
+	.challenge-portability h2 { font-size: 16px; margin: 0; }
+	.challenge-portability p { color: var(--worn-text-secondary); font-size: 13px; line-height: 1.45; margin: 0; }
+	.challenge-portability-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+	.challenge-import-label { align-items: center; border: 1px solid var(--worn-border-strong); border-radius: var(--worn-radius-sm); cursor: pointer; display: inline-flex; font-size: 13px; padding: 9px 10px; }
+	.challenge-import-label input { max-width: 1px; opacity: 0; position: absolute; }
+	.challenge-import-preview { color: var(--worn-text-secondary); font-size: 13px; }
+	.challenge-import-error { color: var(--worn-danger) !important; }
 	.challenge-safety h2 {
 		font-size: 14px;
 		margin: 0 0 8px;
