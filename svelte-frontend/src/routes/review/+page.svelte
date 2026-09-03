@@ -616,11 +616,17 @@
 		{:else if firstReview}
 			<p class="review-list-count" aria-live="polite">Showing {renderedReviewCount} of {filteredVisible.length} review item.</p>
 		{:else if filteredVisible.length === 0 && reviewTotal > 0}
-			<WornEmpty title="No matches">
+			<WornEmpty
+				title="No matches"
+				description="Try clearing filters or updating the search term on the Work route."
+			>
 				<WornButton type="button" onclick={clearReviewFilters}>Clear filters</WornButton>
 			</WornEmpty>
 		{:else if reviewTotal === 0}
-			<WornEmpty title="Review is clear">
+			<WornEmpty
+				title="Review is clear"
+				description="No items are currently waiting for review."
+			>
 				<WornButton variant="primary" href="/work">Work</WornButton>
 			</WornEmpty>
 		{/if}

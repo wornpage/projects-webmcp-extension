@@ -905,16 +905,26 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 
 {#snippet workEmptyState()}
 	{#if packs.length > 0 && hasActiveFilters}
-		<WornEmpty title="No matches" description={activeFilterLabel}>
+		<WornEmpty
+			title="No matches"
+			description={`No work items match ${activeFilterLabel}.`}
+		>
 			<WornButton variant="primary" size="md" onclick={clearAllFilters} data-action="clear-filters">Clear all filters</WornButton>
 		</WornEmpty>
 	{:else if query.trim()}
-		<WornEmpty title='No work matches "{query.trim()}"'>
+		<WornEmpty
+			title={`No work matches "${query.trim()}"`}
+			description="Try a shorter or broader query, or clear search and review results."
+		>
 			<WornButton variant="primary" size="md" onclick={clearSearch}>Clear search</WornButton>
 		</WornEmpty>
 	{:else}
-		<WornEmpty title="No sample work available">
+		<WornEmpty
+			title="No sample work available"
+			description="Load the guide sample to preview each step, or add your own items in Work."
+		>
 			<WornButton variant="primary" size="md" href="/webmcp-challenge">Open guide</WornButton>
+			<WornButton size="md" href="/review">Open Review</WornButton>
 		</WornEmpty>
 	{/if}
 {/snippet}

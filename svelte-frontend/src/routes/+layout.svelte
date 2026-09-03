@@ -382,10 +382,18 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.challenge-skip {
+			transition: none;
+		}
+
 		.challenge-shell-nav,
 		.challenge-route > :global(.demo-panel),
 		.challenge-route :global([data-webmcp-receipt]) {
 			animation: none;
+		}
+
+		.challenge-skip:focus {
+			transform: none;
 		}
 
 		.challenge-shell-nav nav a {
