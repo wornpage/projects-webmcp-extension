@@ -36,6 +36,7 @@
 	const WORK_COMMAND_LIST_SELECTOR = '.work-command-palette-list';
 	const WORK_COMMAND_OPTION_SELECTOR = '.work-command-entry';
 	const WORK_COMMAND_LIST_ID = 'work-command-listbox';
+	const WORK_FILTER_INPUT_SELECTOR = 'input[aria-label="Filter work items by text"]';
 
 	let rendersCollapsible = $derived(typeof summary === 'string');
 
@@ -57,9 +58,12 @@
 			return Array.from(node.querySelectorAll<HTMLButtonElement>(WORK_COMMAND_OPTION_SELECTOR));
 		}
 
+		function optionLabel(option: HTMLButtonElement, index = 0): string {
+			return option.querySelector('span')?.textContent?.trim() || `command-${index + 1}`;
+		}
+
 		function optionSlug(option: HTMLButtonElement, index: number): string {
-			const label = option.querySelector('span')?.textContent?.trim() || `command-${index + 1}`;
-			return label
+			return optionLabel(option, index)
 				.toLocaleLowerCase('en-US')
 				.normalize('NFKD')
 				.replace(/[\u0300-\u036f]/gu, '')
@@ -184,6 +188,34 @@
 			active.click();
 		}
 
+		function closeThenFocusWorkSearch() {
+			const field = input();
+			field?.dispatchEvent(new KeyboardEvent('keydown', {
+				bubbles: true,
+				cancelable: true,
+				key: 'Escape'
+			}));
+			queueMicrotask(async () => {
+				await tick();
+				requestAnimationFrame(() => {
+					document.querySelector<HTMLInputElement>(WORK_FILTER_INPUT_SELECTOR)?.focus({ preventScroll: true });
+				});
+			});
+		}
+
+		function handleClick(event: MouseEvent) {
+			const target = event.target;
+			if (!(target instanceof Element)) return;
+			const option = target.closest<HTMLButtonElement>(WORK_COMMAND_OPTION_SELECTOR);
+			if (!option || !node.contains(option) || option.disabled || optionLabel(option) !== 'Focus search') return;
+			// Work content is inert until WornDialog completes teardown. Prevent the
+			// route's eager focus attempt, close through its existing Escape owner, and
+			// focus the visible search only after modal isolation has been released.
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			closeThenFocusWorkSearch();
+		}
+
 		function handleKeydown(event: KeyboardEvent) {
 			const field = input();
 			if (!field || event.target !== field) return;
@@ -224,6 +256,7 @@
 			childList: true,
 			subtree: true
 		});
+		node.addEventListener('click', handleClick, true);
 		node.addEventListener('keydown', handleKeydown, true);
 		node.addEventListener('input', handleInput, true);
 		node.addEventListener('focusin', handleFocusIn, true);
@@ -233,6 +266,7 @@
 			destroy() {
 				destroyed = true;
 				observer.disconnect();
+				node.removeEventListener('click', handleClick, true);
 				node.removeEventListener('keydown', handleKeydown, true);
 				node.removeEventListener('input', handleInput, true);
 				node.removeEventListener('focusin', handleFocusIn, true);
