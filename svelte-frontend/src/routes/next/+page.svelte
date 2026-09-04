@@ -37,7 +37,8 @@
 		WornError,
 		WornInput,
 		WornPage,
-		WornReceipt
+		WornReceipt,
+		WornCollapsible
 	} from '$lib/components';
 	import { workItemIssues } from '$lib/work-item-issues';
 	import { focusAndPulse } from '$lib/focus-pulse.mjs';
@@ -722,15 +723,17 @@
 			</div>
 		</div>
 
-		{#if workItemIssues(pack).length > 0}
-			<div class="next-item-warnings" data-next-item-warnings>
-				{#each workItemIssues(pack) as v}
-					<WornAlert tone="warning">{v.message}</WornAlert>
-				{/each}
-			</div>
-		{/if}
+		<WornCollapsible summary="Advanced options">
+			{#if workItemIssues(pack).length > 0}
+				<div class="next-item-warnings" data-next-item-warnings>
+					{#each workItemIssues(pack) as v}
+						<WornAlert tone="warning">{v.message}</WornAlert>
+					{/each}
+				</div>
+			{/if}
 
-		<NextCandidatePicker {packs} currentPackId={pack.id || ''} onedit={editPack} />
+			<NextCandidatePicker {packs} currentPackId={pack.id || ''} onedit={editPack} />
+		</WornCollapsible>
 	</WornPage>
 {:else}
 	<WornPage title="Next actions">

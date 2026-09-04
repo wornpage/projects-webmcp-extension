@@ -77,10 +77,10 @@
 						<WornButton
 							type="button"
 							size="sm"
-							aria-label={`Focus ${workTitle(candidate)} in Work`}
+							aria-label={`Open ${workTitle(candidate)} in Work`}
 							onclick={() => focusCandidate(candidate)}
 						>
-							Focus
+							Open in Work
 						</WornButton>
 					</div>
 				</div>

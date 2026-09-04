@@ -5,6 +5,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import Focus from '@lucide/svelte/icons/focus';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
+	import Search from '@lucide/svelte/icons/search';
 	import {
 		demoState,
 		demoStateError,
@@ -42,7 +43,7 @@
 		workTitle,
 		type DemoPack
 	} from '$lib/demo-workflow';
-	import { WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAlert, WornPage, WornReceipt, WornSelect } from '$lib/components';
+	import { WornDialog, WornEmpty, WornError, WornButton, WornIconButton, WornCheckbox, WornChip, WornAlert, WornPage, WornReceipt, WornSelect, WornInput } from '$lib/components';
 	import { buildActionUndoSnapshot, commitActionUndo, receiptUndo, undoReceipt } from '$lib/undo';
 	import { localDateInputValue } from '$lib/local-date.mjs';
 	import { summarizeWorkMetadata } from '$lib/work-metadata.mjs';
@@ -142,6 +143,103 @@
 	let manualTargetId = $state('');
 	let manualOrder = $derived(($demoState?.manualOrder ?? []) as string[]);
 	let renderLimit = $state(WORK_RENDER_LIMIT);
+	let commandPaletteOpen = $state(false);
+	let commandPaletteQuery = $state('');
+	let commandPaletteActiveIndex = $state(0);
+	type WorkCommand = {
+		id: string;
+		label: string;
+		description: string;
+		disabled?: boolean;
+		run: () => void;
+	};
+	let commandPaletteCommands = $derived.by(() => {
+		const normalized = commandPaletteQuery.trim().toLowerCase();
+		const selectedId = $demoState?.selectedId;
+		const selectedPack = packs.find((pack) => pack.id === selectedId) || null;
+		const all: WorkCommand[] = [
+			{
+				id: 'search',
+				label: 'Focus search',
+				description: 'Jump to the work filter search box.',
+				run: () => {
+					filterInput()?.focus();
+				}
+			},
+			{
+				id: 'review',
+				label: 'Open Review',
+				description: 'Jump to the review queue.',
+				run: () => {
+					goto('/review');
+				}
+			},
+			{
+				id: 'challenge',
+				label: 'Open WebMCP guide',
+				description: 'Load the handoff walkthrough.',
+				run: () => {
+					goto('/webmcp-challenge');
+				}
+			},
+			{
+				id: 'next-selected',
+				label: 'Open next for selected',
+				description: selectedPack ? `Open ${workTitle(selectedPack)} in Next` : 'Select a work item first.',
+				disabled: !selectedPack,
+				run: () => {
+					if (!selectedPack) return;
+					goto(`/next?pack=${encodeURIComponent(selectedPack.id || '')}`);
+				}
+			},
+			{
+				id: 'next-decision',
+				label: 'Open decision workspace item in Next',
+				description: decisionWorkspace ? `Open ${workTitle(decisionWorkspace.pack)} in Next` : 'No visible decision item.',
+				disabled: !decisionWorkspace,
+				run: () => {
+					if (!decisionWorkspace) return;
+					goto(`/next?pack=${encodeURIComponent(decisionWorkspace.pack.id)}`);
+				}
+			},
+			{
+				id: 'clear-filters',
+				label: 'Clear all filters',
+				description: 'Reset status, filters, sort, and search.',
+				run: () => {
+					void clearAllFilters();
+				}
+			},
+			{
+				id: 'toggle-batch',
+				label: batchMode ? 'Exit batch mode' : 'Enter batch mode',
+				description: batchMode ? 'Turn off multi-select actions.' : 'Turn on multi-select actions for the card list.',
+				run: () => {
+					toggleBatchMode();
+				}
+			},
+			{
+				id: 'toggle-focus',
+				label: focusMode ? 'Exit focus mode' : 'Enter focus mode',
+				description: focusMode ? 'Return to full list view.' : $demoState?.selectedId ? 'Focus only on the selected work item.' : 'Select a work item first.',
+				disabled: !$demoState?.selectedId,
+				run: () => {
+					toggleFocusMode();
+				}
+			},
+			{
+				id: 'show-work-command-list',
+				label: 'Show advanced controls',
+				description: 'Open advanced filter and density controls.',
+				run: () => {
+					secondaryFiltersOpen = true;
+					commandPaletteOpen = false;
+				}
+			}
+		];
+		if (!normalized) return all;
+		return all.filter((entry) => `${entry.label} ${entry.description}`.toLowerCase().includes(normalized));
+	});
 
 	let filter = $derived($demoState?.filter || 'all');
 	let visible = $derived((()=>{let v=orderPacks(filterPacks(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone), sortBy, manualOrder);if(dueUrgencyFilter!=='all'){v=v.filter(p=>dueUrgency(p)===dueUrgencyFilter)}const sel=$demoState?.selectedId;if(focusMode&&sel){return v.filter(p=>p.id===sel)}return v})());
@@ -631,6 +729,16 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	}
 	function handleWindowKeys(e: KeyboardEvent) {
 		const tag = (e.target as HTMLElement)?.tagName;
+		if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey) && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !(e.target as HTMLElement)?.isContentEditable) {
+			e.preventDefault();
+			openWorkCommandPalette();
+			return;
+		}
+		if (commandPaletteOpen && e.key === 'Escape') {
+			e.preventDefault();
+			closeWorkCommandPalette();
+			return;
+		}
 		if (shortcutHelpOpen) return;
 		if ((e.key === 'f' || e.key === 'F') && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !(e.target as HTMLElement)?.isContentEditable && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat) {
 			e.preventDefault();
@@ -648,6 +756,106 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		if ((e.key === 'n' || e.key === 'c') && tag !== 'INPUT' && tag !== 'TEXTAREA') {
 			const input = document.querySelector<HTMLInputElement>('.quick-create-input');
 			if (input) { e.preventDefault(); input.focus(); }
+		}
+	}
+
+	function closeWorkCommandPalette() {
+		commandPaletteOpen = false;
+		commandPaletteQuery = '';
+		commandPaletteActiveIndex = 0;
+	}
+
+	function openWorkCommandPalette() {
+		commandPaletteOpen = true;
+		commandPaletteQuery = '';
+		const enabled = enabledCommandIndices();
+		commandPaletteActiveIndex = enabled.length > 0 ? enabled[0] : -1;
+	}
+
+	function runWorkCommand(command: WorkCommand) {
+		if (command.disabled) return;
+		commandPaletteOpen = false;
+		commandPaletteQuery = '';
+		commandPaletteActiveIndex = 0;
+		command.run();
+	}
+
+	function runActiveWorkCommand() {
+		if (commandPaletteActiveIndex < 0) return;
+		const command = commandPaletteCommands[commandPaletteActiveIndex];
+		if (command) runWorkCommand(command);
+	}
+
+	function enabledCommandIndices() {
+		return commandPaletteCommands
+			.map((command, index) => command.disabled ? -1 : index)
+			.filter((index) => index >= 0);
+	}
+
+	function moveCommandPaletteSelection(delta: number) {
+		const enabled = enabledCommandIndices();
+		if (enabled.length === 0) {
+			commandPaletteActiveIndex = -1;
+			return;
+		}
+		if (commandPaletteActiveIndex < 0) {
+			commandPaletteActiveIndex = enabled[0];
+			return;
+		}
+		const activePosition = enabled.indexOf(commandPaletteActiveIndex);
+		if (activePosition === -1) {
+			commandPaletteActiveIndex = enabled[0];
+			return;
+		}
+		const nextPosition = (activePosition + delta + enabled.length) % enabled.length;
+		commandPaletteActiveIndex = enabled[nextPosition];
+	}
+
+	async function focusActiveCommand() {
+		await tick();
+		const button = document.querySelector<HTMLButtonElement>(`[data-work-command-index="${commandPaletteActiveIndex}"]`);
+		button?.focus();
+	}
+
+	$effect(() => {
+		if (!commandPaletteOpen) return;
+		if (commandPaletteCommands.length === 0) {
+			commandPaletteActiveIndex = -1;
+			return;
+		}
+		const enabled = enabledCommandIndices();
+		if (enabled.length === 0) {
+			commandPaletteActiveIndex = -1;
+			return;
+		}
+		if (commandPaletteActiveIndex < 0 || commandPaletteActiveIndex >= commandPaletteCommands.length || commandPaletteCommands[commandPaletteActiveIndex]?.disabled) {
+			commandPaletteActiveIndex = enabled[0];
+		}
+	});
+
+	function handleWorkCommandInputKeydown(event: KeyboardEvent) {
+		if (!commandPaletteOpen) return;
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			moveCommandPaletteSelection(1);
+			void focusActiveCommand();
+			return;
+		}
+		if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			moveCommandPaletteSelection(-1);
+			void focusActiveCommand();
+			return;
+		}
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			runActiveWorkCommand();
+			return;
+		}
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			closeWorkCommandPalette();
+			return;
 		}
 	}
 
@@ -973,6 +1181,15 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	{#snippet headActions()}
 		<div class="work-head-actions">
 			<WorkShortcutHelp bind:open={shortcutHelpOpen} />
+			<WornIconButton
+				size="sm"
+				label="Command palette"
+				title="Open command palette (⌘/Ctrl + K)"
+				aria-haspopup="dialog"
+				onclick={openWorkCommandPalette}
+			>
+				<Search aria-hidden="true" />
+			</WornIconButton>
 			{#if packs.length > 1 || batchMode}
 				<WornIconButton class={batchMode ? 'work-mode-active' : undefined} size="sm" label="Batch" title="Toggle batch select mode" data-action="batch-mode" aria-pressed={batchMode} disabled={busyId === 'batch'} onclick={toggleBatchMode}>
 					<ListChecks aria-hidden="true" />
@@ -1172,10 +1389,48 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			{@render workEmptyState()}
 		{/if}
 	</div>
-{/if}
+		{/if}
 	{/if}
 	</div>
 	{/each}
+
+	<WornDialog bind:open={commandPaletteOpen} title="Work command palette" size="sm">
+		<p class="work-command-palette-help">Filter commands with your keyboard and run one safe action.</p>
+		<WornInput
+			type="search"
+			value={commandPaletteQuery}
+			oninput={(event) => {
+				commandPaletteQuery = (event.currentTarget as HTMLInputElement).value;
+			}}
+			onkeydown={handleWorkCommandInputKeydown}
+			placeholder="Type command…"
+			aria-label="Filter work commands"
+			autofocus
+		/>
+		<div class="work-command-palette-list" role="listbox" aria-label="Work command actions">
+			{#if commandPaletteCommands.length === 0}
+				<p class="work-command-empty" role="status">No matching commands.</p>
+			{:else}
+				{#each commandPaletteCommands as command, commandIndex (command.id)}
+					<button
+						type="button"
+						data-work-command-index={commandIndex}
+						class="work-command-entry"
+						disabled={command.disabled}
+						class:work-command-entry-active={commandIndex === commandPaletteActiveIndex}
+						onclick={() => runWorkCommand(command)}
+						onfocus={() => (commandPaletteActiveIndex = commandIndex)}
+					>
+						<span>{command.label}</span>
+						<small>{command.description}</small>
+					</button>
+				{/each}
+			{/if}
+		</div>
+		<div class="work-command-palette-actions">
+			<WornButton type="button" onclick={closeWorkCommandPalette}>Close</WornButton>
+		</div>
+	</WornDialog>
 
 	<WorkRecentActivity {packs} />
 </WornPage>
@@ -1217,5 +1472,16 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		:global([data-work-item] .worn-btn[data-work-primary-navigation]),
 		:global([data-work-item] .worn-btn[data-work-primary-mutation]){min-height:44px}
 	}
+	.work-command-palette-help { color: var(--worn-text-muted); font-size: 13px; margin: 0 0 10px; }
+	.work-command-palette-list { border-top: 1px solid var(--worn-border); display: grid; gap: 8px; margin-top: 8px; max-height: 50vh; overflow: auto; padding-top: 8px; }
+	.work-command-entry { appearance: none; background: var(--worn-surface); border: 1px solid var(--worn-border); border-radius: var(--worn-radius-sm); color: var(--worn-text); display: grid; font: inherit; gap: 4px; padding: 10px 12px; text-align: left; width: 100%; }
+	.work-command-entry:hover,
+	.work-command-entry:focus-visible,
+	.work-command-entry-active { background: var(--worn-surface-secondary); border-color: var(--worn-accent); outline: 0; }
+	.work-command-entry:disabled { opacity: 0.6; }
+	.work-command-entry span { font-weight: 610; }
+	.work-command-entry small { color: var(--worn-text-muted); font-size: 12px; }
+	.work-command-empty { color: var(--worn-text-muted); margin: 0; }
+	.work-command-palette-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 
 </style>
