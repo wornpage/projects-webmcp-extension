@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { pendingDraftFingerprint, discardPendingNextActionDraft, displayToast, type PendingNextActionDraft } from '$lib/demo-client';
-	import { evidenceFacts, workTitle, type DemoPack } from '$lib/demo-workflow';
+	import { evidenceFacts, isOpenDecision, workTitle, type DemoPack } from '$lib/demo-workflow';
 	import { WornAlert, WornButton, WornDialog } from '$lib/components';
 
 	interface Props {
@@ -38,7 +38,7 @@
 </script>
 
 <WornDialog bind:open title={`Pending approvals (${drafts.length})`} size="md">
-	<div class="pending-center-intro">Every proposal remains unsaved until you approve it on Next. Evidence is checked against the current workspace.</div>
+	<div class="pending-center-intro">Every proposal remains unsaved until you approve it on Next or, for an explicit open decision, directly in Work. Evidence is checked against the current workspace.</div>
 	{#if drafts.length === 0}
 		<p class="pending-center-empty">No pending approvals.</p>
 	{:else}
@@ -60,6 +60,16 @@
 						<div class="pending-center-evidence"><span>Verified evidence</span><p>{draft.evidenceNote || `${evidenceFacts(pack!).workflow} is still current.`}</p></div>
 					{/if}
 					<div class="pending-center-actions">
+						{#if pack && isOpenDecision(pack)}
+							<WornButton
+								variant="primary"
+								size="sm"
+								href={`/work?focus=${encodeURIComponent(draft.workId)}`}
+								aria-label={`Open ${workTitle(pack)} in the Work decision workspace`}
+								data-pending-work-resume
+								onclick={() => (open = false)}
+							>Open in Work</WornButton>
+						{/if}
 						<WornButton size="sm" href={`/next?pack=${encodeURIComponent(draft.workId)}`} onclick={() => (open = false)}>Review on Next</WornButton>
 						<WornButton size="sm" variant="danger" type="button" disabled={busyId === draft.workId} onclick={() => discard(draft.workId)}>{busyId === draft.workId ? 'Discarding…' : 'Discard'}</WornButton>
 					</div>
@@ -77,10 +87,15 @@
 	.pending-center-head h3 { font-size: 16px; margin: 0 0 3px; }
 	.pending-center-head span, .pending-center-action span, .pending-center-evidence span { color: var(--worn-text-muted); font-size: 12px; }
 	.pending-center-head strong { border: 1px solid var(--worn-border); border-radius: 999px; font-size: 11px; padding: 3px 7px; text-transform: capitalize; }
-	.status-fresh { color: var(--worn-success); }
-	.status-stale { color: var(--worn-warning); }
+	.status-fresh { color: var(--worn-success-text); }
+	.status-stale { color: var(--worn-warning-text); }
 	.pending-center-action, .pending-center-evidence { display: grid; gap: 3px; }
 	.pending-center-evidence p { margin: 0; }
 	.pending-center-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 	.pending-center-empty { color: var(--worn-text-secondary); }
+	@media (max-width: 500px) {
+		.pending-center-head { align-items: stretch; flex-direction: column; }
+		.pending-center-head strong { justify-self: start; width: fit-content; }
+		.pending-center-actions :global(.worn-btn) { flex: 1 1 100%; width: 100%; }
+	}
 </style>
