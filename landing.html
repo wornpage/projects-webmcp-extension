@@ -8,24 +8,27 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="description" content="A public WebMCP project workspace where a browser agent reads visible work, narrows attention, and prepares an unsaved next action for a person to approve.">
-  <meta property="og:title" content="Wornpage Projects — a visible WebMCP handoff" />
-  <meta property="og:description" content="Let browser workers create bounded drafts and prepare the next move while you keep control of Start and final Save." />
+  <meta name="description" content="A visible WebMCP handoff: the agent narrows work, cites exact evidence, prepares an unsaved next action, and stops before the human decision.">
+  <meta property="og:title" content="Wornpage Projects — Agent finds. Evidence proves. You decide." />
+  <meta property="og:description" content="A browser agent narrows visible work, proves the next move with current facts, and stops before Start and final Save." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://projects-webmcp-extension.pages.dev/" />
   <meta property="og:site_name" content="Wornpage Projects" />
   <meta property="og:locale" content="en_US" />
   <meta property="og:image" content="https://projects-webmcp-extension.pages.dev/assets/og-image.svg" />
+  <meta property="og:image:secure_url" content="https://projects-webmcp-extension.pages.dev/assets/og-image.svg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:type" content="image/svg+xml" />
+  <meta property="og:image:alt" content="Wornpage Projects showing verified blocker evidence, an unsaved next action, and the human-only final decision." />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Wornpage Projects — a visible WebMCP handoff" />
-  <meta name="twitter:description" content="Let browser workers create bounded drafts and prepare the next move while you keep control of Start and final Save." />
+  <meta name="twitter:title" content="Wornpage Projects — Agent finds. Evidence proves. You decide." />
+  <meta name="twitter:description" content="A browser agent narrows visible work, proves the next move with current facts, and stops before Start and final Save." />
   <meta name="twitter:image" content="https://projects-webmcp-extension.pages.dev/assets/og-image.svg" />
+  <meta name="twitter:image:alt" content="Wornpage Projects showing verified blocker evidence, an unsaved next action, and the human-only final decision." />
   <meta name="theme-color" content="#f5f3ef" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0f1714" media="(prefers-color-scheme: dark)">
-  <title>Wornpage Projects: a visible WebMCP handoff</title>
+  <title>Wornpage Projects: Agent finds. Evidence proves. You decide.</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/favicon.png">
   <link rel="stylesheet" href="assets/landing.css">
@@ -67,45 +70,43 @@
       </div>
 
       <!-- PRODUCT PREVIEW -->
-      <div class="lp-preview" role="img" aria-label="WebMCP handoff in Review: the agent narrows visible work, explains a blocker, and prepares a next action for human approval.">
-        <div class="lp-panel" aria-hidden="true">
+      <div class="lp-preview" role="img" aria-label="Verified WebMCP handoff: the agent narrows four of eight work items, checks two facts, prepares an unsaved next action, and stops for human approval.">
+        <div class="lp-panel" data-hero-product-proof aria-hidden="true">
           <div class="lp-panel-head">
             <div>
-              <span class="lp-eyebrow">WebMCP handoff</span>
-              <h2>Team priorities</h2>
+              <span class="lp-eyebrow">Verified action trail</span>
+              <h2>One accountable handoff</h2>
             </div>
-            <span class="lp-panel-status">Agent found 2</span>
+            <span class="lp-panel-status">3 verified · 1 pending</span>
           </div>
-          <div class="lp-cards">
-            <article class="lp-card is-attention">
-              <div class="lp-card-head">
-                <span class="lp-card-title">Prepare the client handoff</span>
-                <span class="lp-pill lp-pill-warn">Blocked</span>
+          <div class="lp-proof-toolbar">
+            <strong>Work 4 of 8 · Review 2 facts</strong>
+            <span class="lp-proof-unchanged">Agent stopped before Save</span>
+          </div>
+          <div class="lp-proof-receipt">
+            <header>
+              <div>
+                <span>Verified evidence</span>
+                <strong>Prepare the client handoff</strong>
               </div>
-              <div class="lp-card-meta"><span>Client work</span></div>
-              <div class="lp-command">
-                <span>Next action</span>
-                <strong>Confirm handoff details</strong>
-              </div>
-            </article>
-            <article class="lp-card">
-              <div class="lp-card-head">
-                <span class="lp-card-title">Schedule design review</span>
-                <span class="lp-pill lp-pill-accent">Ready</span>
-              </div>
-              <div class="lp-card-meta"><span>Design</span></div>
-              <div class="lp-command">
-                <span>Next action</span>
-                <strong>Choose a review time</strong>
-              </div>
-            </article>
-            <article class="lp-card is-done">
-              <div class="lp-card-head">
-                <span class="lp-card-title">Share the weekly update</span>
-                <span class="lp-pill lp-pill-muted">Done</span>
-              </div>
-              <div class="lp-card-meta"><span>Home</span></div>
-            </article>
+              <span class="lp-pill lp-pill-warn">Not saved</span>
+            </header>
+            <dl class="lp-proof-facts">
+              <div><dt>Workflow</dt><dd>Blocked</dd></div>
+              <div><dt>Blocker</dt><dd>Waiting on final details</dd></div>
+            </dl>
+            <div class="lp-proof-proposal">
+              <span>Proposed next action</span>
+              <strong>Confirm handoff details</strong>
+            </div>
+            <footer>
+              <span>Unsaved proposal</span>
+              <strong>Human approval required</strong>
+            </footer>
+            <div class="lp-proof-actions">
+              <span class="lp-proof-action">Discard draft</span>
+              <span class="lp-proof-action is-primary">Approve and save</span>
+            </div>
           </div>
         </div>
       </div>
