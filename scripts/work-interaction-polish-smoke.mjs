@@ -35,6 +35,11 @@ async function assertCardCommands(page, density) {
 
 	const mutation = page.locator('[data-pack-id="mutation-command"]');
 	assert.equal(await mutation.locator('[data-work-primary-mutation]').count(), 1, `${density} cards retain mutation commands.`);
+
+	const terminal = page.locator('[data-pack-id="terminal-done"]');
+	assert.equal(await terminal.locator('[data-work-terminal-title]').count(), 1, `${density} cards render completed titles without Next navigation.`);
+	assert.equal(await terminal.locator('a[href^="/next?pack="]').count(), 0, `${density} cards do not expose a completed Next link.`);
+	assert.equal(await terminal.locator('[data-work-primary-navigation], [data-work-primary-mutation]').count(), 0, `${density} cards do not expose a completed primary command.`);
 }
 
 async function waitForActiveCommand(page, expectedLabel) {
@@ -87,7 +92,8 @@ try {
 			packs: [
 				{ id: 'same-destination', title: 'Same destination', status: 'active', blocker: 'none', next: '', activity: ['[2026-09-03 09:00] Created.'] },
 				{ id: 'review-destination', title: 'Review destination', status: 'blocked', blocker: 'Waiting for review', next: 'Open', activity: ['[2026-09-03 09:00] Created.'] },
-				{ id: 'mutation-command', title: 'Mutation command', status: 'active', blocker: 'none', next: 'Done', activity: ['[2026-09-03 09:00] Created.'] }
+				{ id: 'mutation-command', title: 'Mutation command', status: 'active', blocker: 'none', next: 'Done', activity: ['[2026-09-03 09:00] Created.'] },
+				{ id: 'terminal-done', title: 'Terminal done', status: 'done', blocker: 'none', next: '', activity: ['[2026-09-03 09:00] Finished.'] }
 			]
 		}));
 	}, storageKey);
@@ -97,6 +103,11 @@ try {
 	const registrationsBeforeQuickAdd = await page.evaluate(() => structuredClone(window.__workToolRegistrations));
 	assert.deepEqual(registrationsBeforeQuickAdd.map((tool) => tool.name), ['get_current_work_view', 'show_work_search', 'create_work_drafts']);
 	await assertCardCommands(page, 'grid');
+	await page.goto(`${origin}/next?pack=terminal-done`, { waitUntil: 'networkidle' });
+	await page.getByText('Work item not found', { exact: true }).waitFor({ state: 'visible' });
+	assert.equal(await page.locator('[data-next-choices]').count(), 0, 'A direct completed Next URL never renders an editor.');
+	await page.goto(`${origin}/work`, { waitUntil: 'networkidle' });
+	await page.locator('[data-pack-id="same-destination"]').waitFor({ state: 'visible' });
 
 	const paletteTrigger = page.getByRole('button', { name: 'Command palette' });
 	await paletteTrigger.focus();
@@ -355,6 +366,7 @@ try {
 		visualRhythm: { desktop: desktopDecisionRhythm, compact: compactDecisionRhythm },
 		advancedOptions: { desktop: desktopSpacing, compact: compactSpacing },
 		quickAdd: { receipt: 'visible, focused, and durable after reload' },
+		terminalNext: { cards: 'static', directRoute: 'editor refused' },
 		webMcp: registrationsBeforeQuickAdd.map((tool) => tool.name)
 	}));
 } finally {

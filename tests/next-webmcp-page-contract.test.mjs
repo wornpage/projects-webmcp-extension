@@ -40,9 +40,19 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
 const demoClientSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-client.ts'), 'utf8');
+const demoWorkflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 const layoutSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/+layout.svelte'), 'utf8');
 const pendingStateSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/pending-next-action.mjs'), 'utf8');
 const handoffSessionSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp-handoff-session.mjs'), 'utf8');
+
+test('terminal work cannot enter or complete the Next approval path', () => {
+	assert.match(demoWorkflowSource, /export function canSetNextAction\(pack: DemoPack\): boolean \{\s*return pack\.status !== 'done' && !pack\.archived;\s*\}/u);
+	assert.match(routeSource, /let packs = \$derived\([\s\S]*?\.filter\(canSetNextAction\)/u);
+	assert.match(demoClientSource, /function requireNextActionTarget\(state: DemoState, workId: string\): DemoPack \{[\s\S]*?if \(!canSetNextAction\(pack\)\)[\s\S]*?Completed or archived work cannot have a next-action draft\./u);
+	assert.equal(demoClientSource.match(/requireNextActionTarget\(state, (?:draft\.)?workId\);/gu)?.length, 3);
+	assert.match(demoClientSource, /Object\.assign\(pack, packActionEffect\(pack, action\)\);\s*if \(action === 'done'\) discardPendingDraft\(draft, pack\.id\);/u);
+	assert.match(demoClientSource, /if \(statusBefore !== 'done' && pack\.status === 'done'\) \{[\s\S]*?discardPendingDraft\(draft, pack\.id\);/u);
+});
 const handoffStoreSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/webmcp-handoff-store.ts'), 'utf8');
 const reviewerTests = fs.readFileSync(path.join(repoRoot, 'docs/submission/webmcp/reviewer-tests.md'), 'utf8');
 const helperSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/next-webmcp.mjs'), 'utf8');

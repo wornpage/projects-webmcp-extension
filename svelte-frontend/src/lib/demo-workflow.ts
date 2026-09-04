@@ -109,6 +109,10 @@ export function workTitle(pack: DemoPack): string {
 	return formatWorkTitle(pack?.title);
 }
 
+export function canSetNextAction(pack: DemoPack): boolean {
+	return pack.status !== 'done' && !pack.archived;
+}
+
 export function isMissingNextAction(pack: DemoPack): boolean {
 	return isPlaceholderNext(pack.next);
 }
@@ -118,7 +122,7 @@ export function hasBlocker(pack: DemoPack): boolean {
 }
 
 export function isReview(pack: DemoPack): boolean {
-	if (pack.status === 'done' || pack.archived) return false;
+	if (!canSetNextAction(pack)) return false;
 	const action = commandActionForLabel(pack.next || '').action;
 	return hasBlocker(pack)
 		|| isMissingNextAction(pack)
@@ -293,7 +297,7 @@ export interface DecisionWorkspaceRecommendation {
 }
 
 export function isOpenDecision(pack: DemoPack): boolean {
-	return pack.decision === true && pack.status !== 'done' && !pack.archived;
+	return pack.decision === true && canSetNextAction(pack);
 }
 
 // Work supplies its already filtered, sorted, pinned, and focus-scoped list.

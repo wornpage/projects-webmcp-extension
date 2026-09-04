@@ -10,6 +10,7 @@
 		packStatusLabel,
 		primaryCommand,
 		primaryCommandNavigation,
+		canSetNextAction,
 		workTitle,
 		type DemoPack
 	} from '$lib/demo-workflow';
@@ -43,7 +44,7 @@
 	} = $props();
 	let cmd = $derived(primaryCommand(pack));
 	let commandHref = $derived(PACK_ACTIONS.has(cmd.action) ? undefined : primaryCommandNavigation(pack));
-	let titleHref = $derived(`/next?pack=${encodeURIComponent(pack.id || '')}`);
+	let titleHref = $derived(canSetNextAction(pack) ? `/next?pack=${encodeURIComponent(pack.id || '')}` : null);
 	let statusLabel = $derived(packStatusLabel(pack.status));
 
 </script>
@@ -68,7 +69,11 @@
 	{#if batchMode}
 		{@render batchCheckbox(pack)}
 	{/if}
-	<a class="grid-card-title" href={titleHref} aria-label={`Set the next action for ${workTitle(pack)}`}>{workTitle(pack)}</a>
+	{#if titleHref}
+		<a class="grid-card-title" href={titleHref} aria-label={`Set the next action for ${workTitle(pack)}`}>{workTitle(pack)}</a>
+	{:else}
+		<span class="grid-card-title" data-work-terminal-title>{workTitle(pack)}</span>
+	{/if}
 	<div class="grid-card-meta">
 		{#if pack.owner}
 			<span>{pack.owner}</span>
@@ -86,7 +91,7 @@
 			</span>
 		</div>
 	{/if}
-	{#if !commandHref || commandHref !== titleHref}
+	{#if canSetNextAction(pack) && (!commandHref || commandHref !== titleHref)}
 	<div class="grid-card-quick">
 		{#if commandHref}
 			<WornButton data-work-primary-navigation href={commandHref} size="sm" variant="primary"
