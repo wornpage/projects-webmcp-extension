@@ -30,4 +30,16 @@ jobs:
           test -n "$chrome"
           echo "CHROME_EXECUTABLE_PATH=$chrome" >> "$GITHUB_ENV"
       - run: npm run build
+      - name: Normalize directory-style static routes for calibration
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/calibrate-work-first-recording.mjs')
+          source = path.read_text()
+          source = source.replace(
+              "await page.waitForFunction((path) => location.pathname === path, pathname);",
+              "await page.waitForFunction((path) => location.pathname.replace(/\\/$/u, '') === path, pathname);"
+          )
+          path.write_text(source)
+          PY
       - run: node scripts/calibrate-work-first-recording.mjs
