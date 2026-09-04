@@ -35,10 +35,24 @@
   --worn-danger-text: #991b1b;
   --worn-danger-badge-bg: #991b1b;
   --worn-danger-badge-text: #ffffff;
+  --worn-radius-sm: 6px;
   --worn-radius: 8px;
+  --worn-radius-md: 10px;
+  --worn-radius-lg: 14px;
+
+  --worn-space-1: 4px;
+  --worn-space-2: 8px;
+  --worn-space-3: 12px;
+  --worn-space-4: 16px;
+  --worn-space-5: 20px;
+  --worn-space-6: 24px;
+
+  --worn-text-xs: 11px;
+  --worn-text-sm: 12px;
+  --worn-text-md: 14px;
+  --worn-text-lg: 17px;
 
   --worn-target-min: 44px;
-  --worn-radius-sm: 6px;
   --worn-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.06);
   --worn-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.08);
 

@@ -212,12 +212,12 @@
 		align-content: start;
 		box-sizing: border-box;
 		display: grid;
-		gap: 20px;
+		gap: var(--worn-space-5);
 		margin: 0 auto;
 		max-width: 1240px;
 		min-height: 100vh;
 		min-width: 0;
-		padding: 20px 32px 48px;
+		padding: var(--worn-space-5) calc(var(--worn-space-4) * 2) calc(var(--worn-space-6) * 2);
 		width: 100%;
 	}
 
@@ -244,12 +244,12 @@
 		animation: challenge-nav-arrive 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 		background: var(--worn-surface);
 		border: 1px solid var(--worn-border);
-		border-radius: var(--worn-radius);
+		border-radius: var(--worn-radius-md);
 		display: flex;
-		gap: 16px;
+		gap: var(--worn-space-4);
 		justify-content: space-between;
 		min-width: 0;
-		padding: 8px 10px;
+		padding: var(--worn-space-2) var(--worn-space-3);
 	}
 
 	.challenge-brand {
@@ -260,7 +260,7 @@
 		line-height: 1.15;
 		min-height: 44px;
 		min-width: 0;
-		padding: 0 12px;
+		padding: 0 var(--worn-space-3);
 		place-content: center start;
 		text-decoration: none;
 	}
@@ -274,7 +274,7 @@
 	.challenge-brand small {
 		color: var(--worn-text-muted);
 		font-family: var(--font-typewriter);
-		font-size: 11px;
+		font-size: var(--worn-text-xs);
 		font-weight: 560;
 	}
 
@@ -283,7 +283,7 @@
 		display: flex;
 		flex: 0 1 auto;
 		flex-wrap: nowrap;
-		gap: 4px;
+		gap: var(--worn-space-1);
 		justify-content: flex-end;
 		min-width: 0;
 	}
@@ -293,14 +293,14 @@
 	@media (max-width: 900px) and (min-width: 701px) {
 		.challenge-shell-nav {
 			display: grid;
-			gap: 6px 10px;
+			gap: var(--worn-space-2) var(--worn-space-3);
 			grid-template-columns: minmax(0, 1fr) auto;
-			padding: 6px 8px;
+			padding: var(--worn-space-2);
 		}
 		.challenge-shell-nav :global(.webmcp-status-pill) { grid-column: 2; grid-row: 1; }
-		.challenge-shell-nav nav { gap: 4px; grid-column: 1 / -1; justify-content: stretch; }
-		.challenge-shell-nav .challenge-nav-control { flex: 1 1 0; font-size: 11px; justify-content: center; min-height: 38px; padding-inline: 8px; }
-		.challenge-brand { min-height: 36px; padding-inline: 8px; }
+		.challenge-shell-nav nav { gap: var(--worn-space-1); grid-column: 1 / -1; justify-content: stretch; }
+		.challenge-shell-nav .challenge-nav-control { flex: 1 1 0; font-size: var(--worn-text-xs); justify-content: center; min-height: 38px; padding-inline: var(--worn-space-2); }
+		.challenge-brand { min-height: 36px; padding-inline: var(--worn-space-2); }
 	}
 
 	.challenge-nav-control {
@@ -314,14 +314,14 @@
 		cursor: pointer;
 		display: inline-flex;
 		font-family: var(--font-typewriter);
-		font-size: 12px;
+		font-size: var(--worn-text-sm);
 		font-weight: 650;
 		justify-content: center;
 		line-height: 1;
 		margin: 0;
-		min-height: 44px;
+		min-height: var(--worn-target-min);
 		min-width: 0;
-		padding: 0 12px;
+		padding: 0 var(--worn-space-3);
 		text-decoration: none;
 		white-space: nowrap;
 		transition:
@@ -344,7 +344,7 @@
 
 	.tools-trigger {
 		flex-direction: column;
-		gap: 2px;
+		gap: var(--worn-space-1);
 	}
 
 	.tools-trigger small {
@@ -366,42 +366,42 @@
 
 	.workflow-tools-panel {
 		display: grid;
-		gap: 14px;
+		gap: var(--worn-space-4);
 		max-inline-size: 100%;
 		min-inline-size: 0;
 	}
 
 	.workflow-tools-intro {
 		color: var(--worn-text-secondary);
-		font-size: 14px;
+		font-size: var(--worn-text-md);
 		line-height: 1.5;
 		margin: 0;
 	}
 
 	.workflow-tools-list {
 		display: grid;
-		gap: 8px;
+		gap: var(--worn-space-2);
 	}
 
 	.workflow-tools-link {
-		background: var(--worn-surface);
-		border: 1px solid var(--worn-border);
-		border-radius: var(--worn-radius-sm);
+		background: color-mix(in srgb, var(--worn-surface) 92%, var(--worn-bg));
+		border: 1px solid color-mix(in srgb, var(--worn-border) 72%, transparent);
+		border-radius: var(--worn-radius);
 		color: var(--worn-text);
 		display: grid;
-		gap: 3px;
+		gap: var(--worn-space-1);
 		min-width: 0;
-		padding: 12px 14px;
+		padding: var(--worn-space-3) var(--worn-space-4);
 		text-decoration: none;
 	}
 
 	.workflow-tools-link strong {
-		font-size: 15px;
+		font-size: var(--worn-text-lg);
 	}
 
 	.workflow-tools-link span {
 		color: var(--worn-text-secondary);
-		font-size: 13px;
+		font-size: var(--worn-text-sm);
 		line-height: 1.4;
 	}
 
@@ -420,14 +420,14 @@
 
 	.challenge-route {
 		display: grid;
-		gap: 22px;
+		gap: var(--worn-space-6);
 		min-width: 0;
 	}
-	.offline-status { color: var(--worn-text-secondary); font-family: var(--font-typewriter); font-size: 11px; line-height: 1.3; max-inline-size: 220px; text-align: end; }
+	.offline-status { color: var(--worn-text-secondary); font-family: var(--font-typewriter); font-size: var(--worn-text-xs); line-height: 1.3; max-inline-size: 220px; text-align: end; }
 
-	.demo-recovery { align-items: center; background: var(--worn-surface); border: 1px solid var(--worn-border-strong); border-radius: var(--worn-radius); display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; padding: 12px 14px; }
-	.demo-recovery div { display: grid; gap: 3px; min-width: 0; }
-	.demo-recovery span { color: var(--worn-text-secondary); font-size: 13px; }
+	.demo-recovery { align-items: center; background: var(--worn-surface); border: 1px solid var(--worn-border-strong); border-radius: var(--worn-radius); display: flex; flex-wrap: wrap; gap: var(--worn-space-3); justify-content: space-between; padding: var(--worn-space-3) var(--worn-space-4); }
+	.demo-recovery div { display: grid; gap: var(--worn-space-1); min-width: 0; }
+	.demo-recovery span { color: var(--worn-text-secondary); font-size: var(--worn-text-sm); }
 	.demo-recovery-error { color: var(--worn-danger); flex-basis: 100%; }
 
 	.challenge-route > :global(.demo-panel) {
@@ -437,16 +437,16 @@
 
 	.challenge-route :global(.worn-receipt) {
 		box-shadow: var(--worn-shadow-sm);
-		margin-block: 14px 16px;
-		padding: 16px 18px;
+		margin-block: var(--worn-space-4);
+		padding: var(--worn-space-4) var(--worn-space-5);
 	}
 
 	.challenge-route :global(.worn-receipt-head) {
-		padding-bottom: 10px;
+		padding-bottom: var(--worn-space-3);
 	}
 
 	.challenge-route :global(.worn-receipt-lines > div) {
-		padding-block: 8px;
+		padding-block: var(--worn-space-2);
 	}
 
 	.challenge-route :global([data-webmcp-receipt]) {
@@ -492,12 +492,12 @@
 
 	.demo-toast-container {
 		display: grid;
-		gap: 8px;
+		gap: var(--worn-space-2);
 		pointer-events: none;
 		position: fixed;
-		right: calc(12px + env(safe-area-inset-right, 0px));
-		top: calc(12px + env(safe-area-inset-top, 0px));
-		width: min(420px, calc(100vw - 24px));
+		right: calc(var(--worn-space-3) + env(safe-area-inset-right, 0px));
+		top: calc(var(--worn-space-3) + env(safe-area-inset-top, 0px));
+		width: min(420px, calc(100vw - (var(--worn-space-3) * 2)));
 		z-index: 200;
 	}
 
@@ -561,14 +561,14 @@
 
 	@media (max-width: 700px) {
 		.challenge-shell {
-			gap: 12px;
-			padding: 12px 8px 32px;
+			gap: var(--worn-space-3);
+			padding: var(--worn-space-3) var(--worn-space-2) calc(var(--worn-space-4) * 2);
 		}
 
 		.challenge-shell-nav {
 			align-items: stretch;
 			display: grid;
-			gap: 6px;
+			gap: var(--worn-space-2);
 			grid-template-columns: minmax(0, 1fr) auto;
 		}
 		.challenge-brand { grid-column: 1; grid-row: 1; }
@@ -585,9 +585,9 @@
 
 		.challenge-shell-nav .challenge-nav-control {
 			flex: 1 1 0;
-			font-size: 11px;
+			font-size: var(--worn-text-xs);
 			justify-content: center;
-			padding-inline: 4px;
+			padding-inline: var(--worn-space-1);
 		}
 
 		.tools-trigger small {
@@ -595,8 +595,8 @@
 		}
 
 		.challenge-route :global(.worn-receipt) {
-			margin-block: 12px 14px;
-			padding: 14px;
+			margin-block: var(--worn-space-3) var(--worn-space-4);
+			padding: var(--worn-space-4);
 		}
 	}
 

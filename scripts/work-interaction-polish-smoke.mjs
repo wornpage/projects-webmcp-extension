@@ -230,6 +230,52 @@ try {
 	assert.equal(await decision.locator('[data-decision-workspace-review]').count(), 1, 'Review remains a secondary deep link.');
 	assert.equal(await decision.locator('[data-decision-workspace-next]').count(), 1, 'Next remains a secondary full-editor deep link.');
 
+	const desktopDecisionRhythm = await decision.evaluate((workspace) => {
+		const rootStyle = getComputedStyle(document.documentElement);
+		const explanation = workspace.querySelector('.decision-workspace-explanation');
+		const grid = workspace.querySelector('.decision-editor-grid');
+		const panels = [...workspace.querySelectorAll('.decision-editor-panel')];
+		if (!(explanation instanceof HTMLElement) || !(grid instanceof HTMLElement) || panels.length !== 2) return null;
+		return {
+			tokens: {
+				space3: Number.parseFloat(rootStyle.getPropertyValue('--worn-space-3')),
+				space4: Number.parseFloat(rootStyle.getPropertyValue('--worn-space-4')),
+				space5: Number.parseFloat(rootStyle.getPropertyValue('--worn-space-5')),
+				radiusMd: Number.parseFloat(rootStyle.getPropertyValue('--worn-radius-md'))
+			},
+			explanationPadding: Number.parseFloat(getComputedStyle(explanation).paddingBlockStart),
+			gridGap: Number.parseFloat(getComputedStyle(grid).gap),
+			outerRadius: Number.parseFloat(getComputedStyle(workspace).borderTopLeftRadius),
+			panelBorders: panels.map((panel) => Number.parseFloat(getComputedStyle(panel).borderTopWidth)),
+			contained: workspace.scrollWidth <= workspace.clientWidth + 1
+		};
+	});
+	assert.ok(desktopDecisionRhythm, 'Decision workspace exposes the shared desktop rhythm.');
+	assert.deepEqual(desktopDecisionRhythm.tokens, { space3: 12, space4: 16, space5: 20, radiusMd: 10 });
+	assert.equal(desktopDecisionRhythm.explanationPadding, desktopDecisionRhythm.tokens.space4);
+	assert.equal(desktopDecisionRhythm.gridGap, desktopDecisionRhythm.tokens.space3);
+	assert.equal(desktopDecisionRhythm.outerRadius, desktopDecisionRhythm.tokens.radiusMd);
+	assert.deepEqual(desktopDecisionRhythm.panelBorders, [0, 0], 'Inner decision panels are quieter than the emphasized outer surface.');
+	assert.equal(desktopDecisionRhythm.contained, true);
+
+	await page.setViewportSize({ width: 390, height: 800 });
+	const compactDecisionRhythm = await decision.evaluate((workspace) => {
+		const rootStyle = getComputedStyle(document.documentElement);
+		const explanation = workspace.querySelector('.decision-workspace-explanation');
+		if (!(explanation instanceof HTMLElement)) return null;
+		return {
+			space3: Number.parseFloat(rootStyle.getPropertyValue('--worn-space-3')),
+			explanationPadding: Number.parseFloat(getComputedStyle(explanation).paddingBlockStart),
+			workspacePadding: Number.parseFloat(getComputedStyle(workspace).paddingBlockStart),
+			contained: workspace.scrollWidth <= workspace.clientWidth + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth
+		};
+	});
+	assert.ok(compactDecisionRhythm, 'Decision workspace exposes the shared compact rhythm.');
+	assert.equal(compactDecisionRhythm.explanationPadding, compactDecisionRhythm.space3);
+	assert.equal(compactDecisionRhythm.workspacePadding, compactDecisionRhythm.space3);
+	assert.equal(compactDecisionRhythm.contained, true);
+	await page.setViewportSize({ width: 900, height: 800 });
+
 	await decision.locator('#decision-next-action').selectOption('Focus');
 	await decision.getByRole('button', { name: 'Prepare for approval' }).click();
 	await page.waitForFunction((key) => {
@@ -272,14 +318,17 @@ try {
 		const wrapper = document.querySelector('[data-next-advanced-options]');
 		const disclosure = wrapper?.querySelector('.worn-collapsible');
 		if (!(editor instanceof HTMLElement) || !(wrapper instanceof HTMLElement) || !(disclosure instanceof HTMLElement)) return null;
+		const rootStyle = getComputedStyle(document.documentElement);
 		return {
 			padding: Number.parseFloat(getComputedStyle(wrapper).paddingBlockStart),
+			token: Number.parseFloat(rootStyle.getPropertyValue('--worn-space-4')),
 			gap: disclosure.getBoundingClientRect().top - editor.getBoundingClientRect().bottom
 		};
 	});
 	assert.ok(desktopSpacing, 'Next renders the Advanced options spacing boundary.');
-	assert.equal(desktopSpacing.padding, 16);
-	assert.ok(desktopSpacing.gap >= 15, 'Advanced options clears the action buttons by at least its desktop padding.');
+	assert.equal(desktopSpacing.padding, desktopSpacing.token);
+	assert.equal(desktopSpacing.token, 16);
+	assert.ok(desktopSpacing.gap >= desktopSpacing.token - 1, 'Advanced options clears the action buttons by at least its desktop rhythm token.');
 
 	await page.setViewportSize({ width: 390, height: 800 });
 	const compactSpacing = await page.evaluate(() => {
@@ -287,19 +336,23 @@ try {
 		const wrapper = document.querySelector('[data-next-advanced-options]');
 		const disclosure = wrapper?.querySelector('.worn-collapsible');
 		if (!(editor instanceof HTMLElement) || !(wrapper instanceof HTMLElement) || !(disclosure instanceof HTMLElement)) return null;
+		const rootStyle = getComputedStyle(document.documentElement);
 		return {
 			padding: Number.parseFloat(getComputedStyle(wrapper).paddingBlockStart),
+			token: Number.parseFloat(rootStyle.getPropertyValue('--worn-space-3')),
 			gap: disclosure.getBoundingClientRect().top - editor.getBoundingClientRect().bottom
 		};
 	});
 	assert.ok(compactSpacing, 'Next keeps the Advanced options spacing boundary on compact screens.');
-	assert.equal(compactSpacing.padding, 12);
-	assert.ok(compactSpacing.gap >= 11, 'Advanced options clears the action buttons by at least its compact padding.');
+	assert.equal(compactSpacing.padding, compactSpacing.token);
+	assert.equal(compactSpacing.token, 12);
+	assert.ok(compactSpacing.gap >= compactSpacing.token - 1, 'Advanced options clears the action buttons by at least its compact rhythm token.');
 
 	console.log(JSON.stringify({
 		cards: { grid: 'same-destination suppressed; distinct navigation and mutation retained', card: 'same-destination suppressed; distinct navigation and mutation retained' },
 		commandPalette: { keyboard: 'combobox active-descendant navigation', disabled: 'skipped', escape: 'trigger focus restored' },
 		unifiedDecision: { route: '/work', focus: 'exact pending decision outside unchanged filters', evidence: 'visible', draft: 'prepared', approval: 'saved without navigation' },
+		visualRhythm: { desktop: desktopDecisionRhythm, compact: compactDecisionRhythm },
 		advancedOptions: { desktop: desktopSpacing, compact: compactSpacing },
 		quickAdd: { receipt: 'visible, focused, and durable after reload' },
 		webMcp: registrationsBeforeQuickAdd.map((tool) => tool.name)

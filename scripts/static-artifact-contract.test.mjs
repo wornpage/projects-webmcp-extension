@@ -407,7 +407,7 @@ test('built artifact exposes exactly the intended HTML routes and no executable 
 	assert.equal(rules.filter(({ declarations }) => declarations.size === 0).length, 0, 'built CSS contains no empty rules');
 	const brandRule = findRule(rules, /^\.challenge-brand(?:\.[\w-]+)?$/u);
 	assert.equal(brandRule.declarations.get('min-height'), '44px');
-	assert.equal(brandRule.declarations.get('padding'), '0 12px');
+	assert.equal(brandRule.declarations.get('padding'), '0 var(--worn-space-3)');
 	assert.equal(brandRule.declarations.get('min-width'), '0');
 
 	const landingRules = parseCssRules(readFileSync(path.join(artifactRoot, 'assets', 'landing.css'), 'utf8'));
