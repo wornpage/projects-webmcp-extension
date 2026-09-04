@@ -29,6 +29,19 @@ try {
 
 	const landingPage = await browser.newPage({ viewport: { width: 1100, height: 900 } });
 	await landingPage.goto(`${landingOrigin}/landing.html`, { waitUntil: 'networkidle' });
+	await landingPage.waitForFunction(() => document.documentElement.getAttribute('data-hero-product-proof') === 'ready');
+	const heroProof = await landingPage.locator('.lp-preview .lp-panel').evaluate((panel) => ({
+		marker: panel.hasAttribute('data-hero-product-proof'),
+		text: panel.textContent?.replace(/\s+/gu, ' ').trim() ?? '',
+		actions: [...panel.querySelectorAll('.lp-proof-action')].map((action) => action.textContent?.trim())
+	}));
+	assert.equal(heroProof.marker, true, 'the first fold upgrades to the signature product proof');
+	assert.match(
+		heroProof.text,
+		/Verified action trail[\s\S]*?One accountable handoff[\s\S]*?3 verified · 1 pending[\s\S]*?Work 4 of 8 · Review 2 facts[\s\S]*?Agent stopped before Save[\s\S]*?Workflow[\s\S]*?Blocked[\s\S]*?Blocker[\s\S]*?Waiting on final details[\s\S]*?Proposed next action[\s\S]*?Confirm handoff details[\s\S]*?Not saved[\s\S]*?Human approval required/u
+	);
+	assert.deepEqual(heroProof.actions, ['Discard draft', 'Approve and save']);
+
 	await landingPage.locator('#replay').scrollIntoViewIfNeeded();
 	const replayStates = ['observe', 'narrow', 'prepare', 'decide'];
 	for (let index = 0; index < replayStates.length; index += 1) {
@@ -70,12 +83,16 @@ try {
 		documentWidth: document.documentElement.scrollWidth,
 		viewportWidth: document.documentElement.clientWidth,
 		demoWidth: document.querySelector('#replay-demo')?.getBoundingClientRect().width ?? 0,
-		decisionActions: document.querySelectorAll('.lp-proof-action').length
+		heroWidth: document.querySelector('.lp-preview')?.getBoundingClientRect().width ?? 0,
+		replayDecisionActions: document.querySelectorAll('#replay-demo .lp-proof-action').length,
+		heroDecisionActions: document.querySelectorAll('.lp-preview .lp-proof-action').length
 	}));
-	assert.ok(landingMetrics.documentWidth <= landingMetrics.viewportWidth, `landing replay should not overflow: ${landingMetrics.documentWidth}px > ${landingMetrics.viewportWidth}px`);
+	assert.ok(landingMetrics.documentWidth <= landingMetrics.viewportWidth, `landing proof should not overflow: ${landingMetrics.documentWidth}px > ${landingMetrics.viewportWidth}px`);
 	assert.ok(landingMetrics.demoWidth > 0 && landingMetrics.demoWidth <= landingMetrics.viewportWidth);
-	assert.equal(landingMetrics.decisionActions, 2);
-	console.log(JSON.stringify({ landingReplay: replayStates, humanBoundary: true, mobileOverflow: false }));
+	assert.ok(landingMetrics.heroWidth > 0 && landingMetrics.heroWidth <= landingMetrics.viewportWidth);
+	assert.equal(landingMetrics.replayDecisionActions, 2);
+	assert.equal(landingMetrics.heroDecisionActions, 2);
+	console.log(JSON.stringify({ heroProof: true, landingReplay: replayStates, humanBoundary: true, mobileOverflow: false }));
 	await landingPage.close();
 
 	const page = await browser.newPage({ viewport: { width: 768, height: 900 } });
