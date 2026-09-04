@@ -20,12 +20,26 @@ async function waitForServer(url) {
 	throw new Error(`Browser smoke server did not become ready: ${url}`);
 }
 
+const HERO_PROOF_PATTERN = /Verified action trail[\s\S]*?One accountable handoff[\s\S]*?3 verified · 1 pending[\s\S]*?Work 4 of 8 · Review 2 facts[\s\S]*?Agent stopped before Save[\s\S]*?Not saved[\s\S]*?Workflow[\s\S]*?Blocked[\s\S]*?Blocker[\s\S]*?Waiting on final details[\s\S]*?Proposed next action[\s\S]*?Confirm handoff details[\s\S]*?Human approval required/u;
+
 try {
 	await Promise.all([
 		waitForServer(`${origin}/next`),
 		waitForServer(`${landingOrigin}/landing.html`)
 	]);
 	browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined });
+
+	const noScriptPage = await browser.newPage({ javaScriptEnabled: false, viewport: { width: 1100, height: 900 } });
+	await noScriptPage.goto(`${landingOrigin}/landing.html`, { waitUntil: 'domcontentloaded' });
+	const noScriptProof = await noScriptPage.locator('.lp-preview .lp-panel[data-hero-product-proof]').evaluate((panel) => ({
+		text: panel.textContent?.replace(/\s+/gu, ' ').trim() ?? '',
+		actions: [...panel.querySelectorAll('.lp-proof-action')].map((action) => action.textContent?.trim()),
+		runtimeMarker: document.documentElement.getAttribute('data-hero-product-proof')
+	}));
+	assert.match(noScriptProof.text, HERO_PROOF_PATTERN, 'the signature product proof is present in the initial HTML');
+	assert.deepEqual(noScriptProof.actions, ['Discard draft', 'Approve and save']);
+	assert.equal(noScriptProof.runtimeMarker, null, 'the no-script proof does not depend on the runtime-ready marker');
+	await noScriptPage.close();
 
 	const landingPage = await browser.newPage({ viewport: { width: 1100, height: 900 } });
 	await landingPage.goto(`${landingOrigin}/landing.html`, { waitUntil: 'networkidle' });
@@ -35,11 +49,8 @@ try {
 		text: panel.textContent?.replace(/\s+/gu, ' ').trim() ?? '',
 		actions: [...panel.querySelectorAll('.lp-proof-action')].map((action) => action.textContent?.trim())
 	}));
-	assert.equal(heroProof.marker, true, 'the first fold upgrades to the signature product proof');
-	assert.match(
-		heroProof.text,
-		/Verified action trail[\s\S]*?One accountable handoff[\s\S]*?3 verified · 1 pending[\s\S]*?Work 4 of 8 · Review 2 facts[\s\S]*?Agent stopped before Save[\s\S]*?Not saved[\s\S]*?Workflow[\s\S]*?Blocked[\s\S]*?Blocker[\s\S]*?Waiting on final details[\s\S]*?Proposed next action[\s\S]*?Confirm handoff details[\s\S]*?Human approval required/u
-	);
+	assert.equal(heroProof.marker, true, 'the first fold exposes the signature product proof marker');
+	assert.match(heroProof.text, HERO_PROOF_PATTERN);
 	assert.deepEqual(heroProof.actions, ['Discard draft', 'Approve and save']);
 
 	await landingPage.locator('#replay').scrollIntoViewIfNeeded();
@@ -92,7 +103,7 @@ try {
 	assert.ok(landingMetrics.heroWidth > 0 && landingMetrics.heroWidth <= landingMetrics.viewportWidth);
 	assert.equal(landingMetrics.replayDecisionActions, 2);
 	assert.equal(landingMetrics.heroDecisionActions, 2);
-	console.log(JSON.stringify({ heroProof: true, landingReplay: replayStates, humanBoundary: true, mobileOverflow: false }));
+	console.log(JSON.stringify({ noScriptHeroProof: true, heroProof: true, landingReplay: replayStates, humanBoundary: true, mobileOverflow: false }));
 	await landingPage.close();
 
 	const page = await browser.newPage({ viewport: { width: 768, height: 900 } });

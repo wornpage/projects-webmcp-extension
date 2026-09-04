@@ -1,50 +1,11 @@
 // The landing page keeps behavior in one external file so its CSP
 // can reject inline scripts.
 (function () {
-  var panel = document.querySelector(".lp-preview .lp-panel");
+  // The signature product proof is checked-in HTML, not a JavaScript rewrite.
+  // This marker lets browser checks distinguish a complete first fold while the
+  // same proof remains present when scripts are disabled or slow to execute.
+  var panel = document.querySelector(".lp-preview .lp-panel[data-hero-product-proof]");
   if (panel) {
-    // The checked-in HTML remains a useful no-script fallback. With JavaScript,
-    // the first fold advances to the product's signature end state so the hero
-    // and the interactive replay tell one consistent story.
-    panel.setAttribute("data-hero-product-proof", "");
-    panel.innerHTML = [
-      '<div class="lp-panel-head">',
-      '  <div>',
-      '    <span class="lp-eyebrow">Verified action trail</span>',
-      '    <h2>One accountable handoff</h2>',
-      '  </div>',
-      '  <span class="lp-panel-status">3 verified · 1 pending</span>',
-      '</div>',
-      '<div class="lp-proof-toolbar">',
-      '  <strong>Work 4 of 8 · Review 2 facts</strong>',
-      '  <span class="lp-proof-unchanged">Agent stopped before Save</span>',
-      '</div>',
-      '<div class="lp-proof-receipt">',
-      '  <header>',
-      '    <div>',
-      '      <span>Verified evidence</span>',
-      '      <strong>Prepare the client handoff</strong>',
-      '    </div>',
-      '    <span class="lp-pill lp-pill-warn">Not saved</span>',
-      '  </header>',
-      '  <dl class="lp-proof-facts">',
-      '    <div><dt>Workflow</dt><dd>Blocked</dd></div>',
-      '    <div><dt>Blocker</dt><dd>Waiting on final details</dd></div>',
-      '  </dl>',
-      '  <div class="lp-proof-proposal">',
-      '    <span>Proposed next action</span>',
-      '    <strong>Confirm handoff details</strong>',
-      '  </div>',
-      '  <footer>',
-      '    <span>Unsaved proposal</span>',
-      '    <strong>Human approval required</strong>',
-      '  </footer>',
-      '  <div class="lp-proof-actions">',
-      '    <span class="lp-proof-action">Discard draft</span>',
-      '    <span class="lp-proof-action is-primary">Approve and save</span>',
-      '  </div>',
-      '</div>'
-    ].join("");
     document.documentElement.setAttribute("data-hero-product-proof", "ready");
   }
 
