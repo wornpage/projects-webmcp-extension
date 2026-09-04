@@ -8,7 +8,7 @@ const port = 4177;
 const origin = `http://127.0.0.1:${port}`;
 const server = spawn(
   process.execPath,
-  [path.resolve('node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
+  [path.resolve('svelte-frontend/node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
   { cwd: 'svelte-frontend', stdio: 'ignore', windowsHide: true }
 );
 let browser;
