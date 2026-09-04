@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { createServer } from 'node:http';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 
@@ -10,67 +9,84 @@ const origin = `http://127.0.0.1:${port}`;
 const artifactRoot = path.resolve('dist/static-publish');
 const legacyCacheName = 'projects-webmcp-v2-atomic-1';
 const unrelatedCacheName = 'unrelated-browser-cache';
+const staticServerSource = String.raw`
+const { readFile } = require('node:fs');
+const { createServer } = require('node:http');
+const path = require('node:path');
+const root = process.env.ARTIFACT_ROOT;
+const port = Number(process.env.PORT);
 const mime = new Map([
-	['.css', 'text/css; charset=utf-8'],
-	['.html', 'text/html; charset=utf-8'],
-	['.js', 'text/javascript; charset=utf-8'],
-	['.json', 'application/json; charset=utf-8'],
-	['.png', 'image/png'],
-	['.svg', 'image/svg+xml']
+  ['.css', 'text/css; charset=utf-8'],
+  ['.html', 'text/html; charset=utf-8'],
+  ['.js', 'text/javascript; charset=utf-8'],
+  ['.json', 'application/json; charset=utf-8'],
+  ['.png', 'image/png'],
+  ['.svg', 'image/svg+xml']
 ]);
-
 function publishedPath(requestUrl) {
-	const pathname = decodeURIComponent(new URL(requestUrl, origin).pathname);
-	let relativePath = pathname === '/' ? 'index.html' : pathname.slice(1);
-	if (!path.extname(relativePath)) relativePath = `${relativePath}.html`;
-	const target = path.resolve(artifactRoot, relativePath);
-	const relativeTarget = path.relative(artifactRoot, target);
-	if (relativeTarget.startsWith('..') || path.isAbsolute(relativeTarget)) return null;
-	return target;
+  const pathname = decodeURIComponent(new URL(requestUrl, 'http://127.0.0.1').pathname);
+  let relativePath = pathname === '/' ? 'index.html' : pathname.slice(1);
+  if (!path.extname(relativePath)) relativePath += '.html';
+  const target = path.resolve(root, relativePath);
+  const relativeTarget = path.relative(root, target);
+  if (relativeTarget.startsWith('..') || path.isAbsolute(relativeTarget)) return null;
+  return target;
 }
-
-const server = createServer(async (request, response) => {
-	if (request.method !== 'GET' && request.method !== 'HEAD') {
-		response.statusCode = 405;
-		response.end('Method not allowed');
-		return;
-	}
-	let target;
-	try {
-		target = publishedPath(request.url ?? '/');
-	} catch {
-		response.statusCode = 400;
-		response.end('Bad request');
-		return;
-	}
-	if (!target) {
-		response.statusCode = 403;
-		response.end('Forbidden');
-		return;
-	}
-	try {
-		const body = await readFile(target);
-		response.statusCode = 200;
-		response.setHeader('Cache-Control', 'no-store');
-		response.setHeader('Content-Type', mime.get(path.extname(target).toLowerCase()) ?? 'application/octet-stream');
-		response.end(request.method === 'HEAD' ? undefined : body);
-	} catch (error) {
-		if (error?.code !== 'ENOENT') throw error;
-		response.statusCode = 404;
-		response.end('Not found');
-	}
+createServer((request, response) => {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    response.statusCode = 405;
+    response.end('Method not allowed');
+    return;
+  }
+  let target;
+  try { target = publishedPath(request.url || '/'); }
+  catch {
+    response.statusCode = 400;
+    response.end('Bad request');
+    return;
+  }
+  if (!target) {
+    response.statusCode = 403;
+    response.end('Forbidden');
+    return;
+  }
+  readFile(target, (error, body) => {
+    if (error) {
+      response.statusCode = error.code === 'ENOENT' ? 404 : 500;
+      response.end(error.code === 'ENOENT' ? 'Not found' : 'Server error');
+      return;
+    }
+    response.statusCode = 200;
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Content-Type', mime.get(path.extname(target).toLowerCase()) || 'application/octet-stream');
+    response.end(request.method === 'HEAD' ? undefined : body);
+  });
+}).listen(port, '127.0.0.1');
+`;
+const server = spawn(process.execPath, ['-e', staticServerSource], {
+	env: { ...process.env, ARTIFACT_ROOT: artifactRoot, PORT: String(port) },
+	stdio: 'ignore',
+	windowsHide: true
 });
-server.keepAliveTimeout = 1000;
-server.headersTimeout = 5000;
 
 let browser;
+let context;
+let lastStage = 'starting production artifact server';
+const watchdog = setTimeout(() => {
+	process.stderr.write(`Offline browser smoke exceeded 90 seconds during: ${lastStage}\n`);
+	server.kill('SIGKILL');
+	process.exit(1);
+}, 90000);
+
 try {
 	assert.equal(existsSync(path.join(artifactRoot, 'sw.js')), true, 'run the production build before the offline browser smoke');
-	await new Promise((resolve, reject) => {
-		server.once('error', reject);
-		server.listen(port, '127.0.0.1', resolve);
-	});
+	for (let attempt = 0; attempt < 60; attempt += 1) {
+		try { if ((await fetch(`${origin}/sw.js`)).ok) break; } catch {}
+		await new Promise((resolve) => setTimeout(resolve, 250));
+		if (attempt === 59) throw new Error('Production artifact server did not become ready.');
+	}
 
+	lastStage = 'validating the generated service worker';
 	const serviceWorkerResponse = await fetch(`${origin}/sw.js`);
 	assert.equal(serviceWorkerResponse.status, 200, 'built service worker script is served');
 	const serviceWorkerSource = await serviceWorkerResponse.text();
@@ -92,12 +108,14 @@ try {
 	assert.match(serviceWorkerSource, /isOwnedCache\(key\) && key !== ACTIVE_CACHE_NAME/u, 'activation removes only obsolete app-owned caches');
 	assert.match(serviceWorkerSource, /NETWORK_FIRST_PATHS[\s\S]*?'\/data\/demo-packs\.json'[\s\S]*?'\/assets\/landing\.css'[\s\S]*?'\/assets\/landing\.js'/u, 'unversioned landing and seed assets prefer the network');
 
+	lastStage = 'launching Chrome';
 	browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined });
-	const context = await browser.newContext({ serviceWorkers: 'allow' });
+	context = await browser.newContext({ serviceWorkers: 'allow' });
 	const page = await context.newPage();
+	page.setDefaultTimeout(10000);
+	page.setDefaultNavigationTimeout(15000);
 
-	// Seed one obsolete app cache and one unrelated cache before registration.
-	// Activation must delete only the obsolete app cache.
+	lastStage = 'seeding cache ownership fixtures';
 	await page.goto(`${origin}/data/demo-packs.json`, { waitUntil: 'domcontentloaded' });
 	await page.evaluate(async ({ legacyCacheName, unrelatedCacheName }) => {
 		const legacy = await caches.open(legacyCacheName);
@@ -106,6 +124,7 @@ try {
 		await unrelated.put('/unrelated-cache-marker', new Response('preserve me'));
 	}, { legacyCacheName, unrelatedCacheName });
 
+	lastStage = 'installing the generated offline shell';
 	await page.goto(`${origin}/webmcp-challenge`, { waitUntil: 'networkidle' });
 	await page.evaluate(async () => {
 		await navigator.serviceWorker.register('/sw.js');
@@ -115,6 +134,8 @@ try {
 		]);
 	});
 	await page.reload({ waitUntil: 'networkidle' });
+
+	lastStage = 'verifying the complete active cache';
 	const installedCaches = await page.evaluate(async ({ activeCacheName, buildAssets, legacyCacheName, unrelatedCacheName }) => {
 		const keys = await caches.keys();
 		const active = await caches.open(activeCacheName);
@@ -137,8 +158,7 @@ try {
 	assert.equal(installedCaches.workerScriptCached, false, 'the active cache does not duplicate the browser-managed service worker script');
 	assert.deepEqual(installedCaches.missingBuildAssets, [], 'every generated Svelte client asset is installed before activation');
 
-	// Deliberately poison one navigation entry. Network-first routing must replace
-	// it with the live page while online, then retain that response for offline use.
+	lastStage = 'refreshing a poisoned Work navigation';
 	await page.evaluate(async ({ activeCacheName }) => {
 		const cache = await caches.open(activeCacheName);
 		await cache.put('/work', new Response(
@@ -156,8 +176,7 @@ try {
 	}, { activeCacheName });
 	assert.equal(refreshedWorkCache, true, 'the live Work response replaces the poisoned cache entry');
 
-	// Next has not been visited in this browser. It must still hydrate offline from
-	// the build-generated client manifest rather than relying on runtime warming.
+	lastStage = 'hydrating an unvisited Next route offline';
 	await context.setOffline(true);
 	await page.goto(`${origin}/landing.html`, { waitUntil: 'domcontentloaded', timeout: 10000 });
 	assert.equal(await page.locator('#replay-demo').count(), 1, 'the complete landing proof loads offline');
@@ -172,11 +191,8 @@ try {
 	assert.ok(cachedSeed > 0, 'bundled seed data is available offline');
 	console.log(JSON.stringify({ cache: activeCacheName, generation: 'build-derived', buildAssets: buildAssets.length, unvisitedOfflineRoute: 'next', unrelatedCachePreserved: true, freshness: 'network-first', cachedSeed }));
 } finally {
-	await browser?.close();
-	if (server.listening) {
-		await new Promise((resolve) => {
-			server.close(resolve);
-			server.closeAllConnections();
-		});
-	}
+	clearTimeout(watchdog);
+	await context?.close().catch(() => {});
+	await browser?.close().catch(() => {});
+	server.kill();
 }
