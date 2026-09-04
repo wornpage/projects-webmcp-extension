@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { buildModelContextProbeInitScript } from './webmcp-recording-preflight.mjs';
 
 const port = 4177;
 const origin = `http://127.0.0.1:${port}`;
-const server = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1', '--directory', 'dist/static-publish'], {
-  stdio: 'ignore',
-  windowsHide: true
-});
+const server = spawn(
+  process.execPath,
+  [path.resolve('node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
+  { cwd: 'svelte-frontend', stdio: 'ignore', windowsHide: true }
+);
 let browser;
 
 async function waitForServer() {
