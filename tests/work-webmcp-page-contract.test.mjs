@@ -21,7 +21,7 @@ import {
 	workSearchPresentationReceipt
 } from '../svelte-frontend/src/routes/work/work-webmcp.mjs';
 import { registerPageTools } from '../svelte-frontend/src/lib/webmcp.mjs';
-import { decisionWorkspaceReviewFocusRequest, decisionWorkspaceReviewHref } from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
+import { decisionWorkspaceReviewFocusRequest, decisionWorkspaceReviewHref, decisionWorkspaceWorkFocusRequest, pendingDecisionWorkHref } from '../svelte-frontend/src/lib/decision-workspace-navigation.mjs';
 import { summarizeWorkMetadata } from '../svelte-frontend/src/lib/work-metadata.mjs';
 import { filterPacks, orderPacks, primaryCommand, primaryCommandNavigation } from '../svelte-frontend/src/lib/demo-workflow.ts';
 import { planBatchAction, removePacksAndReferences, repairActiveSelection } from '../svelte-frontend/src/lib/batch-actions.mjs';
@@ -241,6 +241,20 @@ test('Work projects only the rendered decision recommendation and rejects imposs
 		sourceCount: 2
 	});
 	assert.doesNotMatch(JSON.stringify(view), /not exposed/u);
+	const outsideRecommendation = workView({
+		recommendation: {
+			...recommendation,
+			decisionCount: 2,
+			blockedCount: 2,
+			overdueCount: 2,
+			outsideCurrentView: true
+		}
+	});
+	assert.equal(outsideRecommendation?.recommendation?.outsideCurrentView, true);
+	assert.equal(workPageView({
+		...outsideRecommendation,
+		recommendation: { ...outsideRecommendation.recommendation, blockedCount: 3 }
+	}), null);
 	const exactIdRecommendation = workView({ recommendation: { ...recommendation, id: ' bike rack / choice ' } });
 	assert.equal(exactIdRecommendation?.recommendation?.id, ' bike rack / choice ');
 	assert.equal(exactIdRecommendation?.recommendation?.href, '/next?pack=%20bike%20rack%20%2F%20choice%20&context=decision-workspace');
@@ -266,6 +280,22 @@ test('Decision Workspace uses one exact encoded Review destination for visible a
 	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams('focus=one&focus=two')), { present: true, workId: '' });
 	assert.deepEqual(decisionWorkspaceReviewFocusRequest(new URLSearchParams('focus=')), { present: true, workId: '' });
 	assert.throws(() => decisionWorkspaceReviewHref(''), /exact work item id/u);
+
+	const pendingId = 'pending / exact id';
+	const workHref = pendingDecisionWorkHref(pendingId);
+	assert.equal(workHref, '/work?focus=pending%20%2F%20exact%20id&context=pending-decision');
+	assert.deepEqual(decisionWorkspaceWorkFocusRequest(new URLSearchParams(workHref.split('?')[1])), { present: true, workId: pendingId });
+	assert.deepEqual(decisionWorkspaceWorkFocusRequest(new URLSearchParams('focus=generic-card')), { present: false, workId: '' });
+	assert.deepEqual(decisionWorkspaceWorkFocusRequest(new URLSearchParams('focus=one&focus=two&context=pending-decision')), { present: true, workId: '' });
+	assert.deepEqual(decisionWorkspaceWorkFocusRequest(new URLSearchParams('focus=&context=pending-decision')), { present: true, workId: '' });
+	assert.deepEqual(decisionWorkspaceWorkFocusRequest(new URLSearchParams(`focus=${'x'.repeat(201)}&context=pending-decision`)), { present: true, workId: '' });
+	assert.deepEqual(decisionWorkspaceWorkFocusRequest(new URLSearchParams('focus=valid&context=pending-decision&context=pending-decision')), { present: true, workId: '' });
+	assert.equal(pendingDecisionWorkHref('x'.repeat(201)), null);
+	assert.match(routeSource, /import \{ browser \} from '\$app\/environment';[\s\S]*?browser[\s\S]*?decisionWorkspaceWorkFocusRequest\(\$page\.url\.searchParams\)[\s\S]*?: \{ present: false, workId: '' \}/u);
+	assert.match(routeSource, /\$effect\(\(\) => \{\s*if \(!browser\) return;\s*const focusValues = \$page\.url\.searchParams\.getAll\('focus'\);/u);
+	assert.match(routeSource, /pendingDecisionFocus\.present[\s\S]*?focusedDecisionPack[\s\S]*?: \[\][\s\S]*?recommendedDecisionWork\(decisionWorkspaceContext\)/u);
+	assert.match(routeSource, /data-decision-resume-rejected[\s\S]*?pendingDecisionResumeError/u);
+	assert.doesNotMatch(routeSource, /if \(attempts <= 1\) applyFilter\('all'\)/u);
 });
 
 test('the current-Work descriptor is closed, read-only, untrusted-content aware, and live', async () => {
@@ -506,7 +536,7 @@ test('Work renders and returns one canonical bounded view through its existing s
 	assert.match(routeSource, /let currentWorkView = \$derived\.by\(\(\) => workPageView\(\{[\s\S]*?search: query,[\s\S]*?appliedSearch: debouncedQuery,[\s\S]*?matching: visible\.length,[\s\S]*?shown: renderedVisible\.length,[\s\S]*?items: renderedVisible\.map\(\(pack\) => workItemPageView\(/u);
 	assert.match(workflowSource, /export function recommendedDecisionWork\(visiblePacks: DemoPack\[\]\)[\s\S]*?const decisions = visiblePacks\.filter\([\s\S]*?const pack = decisions\[0\];/u);
 	assert.match(workflowSource, /visibleBlockedCount: visiblePacks\.filter\(hasBlocker\)\.length/u);
-	assert.match(routeSource, /let decisionWorkspace = \$derived\(recommendedDecisionWork\(visible\)\);[\s\S]*?recommendation: decisionWorkspace[\s\S]*?reason: decisionWorkspaceReason/u);
+	assert.match(routeSource, /let decisionWorkspaceContext = \$derived\([\s\S]*?let decisionWorkspace = \$derived\(recommendedDecisionWork\(decisionWorkspaceContext\)\);[\s\S]*?recommendation: decisionWorkspace[\s\S]*?reason: decisionWorkspaceReason/u);
 	assert.match(routeSource, /let decisionWorkspaceDecider = \$derived\([\s\S]*?visibleDecisionDecider\(decisionWorkspace\.pack\.area, decisionWorkspace\.pack\.decider\)[\s\S]*?decider: decisionWorkspaceDecider/u);
 	assert.match(routeSource, /import WorkDecisionWorkspace from '\.\/WorkDecisionWorkspace\.svelte';[\s\S]*?\{#if decisionWorkspace\}[\s\S]*?<WorkDecisionWorkspace[\s\S]*?recommendation=\{decisionWorkspace\}[\s\S]*?reason=\{decisionWorkspaceReason\}[\s\S]*?decider=\{decisionWorkspaceDecider\}/u);
 	assert.match(workDecisionWorkspaceSource, /\{#if decider\}<span data-decision-workspace-decider>\{decider\}<\/span>\{\/if\}/u);

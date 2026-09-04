@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -35,6 +36,7 @@
 		hasBlocker,
 		isMissingOwnerValue,
 		isReview,
+		isOpenDecision,
 		dueUrgency,
 		parseDateOnly,
 		PACK_ENERGIES,
@@ -53,6 +55,7 @@
 	import { registerPageTools } from '$lib/webmcp.mjs';
 	import { keepActivityPresenterVisible } from '$lib/webmcp-activity-presentation.mjs';
 	import { recordWebMcpHandoffStep } from '$lib/webmcp-handoff-store';
+	import { decisionWorkspaceWorkFocusRequest } from '$lib/decision-workspace-navigation.mjs';
 	import WebMcpActivityStrip from '$lib/WebMcpActivityStrip.svelte';
 	import WorkGridCard from '$lib/components/WorkGridCard.svelte';
 	import WorkListCard from '$lib/components/WorkListCard.svelte';
@@ -244,7 +247,43 @@
 	let filter = $derived($demoState?.filter || 'all');
 	let visible = $derived((()=>{let v=orderPacks(filterPacks(packs,filter,debouncedQuery,energyFilter,areaFilter,recurrenceFilter,ownerFilter,hideDone), sortBy, manualOrder);if(dueUrgencyFilter!=='all'){v=v.filter(p=>dueUrgency(p)===dueUrgencyFilter)}const sel=$demoState?.selectedId;if(focusMode&&sel){return v.filter(p=>p.id===sel)}return v})());
 	let manualTargetOptions = $derived(visible.map((pack) => ({ value: pack.id, label: workTitle(pack) })));
-	let decisionWorkspace = $derived(recommendedDecisionWork(visible));
+	let workspaceLoaded = $derived($demoState !== null);
+	let pendingDecisionFocus = $derived(
+		browser
+			? decisionWorkspaceWorkFocusRequest($page.url.searchParams)
+			: { present: false, workId: '' }
+	);
+	let focusedDecisionCandidate = $derived(
+		pendingDecisionFocus.workId
+			? packs.find((pack) => pack.id === pendingDecisionFocus.workId) || null
+			: null
+	);
+	let focusedDecisionPack = $derived(
+		focusedDecisionCandidate && isOpenDecision(focusedDecisionCandidate)
+			? focusedDecisionCandidate
+			: null
+	);
+	let focusedDecisionOutsideView = $derived(Boolean(
+		focusedDecisionPack && !visible.some((pack) => pack.id === focusedDecisionPack.id)
+	));
+	let decisionWorkspaceContext = $derived(
+		pendingDecisionFocus.present
+			? focusedDecisionPack
+				? [focusedDecisionPack, ...visible.filter((pack) => pack.id !== focusedDecisionPack.id)]
+				: []
+			: visible
+	);
+	let decisionWorkspace = $derived(recommendedDecisionWork(decisionWorkspaceContext));
+	let pendingDecisionResumeError = $derived.by(() => {
+		if (!pendingDecisionFocus.present || !workspaceLoaded || focusedDecisionPack) return '';
+		if (!pendingDecisionFocus.workId) return 'This pending-decision link is invalid or exceeds the supported identifier length.';
+		const candidate = packs.find((pack) => pack.id === pendingDecisionFocus.workId);
+		if (!candidate) return 'The requested pending decision no longer exists in this workspace.';
+		if (candidate.archived) return 'The requested pending decision is archived and cannot be resumed in Work.';
+		if (candidate.status === 'done') return 'The requested pending decision is already complete and cannot be resumed.';
+		if (candidate.decision !== true) return 'The requested work item is not an explicit open decision.';
+		return 'The requested pending decision could not be resumed.';
+	});
 	let decisionWorkspaceDecider = $derived(
 		decisionWorkspace
 			? visibleDecisionDecider(decisionWorkspace.pack.area, decisionWorkspace.pack.decider)
@@ -252,7 +291,9 @@
 	);
 	let decisionWorkspaceReason = $derived(
 		decisionWorkspace
-			? `First open decision in this filtered and sorted view. ${decisionWorkspace.sameAreaBlockedCount} blocked ${decisionWorkspace.pack.area || 'related'} ${decisionWorkspace.sameAreaBlockedCount === 1 ? 'item is' : 'items are'} in view. One of ${decisionWorkspace.visibleDecisionCount} open ${decisionWorkspace.visibleDecisionCount === 1 ? 'decision is' : 'decisions are'} shown.`
+			? focusedDecisionPack
+				? `Resumed the exact pending decision from Pending approvals. ${focusedDecisionOutsideView ? 'It is outside the current list filters, which remain unchanged.' : 'It remains inside the current filtered and sorted view.'} ${decisionWorkspace.sameAreaBlockedCount} blocked ${decisionWorkspace.pack.area || 'related'} ${decisionWorkspace.sameAreaBlockedCount === 1 ? 'item is' : 'items are'} in this decision context.`
+				: `First open decision in this filtered and sorted view. ${decisionWorkspace.sameAreaBlockedCount} blocked ${decisionWorkspace.pack.area || 'related'} ${decisionWorkspace.sameAreaBlockedCount === 1 ? 'item is' : 'items are'} in view. One of ${decisionWorkspace.visibleDecisionCount} open ${decisionWorkspace.visibleDecisionCount === 1 ? 'decision is' : 'decisions are'} shown.`
 			: ''
 	);
 	let renderedVisible = $derived(visible.slice(0, renderLimit));
@@ -326,7 +367,8 @@
 				decisionCount: decisionWorkspace.visibleDecisionCount,
 				blockedCount: decisionWorkspace.visibleBlockedCount,
 				overdueCount: decisionWorkspace.visibleOverdueCount,
-				sourceCount: decisionWorkspace.pack.sources?.length || 0
+				sourceCount: decisionWorkspace.pack.sources?.length || 0,
+				outsideCurrentView: focusedDecisionOutsideView || undefined
 			}
 			: null,
 		items: renderedVisible.map((pack) => workItemPageView({
@@ -929,12 +971,21 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		goto(primaryCommandNavigation(pack));
 	}
 
-	// A focus query scrolls to the card and focuses its title once.
-	let focusedCardId = '';
+	// A generic focus link may focus a card only when that card already belongs
+	// to the current rendered list. A Pending-approvals context instead focuses
+	// the exact validated decision workspace and never rewrites saved filters.
+	let focusedArrivalKey = '';
 	$effect(() => {
-		const target = $page.url.searchParams.get('focus') || '';
-		if (!target || target === focusedCardId) return;
-		focusedCardId = target;
+		if (!browser) return;
+		const focusValues = $page.url.searchParams.getAll('focus');
+		if (focusValues.length !== 1 || !focusValues[0]) return;
+		const target = focusValues[0];
+		const resume = decisionWorkspaceWorkFocusRequest($page.url.searchParams);
+		const candidate = packs.find((pack) => pack.id === target) || null;
+		if (resume.present && (!resume.workId || !candidate || !isOpenDecision(candidate))) return;
+		if (!resume.present && !candidate) return;
+		const focusKey = `${resume.present ? 'decision' : 'card'}:${target}`;
+		if (focusKey === focusedArrivalKey) return;
 		let cancelled = false;
 		const focusTimers = new Set<ReturnType<typeof setTimeout>>();
 		const scheduleFocus = (callback: () => void, delay: number) => {
@@ -944,18 +995,17 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 			}, delay);
 			focusTimers.add(timer);
 		};
-		// Retry up to 5 times — the card may not be in the visible
-		// filtered list yet. Switch to All on the first miss.
 		const tryFocus = (attempts: number) => {
 			if (cancelled) return;
-			const card = document.querySelector(
-				`[data-work-item][data-pack-id="${CSS.escape(target)}"]`
-			);
-			if (card) {
-				focusAndPulse(card as HTMLElement, { block: 'center' });
+			const selector = resume.present
+				? `[data-decision-workspace][data-decision-pack-id="${CSS.escape(target)}"]`
+				: `[data-work-item][data-pack-id="${CSS.escape(target)}"]`;
+			const destination = document.querySelector<HTMLElement>(selector);
+			if (destination) {
+				focusedArrivalKey = focusKey;
+				focusAndPulse(destination, { block: 'center' });
 				return;
 			}
-			if (attempts <= 1) applyFilter('all');
 			if (attempts < 5) scheduleFocus(() => tryFocus(attempts + 1), 80);
 		};
 		scheduleFocus(() => tryFocus(0), 100);
@@ -1217,11 +1267,19 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		<WornError message="Could not load work items." detail={$demoStateError} onretry={refreshWork} />
 	{/if}
 
+	{#if pendingDecisionResumeError}
+		<div data-decision-resume-rejected>
+			<WornAlert tone="warning">{pendingDecisionResumeError}</WornAlert>
+		</div>
+	{/if}
+
 	{#if decisionWorkspace}
 		<WorkDecisionWorkspace
 			recommendation={decisionWorkspace}
 			reason={decisionWorkspaceReason}
 			decider={decisionWorkspaceDecider}
+			resumed={Boolean(focusedDecisionPack)}
+			outsideCurrentView={focusedDecisionOutsideView}
 		/>
 	{/if}
 
