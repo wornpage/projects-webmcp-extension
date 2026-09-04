@@ -23,7 +23,7 @@ try {
 		assert.match(serviceWorkerSource, new RegExp(`['\"]${assetPath.replaceAll('/', '\\/')}['\"]`, 'u'), `${assetPath} is explicitly precached`);
 	}
 	const precacheSource = serviceWorkerSource.match(/const PRECACHE = \[([\s\S]*?)\];/u)?.[1] ?? '';
-	assert.doesNotMatch(precacheSource, /['\"]\/sw\.js['\"]/u, 'the browser-managed worker script is not stored in Cache Storage');
+	assert.doesNotMatch(precacheSource, /['"]\/sw\.js['"]/u, 'the browser-managed worker script is not stored in Cache Storage');
 	assert.match(serviceWorkerSource, /CACHE_GENERATION = 'atomic-1'[\s\S]*?ACTIVE_CACHE_NAME = `\$\{CACHE_NAME\}-\$\{CACHE_GENERATION\}`/u, 'each worker shell owns a distinct active cache generation');
 	assert.match(serviceWorkerSource, /async function precacheRequiredAssets\(\)[\s\S]*?await caches\.delete\(ACTIVE_CACHE_NAME\)[\s\S]*?Promise\.all\(PRECACHE\.map[\s\S]*?!isCacheable\(response\)[\s\S]*?catch \(error\)[\s\S]*?await caches\.delete\(ACTIVE_CACHE_NAME\)[\s\S]*?throw error/u, 'required precache failure removes the incomplete generation and rejects installation');
 	assert.match(serviceWorkerSource, /key\.startsWith\(OWNED_CACHE_PREFIX\) && key !== ACTIVE_CACHE_NAME/u, 'activation removes only obsolete app-owned caches');
