@@ -4,12 +4,80 @@ import path from 'node:path';
 import { chromium } from 'playwright-core';
 
 const port = 4173;
+const landingPort = 4174;
 const origin = `http://127.0.0.1:${port}`;
-const server = spawn(process.execPath, [path.resolve('svelte-frontend/node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port)], { cwd: 'svelte-frontend', stdio: 'ignore', windowsHide: true });
+const landingOrigin = `http://127.0.0.1:${landingPort}`;
+const viteCli = path.resolve('svelte-frontend/node_modules/vite/bin/vite.js');
+const server = spawn(process.execPath, [viteCli, '--host', '127.0.0.1', '--port', String(port)], { cwd: 'svelte-frontend', stdio: 'ignore', windowsHide: true });
+const landingServer = spawn(process.execPath, [viteCli, '--host', '127.0.0.1', '--port', String(landingPort), '--strictPort'], { cwd: '.', stdio: 'ignore', windowsHide: true });
 let browser;
+
+async function waitForServer(url) {
+	for (let attempt = 0; attempt < 60; attempt += 1) {
+		try { if ((await fetch(url)).ok) return; } catch {}
+		await new Promise((resolve) => setTimeout(resolve, 250));
+	}
+	throw new Error(`Browser smoke server did not become ready: ${url}`);
+}
+
 try {
-	for (let attempt = 0; attempt < 30; attempt += 1) { try { await fetch(`${origin}/next`); break; } catch { await new Promise((resolve) => setTimeout(resolve, 250)); } }
+	await Promise.all([
+		waitForServer(`${origin}/next`),
+		waitForServer(`${landingOrigin}/landing.html`)
+	]);
 	browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined });
+
+	const landingPage = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+	await landingPage.goto(`${landingOrigin}/landing.html`, { waitUntil: 'networkidle' });
+	await landingPage.locator('#replay').scrollIntoViewIfNeeded();
+	const replayStates = ['observe', 'narrow', 'prepare', 'decide'];
+	for (let index = 0; index < replayStates.length; index += 1) {
+		const state = replayStates[index];
+		await landingPage.locator(`[data-replay="${index + 1}"]`).click();
+		await landingPage.waitForFunction((expected) => document.querySelector('#replay-demo')?.getAttribute('data-replay-state') === expected, state);
+		const replay = await landingPage.locator('#replay-demo').evaluate((demo) => ({
+			state: demo.getAttribute('data-replay-state'),
+			label: demo.getAttribute('aria-label'),
+			stage: demo.querySelector('#replay-stage-label')?.textContent?.trim(),
+			activeViews: [...demo.querySelectorAll('[data-replay-view].is-active')].map((view) => view.getAttribute('data-replay-view')),
+			currentProgress: [...demo.querySelectorAll('[data-replay-progress].is-current')].length,
+			pressedSteps: [...document.querySelectorAll('.lp-replay-step[aria-pressed="true"]')].map((step) => step.getAttribute('data-replay')),
+			text: demo.textContent?.replace(/\s+/gu, ' ').trim() ?? ''
+		}));
+		assert.equal(replay.state, state);
+		assert.match(replay.label ?? '', new RegExp(`^${state[0].toUpperCase()}${state.slice(1)}:`, 'u'));
+		assert.equal(replay.stage, `${state[0].toUpperCase()}${state.slice(1)} · ${index + 1} of 4`);
+		assert.deepEqual(replay.activeViews, [state]);
+		assert.equal(replay.currentProgress, 1);
+		assert.deepEqual(replay.pressedSteps, [String(index + 1)]);
+		if (state === 'decide') {
+			assert.match(replay.text, /Agent stopped here[\s\S]*?Your decision[\s\S]*?Discard draft[\s\S]*?Approve and save[\s\S]*?No workspace change until you choose\./u);
+		}
+	}
+	const playButton = landingPage.locator('#replay-play');
+	await playButton.click();
+	assert.equal(await playButton.getAttribute('aria-pressed'), 'true');
+	assert.match((await playButton.textContent()) ?? '', /Stop the handoff/u);
+	assert.equal(await landingPage.locator('#replay-demo').getAttribute('data-replay-state'), 'observe');
+	await playButton.click();
+	assert.equal(await playButton.getAttribute('aria-pressed'), 'false');
+	assert.match((await playButton.textContent()) ?? '', /Watch the handoff/u);
+	assert.equal(await landingPage.locator('#replay-demo').getAttribute('data-replay-state'), 'observe');
+	assert.equal((await landingPage.locator('#replay-note').textContent())?.trim(), 'Press play — four steps, about ten seconds. No account, no setup.');
+	await landingPage.setViewportSize({ width: 390, height: 900 });
+	await landingPage.locator('#replay').scrollIntoViewIfNeeded();
+	const landingMetrics = await landingPage.evaluate(() => ({
+		documentWidth: document.documentElement.scrollWidth,
+		viewportWidth: document.documentElement.clientWidth,
+		demoWidth: document.querySelector('#replay-demo')?.getBoundingClientRect().width ?? 0,
+		decisionActions: document.querySelectorAll('.lp-proof-action').length
+	}));
+	assert.ok(landingMetrics.documentWidth <= landingMetrics.viewportWidth, `landing replay should not overflow: ${landingMetrics.documentWidth}px > ${landingMetrics.viewportWidth}px`);
+	assert.ok(landingMetrics.demoWidth > 0 && landingMetrics.demoWidth <= landingMetrics.viewportWidth);
+	assert.equal(landingMetrics.decisionActions, 2);
+	console.log(JSON.stringify({ landingReplay: replayStates, humanBoundary: true, mobileOverflow: false }));
+	await landingPage.close();
+
 	const page = await browser.newPage({ viewport: { width: 768, height: 900 } });
 	await page.goto(`${origin}/next`, { waitUntil: 'domcontentloaded' });
 	await page.evaluate(async () => {
@@ -38,4 +106,8 @@ try {
 	}
 	await checkViewport(700);
 	await checkViewport(768);
-} finally { await browser?.close(); server.kill(); }
+} finally {
+	await browser?.close();
+	server.kill();
+	landingServer.kill();
+}

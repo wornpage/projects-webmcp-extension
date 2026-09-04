@@ -119,41 +119,181 @@
           <h2 id="replay-title">One browser. One accountable loop.</h2>
           <p>Observe → narrow → prepare → decide. The agent’s work stays visible and the Save remains yours.</p>
         </div>
-        <div class="lp-replay-stage">
-          <ol class="lp-replay-steps">
-            <li>
-              <button class="lp-replay-step is-on" type="button" data-replay="1" aria-current="step">
-                <span class="lp-replay-step-num" aria-hidden="true">1</span>
-                <strong>Observe</strong>
-                <span class="lp-replay-step-detail">The agent reads the exact visible counts, work items, and blockers.</span>
-              </button>
-            </li>
-            <li>
-              <button class="lp-replay-step" type="button" data-replay="2">
-                <span class="lp-replay-step-num" aria-hidden="true">2</span>
-                <strong>Narrow</strong>
-                <span class="lp-replay-step-detail">It narrows the visible workspace without changing its data.</span>
-              </button>
-            </li>
-            <li>
-              <button class="lp-replay-step" type="button" data-replay="3">
-                <span class="lp-replay-step-num" aria-hidden="true">3</span>
-                <strong>Prepare</strong>
-                <span class="lp-replay-step-detail">It prepares a clearer next action and explains why.</span>
-              </button>
-            </li>
-            <li>
-              <button class="lp-replay-step" type="button" data-replay="4">
-                <span class="lp-replay-step-num" aria-hidden="true">4</span>
-                <strong>Decide</strong>
-                <span class="lp-replay-step-detail">The person approves and saves the draft, or discards it without a workspace change.</span>
-              </button>
-            </li>
-          </ol>
-          <button class="lp-btn lp-btn-primary lp-replay-play" id="replay-play" type="button" aria-pressed="false">
-            ▶ Watch the handoff
-          </button>
-          <span class="lp-replay-note" id="replay-note" role="status" aria-live="polite">Press play — four steps, about ten seconds. No account, no setup.</span>
+        <div class="lp-replay-layout">
+          <div
+            class="lp-replay-demo"
+            id="replay-demo"
+            data-replay-state="observe"
+            role="img"
+            aria-label="Observe: the agent reads eight visible work items and identifies a blocked client handoff."
+          >
+            <div class="lp-replay-demo-frame" aria-hidden="true">
+              <div class="lp-replay-demo-head">
+                <div>
+                  <span class="lp-eyebrow">Live product proof</span>
+                  <strong>Team priorities</strong>
+                </div>
+                <span class="lp-replay-demo-stage" id="replay-stage-label">Observe · 1 of 4</span>
+              </div>
+
+              <div class="lp-replay-views">
+                <section class="lp-replay-view is-active" data-replay-view="observe">
+                  <div class="lp-proof-toolbar">
+                    <strong>8 visible of 8 workspace</strong>
+                    <span>Reading visible state</span>
+                  </div>
+                  <div class="lp-proof-list">
+                    <article class="lp-proof-item is-signal">
+                      <header>
+                        <strong>Prepare the client handoff</strong>
+                        <span class="lp-pill lp-pill-warn">Blocked</span>
+                      </header>
+                      <small>Client work · Owner: You</small>
+                      <div class="lp-proof-evidence">
+                        <span>Blocker</span>
+                        <strong>Waiting on final details</strong>
+                      </div>
+                    </article>
+                    <article class="lp-proof-item">
+                      <header>
+                        <strong>Schedule design review</strong>
+                        <span class="lp-pill lp-pill-accent">Ready</span>
+                      </header>
+                      <small>Design · Due Friday</small>
+                    </article>
+                    <article class="lp-proof-item is-receded">
+                      <header>
+                        <strong>Share the weekly update</strong>
+                        <span class="lp-pill lp-pill-muted">Done</span>
+                      </header>
+                      <small>Operations · Completed</small>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="lp-replay-view" data-replay-view="narrow">
+                  <div class="lp-proof-toolbar">
+                    <strong>2 shown · 8 workspace</strong>
+                    <span class="lp-proof-unchanged">Workspace unchanged</span>
+                  </div>
+                  <div class="lp-proof-scope">
+                    <span>Client handoff</span>
+                    <span>Needs attention</span>
+                  </div>
+                  <div class="lp-proof-list">
+                    <article class="lp-proof-item is-selected">
+                      <header>
+                        <strong>Prepare the client handoff</strong>
+                        <span class="lp-pill lp-pill-warn">Blocked</span>
+                      </header>
+                      <div class="lp-proof-evidence">
+                        <span>Why it surfaced</span>
+                        <strong>Waiting on final details</strong>
+                      </div>
+                    </article>
+                    <article class="lp-proof-item">
+                      <header>
+                        <strong>Schedule design review</strong>
+                        <span class="lp-pill lp-pill-accent">Ready</span>
+                      </header>
+                      <small>Related client milestone</small>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="lp-replay-view" data-replay-view="prepare">
+                  <div class="lp-proof-receipt">
+                    <header>
+                      <div>
+                        <span>Verified evidence</span>
+                        <strong>Prepare the client handoff</strong>
+                      </div>
+                      <span class="lp-pill lp-pill-warn">Not saved</span>
+                    </header>
+                    <dl class="lp-proof-facts">
+                      <div>
+                        <dt>Workflow</dt>
+                        <dd>Blocked</dd>
+                      </div>
+                      <div>
+                        <dt>Blocker</dt>
+                        <dd>Waiting on final details</dd>
+                      </div>
+                    </dl>
+                    <div class="lp-proof-proposal">
+                      <span>Proposed next action</span>
+                      <strong>Confirm handoff details</strong>
+                    </div>
+                    <footer>
+                      <span>Unsaved proposal</span>
+                      <strong>Human approval required</strong>
+                    </footer>
+                  </div>
+                </section>
+
+                <section class="lp-replay-view" data-replay-view="decide">
+                  <div class="lp-proof-decision">
+                    <span class="lp-proof-stop">Agent stopped here</span>
+                    <div class="lp-proof-decision-evidence">
+                      <span>Verified evidence retained</span>
+                      <strong>Blocked · Waiting on final details</strong>
+                    </div>
+                    <h3>Your decision</h3>
+                    <p>Confirm handoff details</p>
+                    <div class="lp-proof-actions">
+                      <span class="lp-proof-action">Discard draft</span>
+                      <span class="lp-proof-action is-primary">Approve and save</span>
+                    </div>
+                    <small>No workspace change until you choose.</small>
+                  </div>
+                </section>
+              </div>
+
+              <div class="lp-replay-progress">
+                <span class="is-current" data-replay-progress></span>
+                <span data-replay-progress></span>
+                <span data-replay-progress></span>
+                <span data-replay-progress></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="lp-replay-stage">
+            <ol class="lp-replay-steps">
+              <li>
+                <button class="lp-replay-step is-on" type="button" data-replay="1" aria-current="step" aria-pressed="true" aria-controls="replay-demo">
+                  <span class="lp-replay-step-num" aria-hidden="true">1</span>
+                  <strong>Observe</strong>
+                  <span class="lp-replay-step-detail">The agent reads the exact visible counts, work items, and blockers.</span>
+                </button>
+              </li>
+              <li>
+                <button class="lp-replay-step" type="button" data-replay="2" aria-pressed="false" aria-controls="replay-demo">
+                  <span class="lp-replay-step-num" aria-hidden="true">2</span>
+                  <strong>Narrow</strong>
+                  <span class="lp-replay-step-detail">It narrows the visible workspace without changing its data.</span>
+                </button>
+              </li>
+              <li>
+                <button class="lp-replay-step" type="button" data-replay="3" aria-pressed="false" aria-controls="replay-demo">
+                  <span class="lp-replay-step-num" aria-hidden="true">3</span>
+                  <strong>Prepare</strong>
+                  <span class="lp-replay-step-detail">It prepares a clearer next action and explains why.</span>
+                </button>
+              </li>
+              <li>
+                <button class="lp-replay-step" type="button" data-replay="4" aria-pressed="false" aria-controls="replay-demo">
+                  <span class="lp-replay-step-num" aria-hidden="true">4</span>
+                  <strong>Decide</strong>
+                  <span class="lp-replay-step-detail">The person approves and saves the draft, or discards it without a workspace change.</span>
+                </button>
+              </li>
+            </ol>
+            <button class="lp-btn lp-btn-primary lp-replay-play" id="replay-play" type="button" aria-pressed="false" aria-controls="replay-demo">
+              ▶ Watch the handoff
+            </button>
+            <span class="lp-replay-note" id="replay-note" role="status" aria-live="polite">Press play — four steps, about ten seconds. No account, no setup.</span>
+          </div>
         </div>
       </div>
     </section>
