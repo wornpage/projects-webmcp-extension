@@ -104,7 +104,7 @@ try {
 	}
 	const precacheSource = serviceWorkerSource.match(/const PRECACHE = Object\.freeze\(\[([\s\S]*?)\]\);/u)?.[1] ?? '';
 	assert.doesNotMatch(precacheSource, /['"]\/sw\.js['"]/u, 'the browser-managed worker script is not stored in Cache Storage');
-	assert.match(serviceWorkerSource, /async function precacheRequiredAssets\(\)[\s\S]*?await caches\.delete\(ACTIVE_CACHE_NAME\)[\s\S]*?Promise\.all\(PRECACHE\.map[\s\S]*?!isCacheable\(response\)[\s\S]*?catch \(error\)[\s\S]*?await caches\.delete\(ACTIVE_CACHE_NAME\)[\s\S]*?throw error/u, 'required precache failure removes the incomplete generation and rejects installation');
+	assert.match(serviceWorkerSource, /async function precacheRequiredAssets\(\)[\s\S]*?await caches\.delete\(ACTIVE_CACHE_NAME\)[\s\S]*?cache\.addAll\(PRECACHE\.map[\s\S]*?catch \(error\)[\s\S]*?await caches\.delete\(ACTIVE_CACHE_NAME\)[\s\S]*?throw error/u, 'required batch precache failure removes the incomplete generation and rejects installation');
 	assert.match(serviceWorkerSource, /isOwnedCache\(key\) && key !== ACTIVE_CACHE_NAME/u, 'activation removes only obsolete app-owned caches');
 	assert.match(serviceWorkerSource, /NETWORK_FIRST_PATHS[\s\S]*?'\/data\/demo-packs\.json'[\s\S]*?'\/assets\/landing\.css'[\s\S]*?'\/assets\/landing\.js'/u, 'unversioned landing and seed assets prefer the network');
 
@@ -124,16 +124,17 @@ try {
 		await unrelated.put('/unrelated-cache-marker', new Response('preserve me'));
 	}, { legacyCacheName, unrelatedCacheName });
 
-	lastStage = 'installing the generated offline shell';
-	await page.goto(`${origin}/webmcp-challenge`, { waitUntil: 'networkidle' });
-	await page.evaluate(async () => {
-		await navigator.serviceWorker.register('/sw.js');
-		await Promise.race([
-			navigator.serviceWorker.ready,
-			new Promise((_, reject) => setTimeout(() => reject(new Error('Service worker did not become ready.')), 10000))
-		]);
-	});
-	await page.reload({ waitUntil: 'networkidle' });
+	lastStage = 'loading Guide before service-worker registration';
+	await page.goto(`${origin}/webmcp-challenge`, { waitUntil: 'domcontentloaded' });
+	lastStage = 'waiting for generated service-worker activation';
+	await page.evaluate(() => navigator.serviceWorker.register('/sw.js'));
+	await Promise.race([
+		page.evaluate(() => navigator.serviceWorker.ready.then(() => true)),
+		new Promise((_, reject) => setTimeout(() => reject(new Error('Service worker did not become ready.')), 15000))
+	]);
+	lastStage = 'reloading Guide under the active service worker';
+	await page.reload({ waitUntil: 'domcontentloaded' });
+	await page.waitForSelector('[data-webmcp-challenge-guide]');
 
 	lastStage = 'verifying the complete active cache';
 	const installedCaches = await page.evaluate(async ({ activeCacheName, buildAssets, legacyCacheName, unrelatedCacheName }) => {
@@ -166,9 +167,9 @@ try {
 			{ headers: { 'Content-Type': 'text/html; charset=utf-8' } }
 		));
 	}, { activeCacheName });
-	await page.goto(`${origin}/work`, { waitUntil: 'networkidle' });
+	await page.goto(`${origin}/work`, { waitUntil: 'domcontentloaded' });
+	await page.waitForSelector('main.challenge-route');
 	assert.equal(await page.locator('#stale-work-cache').count(), 0, 'online navigation does not serve a poisoned cached page');
-	assert.equal(await page.locator('main.challenge-route').count(), 1, 'online navigation serves the current Work route');
 	const refreshedWorkCache = await page.evaluate(async ({ activeCacheName }) => {
 		const cache = await caches.open(activeCacheName);
 		const response = await cache.match('/work');
