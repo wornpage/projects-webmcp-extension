@@ -10,6 +10,7 @@ assets/icon-512.svg
 assets/landing.css
 assets/landing.js
 assets/not-found.css
+assets/og-image-7876d230.png
 assets/og-image.svg
 data/demo-packs.json
 DESIGN.md
@@ -31,6 +32,7 @@ scripts/inline-script-bodies.mjs
 scripts/offline-browser-smoke.mjs
 scripts/portability-browser-smoke.mjs
 scripts/run-webmcp-contracts.mjs
+scripts/social-card-smoke.mjs
 scripts/static-artifact-contract.test.mjs
 scripts/webmcp-header-responsive-smoke.mjs
 scripts/webmcp-recording-preflight-contract.test.mjs
