@@ -304,7 +304,7 @@
 		box-sizing: border-box;
 		max-inline-size: 100%;
 		min-inline-size: 0;
-		padding-block-start: 16px;
+		padding-block-start: var(--worn-space-4);
 	}
 
 	.work-command-palette-boundary {
@@ -314,7 +314,7 @@
 
 	@media (max-width: 500px) {
 		.advanced-options-spacing {
-			padding-block-start: 12px;
+			padding-block-start: var(--worn-space-3);
 		}
 	}
 </style>
