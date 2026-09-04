@@ -11,6 +11,7 @@ const here = (relative: string) => fileURLToPath(new URL(relative, import.meta.u
 // Dev and preview serve the same canonical root assets that the production
 // aggregate contains. Production prerendering receives that aggregate through
 // PROJECTS_SVELTE_ASSET_DIR in scripts/build-svelte-frontend.mjs.
+const repoRootLanding = here('../landing.html');
 const repoRootAssets = here('../assets');
 const repoRootManifest = here('../manifest.json');
 const repoRootData = here('../data');
@@ -37,14 +38,15 @@ function repoAssetsMiddleware(
 		res.end('Bad request');
 		return;
 	}
+	const isLanding = pathname === '/' || pathname === '/landing.html';
 	const isManifest = pathname === '/manifest.json';
 	const isData = pathname === '/data/demo-packs.json';
-	if (!isManifest && !pathname.startsWith('/assets/') && !isData) return next();
+	if (!isLanding && !isManifest && !pathname.startsWith('/assets/') && !isData) return next();
 	const root = isData ? repoRootData : repoRootAssets;
-	const rel = isManifest ? '' : isData ? 'demo-packs.json' : pathname.slice('/assets/'.length);
-	const target = isManifest ? repoRootManifest : resolve(normalize(join(root, rel)));
-	const relativeTarget = isManifest ? '' : relative(root, target);
-	const insideRoot = isManifest || (relativeTarget !== '..' && !relativeTarget.startsWith(`..${sep}`) && !isAbsolute(relativeTarget));
+	const rel = isManifest || isLanding ? '' : isData ? 'demo-packs.json' : pathname.slice('/assets/'.length);
+	const target = isLanding ? repoRootLanding : isManifest ? repoRootManifest : resolve(normalize(join(root, rel)));
+	const relativeTarget = isManifest || isLanding ? '' : relative(root, target);
+	const insideRoot = isManifest || isLanding || (relativeTarget !== '..' && !relativeTarget.startsWith(`..${sep}`) && !isAbsolute(relativeTarget));
 
 	if (!insideRoot) {
 		res.statusCode = 403;
