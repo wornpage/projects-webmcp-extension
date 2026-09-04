@@ -136,7 +136,10 @@ try {
   assert.equal(initialWork.counts.workspace, 8);
   await execute(page, 'show_work_search', { query: 'Garage reset' });
   await page.locator('[data-webmcp-receipt="work"]').waitFor({ state: 'visible' });
-  await pressUntil(page, 'Shift+Tab', 'work-review-in-queue', (focus) => focus?.href.startsWith('/review?focus=') && focus.visibleText === 'Review in queue');
+  await pressUntil(page, 'Shift+Tab', 'work-header-tools', (focus) => focus?.data.tools === true);
+  await page.keyboard.press('Enter');
+  await page.getByRole('dialog', { name: 'Tools' }).waitFor({ state: 'visible' });
+  await pressUntil(page, 'Tab', 'tools-review', (focus) => focus?.href === '/review');
   await page.keyboard.press('Enter');
   await waitForRoute(page, '/review');
 
