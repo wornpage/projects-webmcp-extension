@@ -1,13 +1,15 @@
 // CACHE_NAME is the stable family anchor retained by the static artifact
-// contract. Bump CACHE_GENERATION whenever this worker's cached shell changes;
-// a distinct active cache keeps installation isolated from the controlling
-// worker's cache until the new worker activates successfully.
+// contract. The production build replaces the source generation and build-asset
+// markers below after Svelte has emitted its final client bundle. That makes a
+// cache generation change whenever the worker, shell, or compiled assets change.
 const CACHE_NAME = 'projects-webmcp-v2';
-const CACHE_GENERATION = 'atomic-1';
+const CACHE_GENERATION = 'source-dev'; // __PROJECTS_SW_CACHE_GENERATION__
 const ACTIVE_CACHE_NAME = `${CACHE_NAME}-${CACHE_GENERATION}`;
-const OWNED_CACHE_PREFIX = 'projects-webmcp-v';
+const OWNED_CACHE_PREFIX = `${CACHE_NAME}-`;
+const BUILD_ASSETS = Object.freeze([]); // __PROJECTS_SW_BUILD_ASSETS__
 
-const PRECACHE = [
+const PRECACHE = Object.freeze([
+	...BUILD_ASSETS,
 	'/',
 	'/landing.html',
 	'/webmcp-challenge',
@@ -24,7 +26,7 @@ const PRECACHE = [
 	'/assets/favicon.svg',
 	'/assets/icon-192.svg',
 	'/assets/icon-512.svg'
-];
+]);
 
 // These URLs are intentionally unversioned. Prefer the network while online so
 // a newly deployed landing proof, manifest, or sample seed cannot be hidden by
@@ -41,6 +43,10 @@ const NETWORK_FIRST_PATHS = new Set([
 
 function isCacheable(response) {
 	return response.ok && response.status === 200;
+}
+
+function isOwnedCache(key) {
+	return key === CACHE_NAME || key.startsWith(OWNED_CACHE_PREFIX);
 }
 
 async function activeCache() {
@@ -70,8 +76,8 @@ async function cachedOrOfflineFallback(request) {
 }
 
 async function precacheRequiredAssets() {
-	// This generation is unique to the new worker, so clearing it cannot disturb
-	// the cache still owned by the controlling worker.
+	// A production generation is content-derived, so clearing it cannot disturb
+	// the cache owned by the currently controlling worker.
 	await caches.delete(ACTIVE_CACHE_NAME);
 	const cache = await activeCache();
 	try {
@@ -97,7 +103,7 @@ self.addEventListener('activate', (event) => {
 	event.waitUntil((async () => {
 		const keys = await caches.keys();
 		await Promise.all(keys
-			.filter((key) => key.startsWith(OWNED_CACHE_PREFIX) && key !== ACTIVE_CACHE_NAME)
+			.filter((key) => isOwnedCache(key) && key !== ACTIVE_CACHE_NAME)
 			.map((key) => caches.delete(key)));
 		await self.clients.claim();
 	})());
