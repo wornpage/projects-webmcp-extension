@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { pendingDraftFingerprint, discardPendingNextActionDraft, displayToast, type PendingNextActionDraft } from '$lib/demo-client';
 	import { evidenceFacts, isOpenDecision, workTitle, type DemoPack } from '$lib/demo-workflow';
+	import { pendingDecisionWorkHref } from '$lib/decision-workspace-navigation.mjs';
 	import { WornAlert, WornButton, WornDialog } from '$lib/components';
 
 	interface Props {
@@ -46,6 +47,7 @@
 			{#each drafts as draft (draft.workId)}
 				{@const pack = packFor(draft.workId)}
 				{@const status = draftStatus(draft)}
+				{@const workResumeHref = pack && isOpenDecision(pack) ? pendingDecisionWorkHref(draft.workId) : null}
 				<article class="pending-center-item" role="listitem">
 					<div class="pending-center-head">
 						<div><h3>{pack ? workTitle(pack) : `Missing work item ${draft.workId}`}</h3><span>{draft.source === 'webmcp' ? 'Prepared by browser agent' : 'Prepared by you'} · {draft.mode === 'custom' ? 'Custom action' : 'Preset action'}</span></div>
@@ -60,12 +62,12 @@
 						<div class="pending-center-evidence"><span>Verified evidence</span><p>{draft.evidenceNote || `${evidenceFacts(pack!).workflow} is still current.`}</p></div>
 					{/if}
 					<div class="pending-center-actions">
-						{#if pack && isOpenDecision(pack)}
+						{#if workResumeHref}
 							<WornButton
 								variant="primary"
 								size="sm"
-								href={`/work?focus=${encodeURIComponent(draft.workId)}`}
-								aria-label={`Open ${workTitle(pack)} in the Work decision workspace`}
+								href={workResumeHref}
+								aria-label={`Open ${pack ? workTitle(pack) : draft.workId} in the Work decision workspace`}
 								data-pending-work-resume
 								onclick={() => (open = false)}
 							>Open in Work</WornButton>

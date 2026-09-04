@@ -18,6 +18,42 @@ export function decisionWorkspaceReviewHref(workId) {
 	return `/review?focus=${encodeURIComponent(normalizedId)}`;
 }
 
+export const PENDING_DECISION_CONTEXT = 'pending-decision';
+export const PENDING_DECISION_FOCUS_MAX_LENGTH = 200;
+
+/** @param {unknown} value @returns {string | null} */
+function boundedPendingDecisionId(value) {
+	if (typeof value !== 'string' || !value.trim() || value.length > PENDING_DECISION_FOCUS_MAX_LENGTH || SINGLE_LINE_CONTROL.test(value)) return null;
+	return value;
+}
+
+/** @param {unknown} workId @returns {string | null} */
+export function pendingDecisionWorkHref(workId) {
+	const normalizedId = boundedPendingDecisionId(workId);
+	return normalizedId
+		? `/work?focus=${encodeURIComponent(normalizedId)}&context=${PENDING_DECISION_CONTEXT}`
+		: null;
+}
+
+/**
+ * Read only the explicit Pending-approvals resume contract. Generic Work card
+ * focus links remain separate and never gain decision or persistence authority.
+ *
+ * @param {unknown} searchParams
+ * @returns {{ present: boolean, workId: string }}
+ */
+export function decisionWorkspaceWorkFocusRequest(searchParams) {
+	if (!searchParams || typeof /** @type {{ getAll?: unknown }} */ (searchParams).getAll !== 'function') {
+		return { present: false, workId: '' };
+	}
+	const params = /** @type {{ getAll: (name: string) => string[] }} */ (searchParams);
+	const contexts = params.getAll('context');
+	if (!contexts.includes(PENDING_DECISION_CONTEXT)) return { present: false, workId: '' };
+	const workIds = params.getAll('focus');
+	if (contexts.length !== 1 || workIds.length !== 1) return { present: true, workId: '' };
+	return { present: true, workId: boundedPendingDecisionId(workIds[0]) || '' };
+}
+
 /**
  * Accept one exact focus request only. The Review route still has to prove the
  * requested id is in its currently rendered review queue before focusing it.

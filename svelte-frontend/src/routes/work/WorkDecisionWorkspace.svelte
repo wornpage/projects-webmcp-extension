@@ -47,11 +47,15 @@
 	let {
 		recommendation,
 		reason,
-		decider
+		decider,
+		resumed = false,
+		outsideCurrentView = false
 	}: {
 		recommendation: DecisionWorkspaceRecommendation;
 		reason: string;
 		decider: string | null;
+		resumed?: boolean;
+		outsideCurrentView?: boolean;
 	} = $props();
 
 	let sourceCount = $derived(recommendation.pack.sources?.length || 0);
@@ -275,8 +279,11 @@
 	class="decision-workspace"
 	data-decision-workspace
 	data-decision-pack-id={recommendation.pack.id}
+	data-decision-resumed={resumed || undefined}
+	data-decision-outside-view={outsideCurrentView || undefined}
 	aria-labelledby="decision-workspace-title"
 	id="work-decision-workspace"
+	tabindex="-1"
 >
 	<div class="decision-workspace-heading">
 		<div>
@@ -290,6 +297,13 @@
 		</div>
 		<h3 class="decision-workspace-item-title" data-decision-workspace-title>{workTitle(recommendation.pack)}</h3>
 	</div>
+
+	{#if resumed}
+		<div class="decision-resume-status" data-decision-resume-status role="status">
+			<strong>Pending decision resumed.</strong>
+			<span>{outsideCurrentView ? 'This decision is outside the current list filters. Your filters were left unchanged.' : 'This is the exact pending decision selected from Pending approvals.'}</span>
+		</div>
+	{/if}
 
 	<ol class="decision-workspace-path" aria-label="Find, prove, prepare, decide">
 		<li class="is-complete"><span>Find</span><strong>Selected from current Work</strong></li>
@@ -397,10 +411,10 @@
 		<WornCollapsible summary="Why this decision is surfaced">
 			<div class="decision-workspace-detail">
 				<p data-decision-workspace-reason>{reason}</p>
-				<ul class="decision-workspace-signals" aria-label="Current Work view signals">
-					<li data-decision-workspace-signal="decisions" data-decision-workspace-signal-count={recommendation.visibleDecisionCount}><strong>{recommendation.visibleDecisionCount}</strong> open {recommendation.visibleDecisionCount === 1 ? 'decision' : 'decisions'} in view</li>
-					<li data-decision-workspace-signal="blocked" data-decision-workspace-signal-count={recommendation.visibleBlockedCount}><strong>{recommendation.visibleBlockedCount}</strong> blocked {recommendation.visibleBlockedCount === 1 ? 'item' : 'items'} in view</li>
-					<li data-decision-workspace-signal="overdue" data-decision-workspace-signal-count={recommendation.visibleOverdueCount}><strong>{recommendation.visibleOverdueCount}</strong> overdue {recommendation.visibleOverdueCount === 1 ? 'item' : 'items'} in view</li>
+				<ul class="decision-workspace-signals" aria-label={outsideCurrentView ? 'Resumed decision context signals' : 'Current Work view signals'}>
+					<li data-decision-workspace-signal="decisions" data-decision-workspace-signal-count={recommendation.visibleDecisionCount}><strong>{recommendation.visibleDecisionCount}</strong> open {recommendation.visibleDecisionCount === 1 ? 'decision' : 'decisions'} {outsideCurrentView ? 'in decision context' : 'in view'}</li>
+					<li data-decision-workspace-signal="blocked" data-decision-workspace-signal-count={recommendation.visibleBlockedCount}><strong>{recommendation.visibleBlockedCount}</strong> blocked {recommendation.visibleBlockedCount === 1 ? 'item' : 'items'} {outsideCurrentView ? 'in decision context' : 'in view'}</li>
+					<li data-decision-workspace-signal="overdue" data-decision-workspace-signal-count={recommendation.visibleOverdueCount}><strong>{recommendation.visibleOverdueCount}</strong> overdue {recommendation.visibleOverdueCount === 1 ? 'item' : 'items'} {outsideCurrentView ? 'in decision context' : 'in view'}</li>
 					<li data-decision-workspace-signal="sources" data-decision-workspace-signal-count={sourceCount}><strong>{sourceCount}</strong> linked {sourceCount === 1 ? 'source' : 'sources'}</li>
 				</ul>
 				<p>Review and Next remain available as focused deep links; the core decision can now be completed here.</p>
@@ -423,6 +437,9 @@
 	.decision-workspace .decision-workspace-item-title{font-size:clamp(22px,3vw,30px);line-height:1.12;overflow-wrap:anywhere}
 	.decision-workspace-meta{align-items:center;color:var(--worn-text-muted);display:flex;flex-wrap:wrap;gap:8px;font-size:13px;min-width:0}
 	.decision-workspace-meta span{min-width:0;overflow-wrap:anywhere}
+	.decision-resume-status{background:var(--worn-surface);border:1px solid var(--worn-border);border-radius:var(--worn-radius-sm);display:grid;gap:3px;margin-block-start:14px;padding:10px 12px}
+	.decision-resume-status strong{font-size:13px}
+	.decision-resume-status span{color:var(--worn-text-secondary);font-size:12px;line-height:1.4}
 	.decision-workspace-path{display:grid;gap:8px;grid-template-columns:repeat(4,minmax(0,1fr));list-style:none;margin:16px 0 0;padding:0}
 	.decision-workspace-path li{display:grid;gap:2px;min-width:0}
 	.decision-workspace-path span{color:var(--worn-link);font-family:var(--font-typewriter);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}

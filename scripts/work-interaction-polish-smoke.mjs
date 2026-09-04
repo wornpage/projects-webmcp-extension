@@ -176,7 +176,19 @@ try {
 	// human flow now finishes on Work without Review -> Next route hopping.
 	await page.evaluate((key) => {
 		localStorage.setItem(key, JSON.stringify({
+			filter: 'active',
 			packs: [
+				{
+					id: 'first-decision',
+					title: 'First ranked decision',
+					status: 'active',
+					blocker: 'none',
+					next: 'Open',
+					decision: true,
+					decider: 'Operations owner',
+					area: 'Operations',
+					activity: ['[2026-09-03 08:00] Created.']
+				},
 				{
 					id: 'inline-decision',
 					title: 'Confirm launch handoff',
@@ -201,11 +213,17 @@ try {
 			]
 		}));
 	}, storageKey);
-	await page.goto(`${origin}/work`, { waitUntil: 'networkidle' });
+	await page.goto(`${origin}/work?focus=inline-decision&context=pending-decision`, { waitUntil: 'networkidle' });
 
 	const decision = page.locator('[data-decision-workspace]');
 	await decision.waitFor({ state: 'visible' });
 	assert.equal(new URL(page.url()).pathname, '/work');
+	assert.equal(await decision.getAttribute('data-decision-pack-id'), 'inline-decision', 'The pending link wins over the first ranked decision.');
+	assert.equal(await decision.getAttribute('data-decision-resumed'), 'true');
+	assert.equal(await decision.getAttribute('data-decision-outside-view'), 'true');
+	assert.match((await decision.locator('[data-decision-resume-status]').textContent()) ?? '', /outside the current list filters[\s\S]*left unchanged/u);
+	assert.match((await decision.locator('[data-decision-workspace-title]').textContent()) ?? '', /Confirm launch handoff/u);
+	assert.doesNotMatch((await decision.locator('[data-decision-workspace-title]').textContent()) ?? '', /First ranked decision/u);
 	assert.match((await decision.locator('[data-decision-evidence]').textContent()) ?? '', /Workflow[\s\S]*Blocked[\s\S]*Blocker[\s\S]*Waiting on final details/u);
 	assert.match((await decision.textContent()) ?? '', /Find[\s\S]*Prove[\s\S]*Prepare[\s\S]*Decide/u);
 	await decision.getByRole('button', { name: 'Why this decision is surfaced' }).click();
@@ -239,11 +257,13 @@ try {
 	await decision.locator('[data-decision-outcome]').waitFor({ state: 'visible' });
 	assert.match((await decision.locator('[data-decision-outcome]').textContent()) ?? '', /Next action set to "Focus"\.[\s\S]*Approved by you\./u);
 	assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute('data-decision-outcome')), true, 'Approval lands focus on the completed inline decision state.');
+	const completedWorkspace = await readWorkspace(page);
 	assert.deepEqual(
-		(await readWorkspace(page)).pendingNextActionDrafts || [],
+		completedWorkspace.pendingNextActionDrafts || [],
 		[],
 		'The approved inline draft is consumed atomically.'
 	);
+	assert.equal(completedWorkspace.filter, 'active', 'Resuming a hidden pending decision never rewrites the saved Work filter.');
 
 	await page.goto(`${origin}/next?pack=inline-decision`, { waitUntil: 'networkidle' });
 	await page.locator('[data-next-advanced-options] .worn-collapsible').waitFor({ state: 'visible' });
@@ -279,7 +299,7 @@ try {
 	console.log(JSON.stringify({
 		cards: { grid: 'same-destination suppressed; distinct navigation and mutation retained', card: 'same-destination suppressed; distinct navigation and mutation retained' },
 		commandPalette: { keyboard: 'combobox active-descendant navigation', disabled: 'skipped', escape: 'trigger focus restored' },
-		unifiedDecision: { route: '/work', evidence: 'visible', draft: 'prepared', approval: 'saved without navigation' },
+		unifiedDecision: { route: '/work', focus: 'exact pending decision outside unchanged filters', evidence: 'visible', draft: 'prepared', approval: 'saved without navigation' },
 		advancedOptions: { desktop: desktopSpacing, compact: compactSpacing },
 		quickAdd: { receipt: 'visible, focused, and durable after reload' },
 		webMcp: registrationsBeforeQuickAdd.map((tool) => tool.name)

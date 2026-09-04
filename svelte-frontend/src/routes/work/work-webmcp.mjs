@@ -38,7 +38,7 @@ const WORK_DUE_SCOPES = new Set(['all', 'overdue']);
 /** @typedef {{ search: string, appliedSearch: string, status: string, energy: string, area: string, recurrence: string, owner: string, dueUrgency: string, sort: string, hideDone: boolean, focusMode: boolean, density: WorkDensity }} WorkScopeView */
 /** @typedef {{ workspace: number, matching: number, shown: number, remaining: number, blocked: number }} WorkCountsView */
 /** @typedef {{ id: string, title: string, href: string, workflow: string, owner: string | null, due: string | null, blocker: string | null }} WorkItemView */
-/** @typedef {{ id: string, title: string, href: string, reviewHref: string, reason: string, decider: string | null, decisionCount: number, blockedCount: number, overdueCount: number, sourceCount: number }} WorkDecisionRecommendationView */
+/** @typedef {{ id: string, title: string, href: string, reviewHref: string, reason: string, decider: string | null, decisionCount: number, blockedCount: number, overdueCount: number, sourceCount: number, outsideCurrentView?: true }} WorkDecisionRecommendationView */
 /** @typedef {{ scope: WorkScopeView, counts: WorkCountsView, recommendation: WorkDecisionRecommendationView | null, items: WorkItemView[] }} WorkView */
 /** @typedef {{ target: 'item', itemId: string, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean } | { target: 'search', itemId: null, focused: boolean, focusVisible: boolean, inViewport: boolean, pulsed: boolean }} WorkSearchFocus */
 /** @typedef {{ changed: boolean, query: string, focus: WorkSearchFocus, work: WorkView }} WorkSearchReceipt */
@@ -68,6 +68,7 @@ export function workPageView(input) {
 	const items = candidate.items.map(workItemPageView);
 	if (items.some((item) => item === null)) return null;
 	const projectedItems = /** @type {WorkItemView[]} */ (items);
+	const recommendationAllowance = recommendation?.outsideCurrentView === true ? 1 : 0;
 	if (
 		new Set(projectedItems.map(({ id }) => id)).size !== projectedItems.length ||
 		counts.shown !== projectedItems.length ||
@@ -76,9 +77,10 @@ export function workPageView(input) {
 		counts.blocked > counts.matching ||
 		(recommendation !== null && (
 			recommendation.decisionCount < 1 ||
-			recommendation.decisionCount > counts.matching ||
-			recommendation.blockedCount !== counts.blocked ||
-			recommendation.overdueCount > counts.matching
+			recommendation.decisionCount > counts.matching + recommendationAllowance ||
+			recommendation.blockedCount < counts.blocked ||
+			recommendation.blockedCount > counts.blocked + recommendationAllowance ||
+			recommendation.overdueCount > counts.matching + recommendationAllowance
 		))
 	) {
 		return null;
@@ -392,6 +394,8 @@ function workDecisionRecommendationView(input) {
 	const blockedCount = nonNegativeSafeInteger(candidate.blockedCount);
 	const overdueCount = nonNegativeSafeInteger(candidate.overdueCount);
 	const sourceCount = nonNegativeSafeInteger(candidate.sourceCount);
+	const outsideCurrentView = candidate.outsideCurrentView === true;
+	if (candidate.outsideCurrentView !== undefined && typeof candidate.outsideCurrentView !== 'boolean') return undefined;
 	if (!id || !title || !reason || decider === undefined || decisionCount === null || blockedCount === null || overdueCount === null || sourceCount === null) return undefined;
 	return {
 		id,
@@ -403,7 +407,8 @@ function workDecisionRecommendationView(input) {
 		decisionCount,
 		blockedCount,
 		overdueCount,
-		sourceCount
+		sourceCount,
+		...(outsideCurrentView ? { outsideCurrentView: true } : {})
 	};
 }
 
