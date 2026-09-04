@@ -46,23 +46,25 @@
 		<WornButton data-decision-workspace-next variant="primary" href={decisionWorkspaceNextHref(recommendation.pack.id)}>Set next action</WornButton>
 	</div>
 
-	<WornCollapsible summary="Why this decision is surfaced">
-		<div class="decision-workspace-detail">
-			<p data-decision-workspace-reason>{reason}</p>
-			<ul class="decision-workspace-signals" aria-label="Current Work view signals">
-				<li data-decision-workspace-signal="decisions" data-decision-workspace-signal-count={recommendation.visibleDecisionCount}><strong>{recommendation.visibleDecisionCount}</strong> open {recommendation.visibleDecisionCount === 1 ? 'decision' : 'decisions'} in view</li>
-				<li data-decision-workspace-signal="blocked" data-decision-workspace-signal-count={recommendation.visibleBlockedCount}><strong>{recommendation.visibleBlockedCount}</strong> blocked {recommendation.visibleBlockedCount === 1 ? 'item' : 'items'} in view</li>
-				<li data-decision-workspace-signal="overdue" data-decision-workspace-signal-count={recommendation.visibleOverdueCount}><strong>{recommendation.visibleOverdueCount}</strong> overdue {recommendation.visibleOverdueCount === 1 ? 'item' : 'items'} in view</li>
-				<li data-decision-workspace-signal="sources" data-decision-workspace-signal-count={sourceCount}><strong>{sourceCount}</strong> linked {sourceCount === 1 ? 'source' : 'sources'}</li>
-			</ul>
-			<div class="decision-workspace-authority">
-				<p>Review this item in the review queue before deciding how to proceed.</p>
+	<div class="decision-workspace-explanation">
+		<WornCollapsible summary="Why this decision is surfaced">
+			<div class="decision-workspace-detail">
+				<p data-decision-workspace-reason>{reason}</p>
+				<ul class="decision-workspace-signals" aria-label="Current Work view signals">
+					<li data-decision-workspace-signal="decisions" data-decision-workspace-signal-count={recommendation.visibleDecisionCount}><strong>{recommendation.visibleDecisionCount}</strong> open {recommendation.visibleDecisionCount === 1 ? 'decision' : 'decisions'} in view</li>
+					<li data-decision-workspace-signal="blocked" data-decision-workspace-signal-count={recommendation.visibleBlockedCount}><strong>{recommendation.visibleBlockedCount}</strong> blocked {recommendation.visibleBlockedCount === 1 ? 'item' : 'items'} in view</li>
+					<li data-decision-workspace-signal="overdue" data-decision-workspace-signal-count={recommendation.visibleOverdueCount}><strong>{recommendation.visibleOverdueCount}</strong> overdue {recommendation.visibleOverdueCount === 1 ? 'item' : 'items'} in view</li>
+					<li data-decision-workspace-signal="sources" data-decision-workspace-signal-count={sourceCount}><strong>{sourceCount}</strong> linked {sourceCount === 1 ? 'source' : 'sources'}</li>
+				</ul>
+				<div class="decision-workspace-authority">
+					<p>Review this item in the review queue before deciding how to proceed.</p>
+				</div>
+				<div class="decision-workspace-actions">
+					<WornButton data-decision-workspace-review variant="default" size="sm" href={decisionWorkspaceReviewHref(recommendation.pack.id)}>Review in queue</WornButton>
+				</div>
 			</div>
-			<div class="decision-workspace-actions">
-				<WornButton data-decision-workspace-review variant="default" size="sm" href={decisionWorkspaceReviewHref(recommendation.pack.id)}>Review in queue</WornButton>
-			</div>
-		</div>
-	</WornCollapsible>
+		</WornCollapsible>
+	</div>
 </section>
 
 <style>
@@ -74,6 +76,7 @@
 	.decision-workspace h3{font-size:14px}
 	.decision-workspace .decision-workspace-item-title{font-size:clamp(20px,3vw,28px);line-height:1.15;overflow-wrap:anywhere}
 	.decision-workspace-primary{align-items:center;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;min-width:0}
+	.decision-workspace-explanation{padding-block-start:16px}
 	.decision-workspace-authority-note{color:var(--worn-text-muted);font-size:13px;line-height:1.4;max-width:100%;margin:0}
 	.decision-workspace-authority-note,
 	.decision-workspace-detail p{color:var(--worn-text-secondary)}
@@ -92,6 +95,7 @@
 	}
 	@media(max-width:420px){
 		.decision-workspace{padding:13px}
+		.decision-workspace-explanation{padding-block-start:12px}
 		.decision-workspace-primary{align-items:stretch}
 		.decision-workspace-actions :global(.worn-btn),
 		.decision-workspace-primary :global(.worn-btn){flex:1 1 100%;justify-content:center;min-width:0;width:100%}
