@@ -91,6 +91,8 @@ test('Priority owns one visible projection and one page-lifetime read-only regis
 	assert.match(routeSource, /<h2 id="priority-recommendation-title">\s*\{recommendation\.title\}\s*<\/h2>/u);
 	assert.match(routeSource, /<dd class="priority-destination">\{recommendation\.href\}<\/dd>/u);
 	assert.match(routeSource, /<WornButton href=\{recommendation\.href\} variant="primary">Open next action<\/WornButton>/u);
+	assert.match(routeSource, /loading=\{\$demoState === null \|\| \(\$demoStateLoading && packs\.length === 0\)\}/u);
+	assert.match(routeSource, /\{:else if \$demoState !== null && !\$demoStateLoading && !\$demoStateError\}/u);
 	assert.doesNotMatch(routeSource, /fetch\(|localStorage|sessionStorage|saveBrowserState|createPack|runPackAction|savePack|goto\(/u);
 	assert.match(layoutSource, /href: '\/priority'[\s\S]*?label: 'Priority'/u);
 	assert.match(configSource, /prerender: \{ entries: \[[^\]]*'\/priority'/u);

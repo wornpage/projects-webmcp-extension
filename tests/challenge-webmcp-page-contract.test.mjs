@@ -148,6 +148,8 @@ test('Projects workflow surfaces keep the Guide compact and product-labeled', ()
 	assert.match(pageSource, /@media \(pointer: coarse\) \{ \.challenge-import-label \{ block-size: 44px; \} \}/u);
 	assert.doesNotMatch(pageSource, /challenge-facts|Projects workflow capabilities/u);
 	assert.match(editorSource, /All visible work is ready by default; choose a counted scope or Custom, then ask:/u);
+	assert.match(pageSource, /title: 'Observe',[\s\S]*?title: 'Narrow',[\s\S]*?title: 'Prepare',/u);
+	assert.doesNotMatch(pageSource, /title: 'Observe the workspace'|title: 'Explain what needs attention'|title: 'Prepare the handoff'/u);
 });
 
 test('one global accessible WebMCP catalog replaces the verbose Guide-only reader panel', () => {
@@ -155,6 +157,8 @@ test('one global accessible WebMCP catalog replaces the verbose Guide-only reade
 	assert.match(layoutSource, /import WebMcpStatus from '\$lib\/WebMcpStatus\.svelte';/u);
 	assert.equal(layoutSource.match(/<WebMcpStatus \/>/gu)?.length, 1);
 	assert.match(webMcpStatusSource, /<button[\s\S]*?data-webmcp-status-pill[\s\S]*?aria-haspopup="dialog"[\s\S]*?aria-expanded=\{open\}[\s\S]*?aria-label=\{`WebMCP \$\{statusLabel\}, \$\{toolCountLabel\} on this page`\}/u);
+	assert.match(webMcpStatusSource, /<span class="webmcp-status-name">WebMCP<\/span>[\s\S]*?<span class="webmcp-status-word">\{statusLabel\}<\/span>/u);
+	assert.match(webMcpStatusSource, /\.webmcp-status-pill \{[\s\S]*?min-height: var\(--worn-target-min\);/u);
 	assert.match(webMcpStatusSource, /<WornDialog bind:open title="WebMCP tools on this page" size="sm">/u);
 	assert.match(webMcpStatusSource, /<h2 id="webmcp-native-status-heading">Native browser status<\/h2>[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/u);
 	assert.match(webMcpStatusSource, /Current-page tools · \{toolCount\}[\s\S]*?\{#each \$webMcpCatalog\.tools as tool \(tool\.name\)\}[\s\S]*?<code>\{tool\.name\}<\/code>[\s\S]*?<p>\{tool\.description\}<\/p>/u);
@@ -185,6 +189,7 @@ test('work-first navigation keeps Pending and Tools in one compact row', () => {
 	assert.match(layoutSource, /data-nav-label=\{`Pending \$\{pendingNavigation\.count\}`\}/u);
 	assert.match(layoutSource, /data-nav-label="Guide"[\s\S]*?data-tools-trigger[\s\S]*?data-nav-label="Tools"/u);
 	assert.match(layoutSource, /aria-label=\{activeToolRoute \? `Tools, \$\{activeToolRoute\.label\} is the current view` : 'Tools'\}/u);
+	assert.match(layoutSource, /<span>Tools<\/span>[\s\S]*?\{#if activeToolRoute\}<small aria-hidden="true">\{activeToolRoute\.label\}<\/small>\{\/if\}/u);
 	assert.match(layoutSource, /<WornDialog bind:open=\{toolsOpen\} title="Tools" size="sm" onclose=\{restoreToolsFocus\}>/u);
 	assert.match(layoutSource, /requestAnimationFrame\(\(\) => toolsTrigger\?\.focus\(\{ preventScroll: true \}\)\)/u);
 	assert.match(layoutSource, /Priority[\s\S]*?Standalone recommendation view[\s\S]*?Review[\s\S]*?Full evidence queue[\s\S]*?Next[\s\S]*?Full next-action editor/u);
@@ -196,7 +201,11 @@ test('work-first navigation keeps Pending and Tools in one compact row', () => {
 	const compactSource = layoutSource.slice(compactStart, compactEnd);
 	assert.match(compactSource, /\.challenge-shell-nav nav \{[\s\S]*?display: flex;[\s\S]*?flex-wrap: nowrap;[\s\S]*?width: 100%;/u);
 	assert.match(compactSource, /\.challenge-shell-nav \.challenge-nav-control \{[\s\S]*?flex: 1 1 0;/u);
+	assert.doesNotMatch(compactSource, /\.tools-trigger small \{[\s\S]*?display: none;/u);
 	assert.doesNotMatch(compactSource, /pending-approval-link[^}]*grid-column:\s*1\s*\/\s*-1/u);
+	assert.match(layoutSource, /@media \(max-width: 900px\) and \(min-width: 701px\)[\s\S]*?\.challenge-shell-nav \.challenge-nav-control \{[^}]*min-height: var\(--worn-target-min\);/u);
+	assert.match(layoutSource, /\.demo-recovery-error \{ color: var\(--worn-danger-text\);/u);
+	assert.doesNotMatch(layoutSource, /var\(--worn-danger\)/u);
 });
 
 test('Guide derives bounded scope choices from stable fields and the supplied Work search counter', () => {
@@ -413,10 +422,17 @@ test('handoff route owns one data-backed reader without navigation, write, or mo
 
 test('the live sample can be explicitly reset through the single browser-state owner', () => {
 	assert.match(pageSource, /Reset live sample/u);
-	assert.match(pageSource, /onclick=\{resetLiveSample\}/u);
+	assert.match(pageSource, /onclick=\{\(\) => \(resetConfirmOpen = true\)\}/u);
 	assert.match(pageSource, /Explicitly restores this browser’s bundled sample and clears its prior local results\./u);
+	assert.match(pageSource, /<WornDialog bind:open=\{resetConfirmOpen\} title="Confirm live sample reset"[\s\S]*?Export a backup first[\s\S]*?Confirm reset/u);
+	assert.match(pageSource, /\{#if exportHref\}[\s\S]*?Download backup[\s\S]*?\{:else\}[\s\S]*?Prepare export first/u);
+	assert.match(pageSource, /Confirm reset<\/WornButton>[\s\S]*?<\/WornDialog>/u);
+	assert.match(pageSource, /onclick=\{\(\) => \{ resetConfirmOpen = false; void resetLiveSample\(\); \}\}/u);
 	assert.match(pageSource, /import \{ ChallengeStateError, demoState, displayToast, exportWorkspaceState, importWorkspaceState, previewWorkspaceImport, resetDemoSampleState, type WorkspaceImportPreview \} from '\$lib\/demo-client';/u);
 	assert.match(demoClientSource, /export async function resetDemoSampleState\(\): Promise<DemoState \| null> \{[\s\S]*?if \(!browser\) return null;[\s\S]*?stateRevision \+= 1;[\s\S]*?withStateStorageLock\(\(\) => resetPersistedState\([\s\S]*?remove: \(\) => localStorage\.removeItem\(STORAGE_KEY\),[\s\S]*?loadSeed: loadSeedState,[\s\S]*?install: \(state\) => replaceDemoState\(state, null\)/u);
+	assert.match(pageSource, /\.challenge-import-label:focus-within \{ outline: 2px dashed var\(--worn-focus\); outline-offset: 2px; \}/u);
+	assert.doesNotMatch(pageSource, /var\(--worn-danger\)/u);
+	assert.doesNotMatch(editorSource, /var\(--worn-text-primary\)/u);
 	assert.doesNotMatch(pageSource, /localStorage|sessionStorage|fetch\(/u);
 });
 

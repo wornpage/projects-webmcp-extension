@@ -16,19 +16,19 @@
 
 	const steps = [
 		{
-			title: 'Observe the workspace',
+			title: 'Observe',
 			description: 'On Work, read the visible items, priorities, and explicit counts.',
 			action: 'Start in Work',
 			href: '/work'
 		},
 		{
-			title: 'Explain what needs attention',
+			title: 'Narrow',
 			description: 'On Review, narrow the queue and surface the evidence behind each priority.',
 			action: 'Continue to Review',
 			href: '/review'
 		},
 		{
-			title: 'Prepare the handoff',
+			title: 'Prepare',
 			description: 'On Next, prepare a clear next action from exact workspace facts, then stop before Save.',
 			action: 'Open the draft editor',
 			href: '/next'
@@ -61,6 +61,7 @@
 	let importInput = $state<HTMLInputElement | null>(null);
 	let exportHref = $state('');
 	let replaceConfirmOpen = $state(false);
+	let resetConfirmOpen = $state(false);
 
 	function prepareWorkspaceExport() {
 		if (exportHref) URL.revokeObjectURL(exportHref);
@@ -186,7 +187,7 @@
 						<WornBadge size="sm" label="You · decide + save" />
 					</div>
 					<div class="challenge-sample-reset">
-						<WornButton type="button" size="sm" disabled={resettingSample} onclick={resetLiveSample}>
+						<WornButton type="button" size="sm" disabled={resettingSample} onclick={() => (resetConfirmOpen = true)}>
 							{resettingSample ? 'Resetting sample…' : 'Reset live sample'}
 						</WornButton>
 						<span>Explicitly restores this browser’s bundled sample and clears its prior local results.</span>
@@ -255,6 +256,19 @@
 	<div class="challenge-portability-actions">
 		<WornButton type="button" onclick={() => (replaceConfirmOpen = false)}>Cancel</WornButton>
 		<WornButton type="button" variant="danger" disabled={importBusy} onclick={() => { replaceConfirmOpen = false; void applyWorkspaceImport('replace'); }}>Confirm Replace</WornButton>
+	</div>
+</WornDialog>
+
+<WornDialog bind:open={resetConfirmOpen} title="Confirm live sample reset" size="sm">
+	<p class="challenge-replace-warning">Reset will discard this browser’s local workspace results and pending approvals, then restore the bundled sample. Export a backup first if you may need them again.</p>
+	<div class="challenge-portability-actions">
+		{#if exportHref}
+			<a class="challenge-export-link" href={exportHref} download="projects-workspace.json">Download backup</a>
+		{:else}
+			<WornButton type="button" onclick={prepareWorkspaceExport}>Prepare export first</WornButton>
+		{/if}
+		<WornButton type="button" onclick={() => (resetConfirmOpen = false)}>Cancel</WornButton>
+		<WornButton type="button" variant="danger" disabled={resettingSample} onclick={() => { resetConfirmOpen = false; void resetLiveSample(); }}>Confirm reset</WornButton>
 	</div>
 </WornDialog>
 
@@ -328,9 +342,10 @@
 	:global(.challenge-export-primary.worn-btn), .challenge-import-label { inline-size: 124px; }
 	.challenge-import-label { align-items: center; background: var(--worn-surface); block-size: 32px; border: 1px solid var(--worn-border); border-radius: var(--worn-radius); box-sizing: border-box; cursor: pointer; display: inline-flex; font-family: var(--font-typewriter); font-size: 12px; font-weight: 610; justify-content: center; line-height: 14.4px; padding: 4px 10px; }
 	@media (pointer: coarse) { .challenge-import-label { block-size: 44px; } }
+	.challenge-import-label:focus-within { outline: 2px dashed var(--worn-focus); outline-offset: 2px; }
 	.challenge-import-label input { max-width: 1px; opacity: 0; position: absolute; }
 	.challenge-import-preview { color: var(--worn-text-secondary); font-size: 13px; }
-	.challenge-import-error { color: var(--worn-danger) !important; }
+	.challenge-import-error { color: var(--worn-danger-text) !important; }
 	.challenge-replace-warning { color: var(--worn-text-secondary); line-height: 1.5; margin: 0 0 12px; }
 	.challenge-safety h2 {
 		font-size: 14px;

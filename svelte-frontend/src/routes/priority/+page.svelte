@@ -31,7 +31,7 @@
 	sectionLabel="Recommended next · Read only"
 	title="Priority"
 	status={recommendation ? '1 recommendation' : undefined}
-	loading={$demoStateLoading && packs.length === 0}
+	loading={$demoState === null || ($demoStateLoading && packs.length === 0)}
 >
 	{#if $demoStateError}
 		<WornError
@@ -62,7 +62,7 @@
 			</dl>
 			<WornButton href={recommendation.href} variant="primary">Open next action</WornButton>
 		</section>
-	{:else if !$demoStateLoading && !$demoStateError}
+	{:else if $demoState !== null && !$demoStateLoading && !$demoStateError}
 		<WornEmpty
 			title="No actionable recommendation"
 			description="No loaded, non-archived work item is active, unblocked, dependency-ready, and free of a pending decision."

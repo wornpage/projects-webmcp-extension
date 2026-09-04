@@ -9,6 +9,7 @@
 		WornSelect
 	} from '$lib/components';
 	import {
+		ENERGY_OPTIONS,
 		PACK_ACTIONS,
 		blockerText,
 		dueDateLabel,
@@ -33,6 +34,12 @@
 		{ value: '3', label: '3 days' },
 		{ value: '7', label: '7 days' }
 	];
+	const ENERGY_ACTION_OPTIONS = [
+		{ value: '', label: 'Set energy', disabled: true },
+		...ENERGY_OPTIONS
+	];
+	const instanceId = $props.id();
+	const energySelectId = `${instanceId}-energy`;
 
 	function displayedTypeLabel(value: unknown): string {
 		return String(value ?? '');
@@ -72,7 +79,8 @@
 		onApplySnooze,
 		onRepeatPack,
 		onReactPack,
-		onUndoReceipt
+		onUndoReceipt,
+		onSetEnergy
 	}: {
 		pack: DemoPack;
 		index: number;
@@ -100,6 +108,7 @@
 		onRepeatPack: (pack: DemoPack) => void;
 		onReactPack: (pack: DemoPack, emoji: string) => void;
 		onUndoReceipt: () => void;
+		onSetEnergy: (pack: DemoPack, energy: string) => void | Promise<void>;
 	} = $props();
 
 	let command = $derived(primaryCommand(pack));
@@ -108,6 +117,10 @@
 	let workflow = $derived(workflowLabel(pack));
 	let cardCls = $derived(workflowCardClass(pack, false, false));
 	let packKey = $derived(pack.id || '');
+
+	function focusCardForKeyboardMove(event: MouseEvent) {
+		(event.currentTarget as HTMLElement | null)?.closest<HTMLElement>('[data-work-item][data-pack-id]')?.focus();
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
@@ -122,10 +135,7 @@
 	aria-current={pack.id === selectedId ? 'true' : undefined}
 	data-pack-id={pack.id}
 	data-work-item
-	draggable="true"
-	ondragstart={(event) => onDragStart(event, pack.id!)}
 	ondragover={(event) => onDragOver(event, pack.id!)}
-	ondragend={onDragEnd}
 	ondrop={(event) => onDrop(event, pack.id!)}
 	onclick={(event) => onCardClick(event, pack.id!)}
 	onkeydown={(event) => onCardKeydown(event, index)}
@@ -154,6 +164,17 @@
 		{#if pack.decision && pack.status !== 'done'}
 			<WornBadge variant="warn" label="Needs decision" title={pack.decider ? `Decision needed from ${pack.decider}` : 'Decision needed'} />
 		{/if}
+		<button
+			type="button"
+			class="work-card-move-handle"
+			draggable="true"
+			data-work-drag-handle
+			aria-label={`Move ${workTitle(pack)}. Drag to reorder or change energy; activate for keyboard move controls.`}
+			title="Drag to reorder or change energy. Activate for keyboard move controls."
+			ondragstart={(event) => onDragStart(event, pack.id!)}
+			ondragend={onDragEnd}
+			onclick={focusCardForKeyboardMove}
+		>Move</button>
 	</div>
 	{#if hasBlocker(pack)}
 		<div class="demo-card-facts" role="group" aria-label="Blocker: {blockerText(pack)}.">
@@ -215,6 +236,19 @@
 				{#if pack.doneWhen}<div><dt>Proof target</dt><dd>{pack.doneWhen}</dd></div>{/if}
 			</dl>
 		{/if}
+		<div class="work-card-energy-control">
+			<label for={energySelectId}>Energy</label>
+			<WornSelect
+				id={energySelectId}
+				value={String(pack.energy || '')}
+				options={ENERGY_ACTION_OPTIONS}
+				data-action="set-energy"
+				data-pack={pack.id}
+				disabled={busyId === pack.id}
+				aria-label={`Set energy for ${workTitle(pack)}`}
+				onchange={(event) => onSetEnergy(pack, (event.currentTarget as HTMLSelectElement).value)}
+			/>
+		</div>
 		<div class="demo-card-reactions demo-card-reactions-picker">
 			{#each REACTION_EMOJI as emoji (emoji)}
 				<WornReactionButton reaction={emoji} count={(pack.reactions as Record<string, number>)?.[emoji] ?? 0} pressed={((pack.reactions as Record<string, number>)?.[emoji] ?? 0) > 0} disabled={busyId === pack.id} onclick={() => onReactPack(pack, emoji)} />
@@ -257,11 +291,28 @@
 	.demo-card-extra dd { margin: 0; color: var(--worn-text); }
 	.demo-card-reactions { display: flex; gap: 4px; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--worn-border); }
 	.work-command-row, .work-card-actions { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; max-width: 100%; }
+	.work-card-move-handle {
+		appearance: none;
+		background: var(--worn-surface);
+		border: 1px solid var(--worn-border);
+		border-radius: var(--worn-radius-sm);
+		color: var(--worn-text-muted);
+		cursor: grab;
+		font: 700 11px/1.2 var(--font-typewriter);
+		min-height: 32px;
+		padding: 5px 8px;
+		user-select: none;
+	}
+	.work-card-move-handle:active { cursor: grabbing; }
+	.work-card-move-handle:focus-visible { outline: 2px dashed var(--worn-focus); outline-offset: 2px; }
+	.work-card-energy-control { align-items: center; display: flex; gap: 8px; margin-block-start: 8px; max-width: 100%; min-width: 0; }
+	.work-card-energy-control label { color: var(--worn-text-muted); font: 700 12px/1.2 var(--font-typewriter); }
+	.work-card-energy-control :global(.worn-select) { min-height: 36px; width: min(100%, 220px); }
 	.demo-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; margin-block-start: 8px; }
 	.work-command-row :global(.worn-btn), .work-card-actions :global(.worn-btn) { box-sizing: border-box; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 	.work-card-actions :global(.worn-select) { box-sizing: border-box; min-width: 0; max-width: 100%; }
 	:global(.demo-work-card.batch-active) .demo-card-head { min-block-size: 44px; padding-inline-start: 52px; }
-	:global(.demo-work-card) { transition: box-shadow .1s ease, background .1s ease; }
+	:global(.demo-work-card) { cursor: default; transition: box-shadow .1s ease, background .1s ease; user-select: text; -webkit-user-select: text; }
 	/* Both density cards use these generated urgency classes. Keep the visual
 	   contract with the list-card component rather than the route shell. */
 	:global(.due-overdue) { border-color: var(--worn-danger-border) !important; background: var(--worn-danger-bg) !important; color: var(--worn-danger-text) !important; }
@@ -269,6 +320,11 @@
 	:global(.due-soon) { border-color: var(--worn-accent) !important; background: var(--worn-accent-50) !important; }
 	@media (max-width: 640px) {
 		.demo-card-meta { gap: 6px; margin-block-start: 6px; }
+		.work-card-energy-control { align-items: stretch; flex-direction: column; }
+		.work-card-energy-control :global(.worn-select) { width: 100%; }
 		:global(.work-snooze-select) { width: 100%; }
+	}
+	@media (pointer: coarse) {
+		.work-card-move-handle { min-height: 44px; min-width: 44px; }
 	}
 </style>

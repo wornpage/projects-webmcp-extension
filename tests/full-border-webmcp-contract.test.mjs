@@ -165,7 +165,7 @@ test('the Full Border Rule covers every authored extension CSS and Svelte source
 test('the extension design contract documents the Full Border Rule', () => {
 	const design = readFileSync(path.join(root, 'DESIGN.md'), 'utf8');
 	assert.match(design, /five task routes/iu);
-	assert.match(design, /eight supported themes/iu);
+	assert.match(design, /supported light and dark color schemes/iu);
 	assert.match(design, /Full Border Rule/u);
 	assert.match(design, /full 1px borders or background tints/iu);
 	assert.match(design, /never a colored side stripe/iu);

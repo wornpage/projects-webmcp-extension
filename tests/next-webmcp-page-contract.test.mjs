@@ -606,7 +606,7 @@ test('a failed repeated preparation preserves the immediately preceding valid dr
 test('Next owns one projection and one unsaved setter without server or navigation authority', () => {
 	assert.match(routeSource, /import \{ registerPageTools \} from '\$lib\/webmcp\.mjs';/u);
 	assert.match(routeSource, /import \{[\s\S]*?createCurrentNextEditorTool,[\s\S]*?createPrepareNextActionTool,[\s\S]*?nextEditorPageView[\s\S]*?\} from '\.\/next-webmcp\.mjs';/u);
-	assert.match(routeSource, /let currentNextEditor = \$derived\.by\(\(\) => \{[\s\S]*?return nextEditorPageView\(\{[\s\S]*?work: \{ id: pack\.id,[\s\S]*?presetChoices: NEXT_ACTION_CHOICES,[\s\S]*?editor:[\s\S]*?preview:[\s\S]*?preparationReceipt: preparationReceipt && pendingDraft\?\.source === 'webmcp' \? preparationReceipt : null,[\s\S]*?canSave:[\s\S]*?busy/u);
+	assert.match(routeSource, /let currentNextEditor = \$derived\.by\(\(\) => \{[\s\S]*?return nextEditorPageView\(\{[\s\S]*?work: \{ id: pack\.id,[\s\S]*?presetChoices: NEXT_ACTION_CHOICES,[\s\S]*?editor:[\s\S]*?preview:[\s\S]*?preparationReceipt: preparationReceipt && pendingDraft\?\.source === 'webmcp' && preparationReceipt\.preparedAction === effectiveChoice[\s\S]*?\? preparationReceipt[\s\S]*?: null,[\s\S]*?canSave:[\s\S]*?busy/u);
 	assert.match(routeSource, /function setNextEditorChoice\(nextChoice: string, mode: NextEditorMode,[\s\S]*?choice = nextChoice;[\s\S]*?showingCustom = mode === 'custom';[\s\S]*?customValue = nextChoice/u);
 	assert.match(routeSource, /async function prepareNextActionFromWebMcp[\s\S]*?if \(routeBusy\)[\s\S]*?currentNextEditor[\s\S]*?verifyNextPreparationEvidence\([\s\S]*?\.\.\.evidenceFacts\(candidate\)[\s\S]*?verifiedNextEvidenceNote[\s\S]*?expectedMode[\s\S]*?expectedChoice[\s\S]*?stale[\s\S]*?evidenceNote[\s\S]*?workspaceChanged: false[\s\S]*?requiresHumanSave: true[\s\S]*?const focusReceipt = focusAndPulse\([\s\S]*?requireVisibleFocus: true[\s\S]*?focus: \{ id: NEXT_PREPARATION_RECEIPT_ID, \.\.\.focusReceipt \}[\s\S]*?next: currentNextEditor/u);
 	assert.match(routeSource, /evidenceMatchesReferences,[\s\S]*?from '\.\/next-webmcp\.mjs';[\s\S]*?const receiptAlreadyDesired[\s\S]*?evidenceMatchesReferences\(preparationReceipt\.evidence, input\.evidence\)/u);
@@ -653,6 +653,11 @@ test('Next owns one projection and one unsaved setter without server or navigati
 	assert.match(routeSource, /\.next-action-editor > \.demo-field\s*\{[\s\S]*?grid-column:\s*1 \/ -1;[\s\S]*?width:\s*100%;/u);
 	assert.match(routeSource, /<div class="demo-inline-form next-action-editor">[\s\S]*?<div class="next-save-actions">[\s\S]*?<\/div>[\s\S]*?<\/div>[\s\S]*?\{#if workItemIssues\(pack\)\.length > 0\}[\s\S]*?<div class="next-item-warnings" data-next-item-warnings>[\s\S]*?<WornAlert tone="warning">\{v\.message\}<\/WornAlert>/u);
 	assert.match(routeSource, /\.next-item-warnings\s*\{[\s\S]*?margin-block-start: 16px;[\s\S]*?max-inline-size: 100%;[\s\S]*?min-inline-size: 0;/u);
+	assert.match(routeSource, /\{#if !demoLoaded\}[\s\S]*?<WornPage sectionLabel="Step 3 of 3 · Prepare" title="Next actions" loading=\{!\$demoStateError\}>[\s\S]*?\{:else if notFound\}/u);
+	assert.doesNotMatch(routeSource, /loadingSelected|No sample work available[\s\S]*?\{#if !demoLoaded\}/u);
+	assert.match(routeSource, /function stageHumanNextEditorChoice[\s\S]*?setNextEditorChoice\(nextChoice\.slice\(0, NEXT_ACTION_MAX_LENGTH\), mode, false\);[\s\S]*?editorChoiceStaged = true;/u);
+	assert.match(routeSource, /pressed=\{\(editorChoiceStaged \|\| Boolean\(pendingDraft\)\) && !showingCustom && effectiveChoice === act\}/u);
+	assert.match(routeSource, /\{#if !pendingDraft\}[\s\S]*?data-next-prepare-draft[\s\S]*?2 · Prepare draft[\s\S]*?\{:else\}[\s\S]*?Discard draft[\s\S]*?Approve and save/u);
 	assert.match(routeSource, /@media \(max-width: 500px\)[\s\S]*?\.next-action-editor\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\);/u);
 	assert.match(workContextSource, /@media \(max-width: 500px\)[\s\S]*?\.next-work-context\s*\{\s*padding: 12px;/u);
 	assert.match(routeSource, /@media \(max-width: 500px\)[\s\S]*?\.next-save-help\s*\{\s*flex: 0 0 auto;/u);
@@ -690,18 +695,19 @@ test('pending next-action approvals use one durable state owner and fail closed 
 	assert.match(helperSource, /export async function runSettledNextDraftAction[\s\S]*?nextDraftTerminalAvailable[\s\S]*?action\(consumedDraft\)[\s\S]*?finish\?\.\(\)/u);
 	assert.match(routeSource, /let terminalDraftAvailable = \$derived\(nextDraftTerminalAvailable\(draftRevision,[\s\S]*?draft: pendingDraft/u);
 	assert.match(routeSource, /canSave: terminalDraftAvailable,[\s\S]*?The visible draft change is still being saved\.[\s\S]*?busy: routeBusy/u);
-	assert.equal(routeSource.match(/disabled=\{!terminalDraftAvailable\}/gu)?.length, 2);
-	assert.match(routeSource, /let saveNextHelp = \$derived\.by\(\(\) => \{[\s\S]*?if \(!effectiveChoice\) return 'Type a custom next action\.';[\s\S]*?if \(!pendingDraft\) return `Choose or confirm an action to create a draft for \$\{workTitle\(pack\)\}\.`;[\s\S]*?if \(pendingDraftStale\) return 'This draft is stale\. Refresh the evidence before approval\.';[\s\S]*?if \(draftRevision\.pending\) return 'Wait for the visible draft change to finish saving\.';[\s\S]*?if \(!terminalDraftAvailable\) return 'Finish saving the visible draft before approval\.';/u);
+	assert.equal(routeSource.match(/disabled=\{!terminalDraftAvailable\}/gu)?.length, 1, 'Only approval requires an approvable settled draft');
+	assert.match(routeSource, /let saveNextHelp = \$derived\.by\(\(\) => \{[\s\S]*?if \(!effectiveChoice\) return 'Type a custom next action\.';[\s\S]*?if \(!pendingDraft\) return `Prepare "\$\{effectiveChoice\}" as a browser-local draft for \$\{workTitle\(pack\)\}\. The workspace stays unchanged\.`;[\s\S]*?if \(pendingDraftStale\) return 'This draft is stale\. Refresh the evidence before approval\.';[\s\S]*?if \(draftRevision\.pending\) return 'Wait for the visible draft change to finish saving\.';[\s\S]*?if \(!pendingDraftMatchesEditor\) return 'The visible choice differs from the pending draft\. Update the draft before approval\.';/u);
 	assert.match(routeSource, /next-authority[\s\S]*?savedNextReceipt \? 'none · completed'[\s\S]*?savedNextReceipt \? 'updated'[\s\S]*?saved and approved by the person/u);
 	assert.match(routeSource, /function savedEditorBaseline\(target: DemoPack \| null\): EditorSnapshot[\s\S]*?defaultChoiceFor\(target\)[\s\S]*?NEXT_ACTION_CHOICES/u);
 	assert.match(routeSource, /async function setHumanNextEditorChoice[\s\S]*?await reviseNextDraft\(draftRevision,[\s\S]*?capture: captureHumanRevisionSnapshot,[\s\S]*?const state = await revisePendingNextActionDraftChoice\(workId, pendingChoice, mode\);[\s\S]*?settle: \(revisedDraft\)[\s\S]*?preparationReceipt = preparationFromPending\(revisedDraft\);[\s\S]*?rollback: restoreHumanRevisionSnapshot,[\s\S]*?Your previous draft is still pending\./u);
 	assert.doesNotMatch(routeSource, /void revisePendingNextActionDraftChoice|void setHumanNextEditorChoice/u);
 	assert.match(routeSource, /function captureHumanRevisionSnapshot[\s\S]*?preparationReceipt:[\s\S]*?preparationPreviousEditor:[\s\S]*?savedNextReceipt[\s\S]*?function restoreHumanRevisionSnapshot[\s\S]*?choice = snapshot\.choice;[\s\S]*?preparationReceipt = clonePreparationReceipt\(snapshot\.preparationReceipt\);[\s\S]*?savedNextReceipt = snapshot\.savedNextReceipt/u);
 	assert.match(routeSource, /shouldHydratePendingDraft\(\{ preparationInFlight: preparationInFlight \|\| draftRevision\.pending/u);
-	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?runSettledNextDraftAction\(draftRevision,[\s\S]*?await discardPendingNextActionDraft\(workId\);[\s\S]*?recordWebMcpDraftDecision\(consumedDraft, 'proposal-discarded'\)/u);
+	assert.match(routeSource, /async function discardPreparation\(\)[\s\S]*?!pendingDraft \|\| routeBusy[\s\S]*?const consumedDraft = structuredClone\(pendingDraft\);[\s\S]*?await discardPendingNextActionDraft\(workId\);[\s\S]*?recordWebMcpDraftDecision\(consumedDraft, 'proposal-discarded'\)/u);
+	assert.match(routeSource, /disabled=\{routeBusy\}[\s\S]*?pendingDraftStale \? 'Discard stale draft' : 'Discard draft'/u);
 	assert.match(routeSource, /let visiblePackId = \$derived\(pack\?\.id \|\| ''\);[\s\S]*?pendingNextActionDraftFor\(\$demoState, visiblePackId\)/u);
 	assert.match(routeSource, /\{#if preparationReceipt && pendingDraft\?\.source === 'webmcp'\}[\s\S]*?<WebMcpActivityStrip[\s\S]*?\{:else if pendingDraft\?\.source === 'human'\}[\s\S]*?Draft prepared by you\. The Next action remains unsaved until you approve Save\./u);
-	assert.match(routeSource, /preparationReceipt: preparationReceipt && pendingDraft\?\.source === 'webmcp' \? preparationReceipt : null/u);
+	assert.match(routeSource, /preparationReceipt: preparationReceipt && pendingDraft\?\.source === 'webmcp' && preparationReceipt\.preparedAction === effectiveChoice[\s\S]*?\? preparationReceipt[\s\S]*?: null/u);
 	assert.match(routeSource, /await savePendingNextActionDraft\(pending\);[\s\S]*?await tick\(\);[\s\S]*?NEXT_PREPARATION_RECEIPT_ID/u);
 	assert.doesNotMatch(routeSource, /preparationToolName/u);
 	assert.match(routeSource, /let preparationInFlight = \$state\(false\);[\s\S]*?let draftRevision = \$state\(createNextDraftRevisionState\(\)\)/u);
@@ -719,13 +725,14 @@ test('pending next-action approvals use one durable state owner and fail closed 
 
 test('discarding a draft restores focus to the matching saved editor mode', () => {
 	const discardHandler = routeSource.match(/async function discardPreparation\(\)[\s\S]*?(?=\n\tfunction editPack)/u)?.[0] ?? '';
-	assert.match(discardHandler, /runSettledNextDraftAction\(draftRevision,[\s\S]*?action: async \(consumedDraft\)/u);
+	assert.match(discardHandler, /if \(!pack\?\.id \|\| !pendingDraft \|\| routeBusy\) return;[\s\S]*?const consumedDraft = structuredClone\(pendingDraft\);/u);
 	assert.match(discardHandler, /await discardPendingNextActionDraft\(workId\);/u);
 	assert.match(discardHandler, /clearPreparation\(\);/u);
 	assert.match(discardHandler, /recordWebMcpDraftDecision\(consumedDraft, 'proposal-discarded'\)/u);
+	assert.doesNotMatch(discardHandler, /nextDraftTerminalAvailable|pendingDraftStale|runSettledNextDraftAction/u);
 	assert.match(
 		discardHandler,
-		/if \(previous\) \{\s*setNextEditorChoice\(previous\.choice, previous\.mode, false\);\s*await scheduleEditorFocus\(previous\.mode === 'custom' \? 'custom' : 'choices'\);\s*\}/u
+		/if \(previous\) \{\s*setNextEditorChoice\(previous\.choice, previous\.mode, false\);\s*editorChoiceStaged = false;\s*await scheduleEditorFocus\(previous\.mode === 'custom' \? 'custom' : 'choices'\);\s*\}/u
 	);
 	assert.doesNotMatch(discardHandler, /scheduleEditorFocus\('choices'\)/u);
 });

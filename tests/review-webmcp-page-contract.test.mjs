@@ -22,6 +22,18 @@ const routeSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/rou
 const nextRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/+page.svelte'), 'utf8');
 const nextCandidatePickerSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/next/NextCandidatePicker.svelte'), 'utf8');
 const workRouteSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/work/+page.svelte'), 'utf8');
+
+test('Review keeps cold hydration in a loading state before declaring an empty queue', () => {
+	assert.match(routeSource, /loading=\{\(\$demoState === null && !\$demoStateError\) \|\| \(\$demoStateLoading && packs\.length === 0\)\}/u);
+	assert.match(routeSource, /\{:else if reviewTotal === 0 && \$demoState !== null && !\$demoStateLoading && !\$demoStateError\}/u);
+});
+
+test('Review announces its canonical mutation receipt without adding another toast path', () => {
+	assert.match(routeSource, /<WornReceipt[\s\S]*?summary=\{receipt\.summary\}[\s\S]*?announce=\{true\}/u);
+	const actionHandler = routeSource.match(/async function doAction\(pack: DemoPack, action: string\)[\s\S]*?\n\t\}/u)?.[0] ?? '';
+	assert.equal(actionHandler.match(/displayToast\(/gu)?.length ?? 0, 1);
+	assert.match(actionHandler, /catch \(e\)[\s\S]*?displayToast\([\s\S]*?'error'\)/u);
+});
 const workflowSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/lib/demo-workflow.ts'), 'utf8');
 const reviewQueueSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/review-queue.ts'), 'utf8');
 const reviewFilterControlsSource = fs.readFileSync(path.join(repoRoot, 'svelte-frontend/src/routes/review/ReviewFilterControls.svelte'), 'utf8');

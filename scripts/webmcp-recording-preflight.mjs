@@ -113,12 +113,12 @@ export const RECORDING_PREFLIGHT_SPEC = deepFreeze({
 		guideToFastBriefShiftTabs: 5,
 		guideReaderBodyTabs: 1,
 		guideToWorkTabs: 9,
-		workToToolsShiftTabs: 13,
+		workToToolsShiftTabs: 11,
 		toolsToReviewTabs: 3,
 		reviewToToolsShiftTabs: 3,
 		toolsToNextTabs: 4,
 		nextToWorkShiftTabs: 5,
-		workToPendingShiftTabs: 15,
+		workToPendingShiftTabs: 13,
 		pendingToNextTabs: 2,
 		guideBodyPageDowns: 1,
 		nextBodyArrowDowns: 4,
@@ -283,10 +283,10 @@ export function parseRecordingCueSheet(markdown) {
 		const match = cueMatch(entry, /^`([a-z][a-z0-9-]+)@(\d{2}):(\d{2})\.(\d{3})`$/u, 'timeline event');
 		return { id: match[1], atMs: (integer(match[2]) * 60 + integer(match[3])) * 1_000 + integer(match[4]) };
 	});
-	const workToReview = cueMatch(markdown, /Work receipt → Review:\s*thirteen Shift\+Tab presses to reach \*\*Tools\*\*, then Enter; three Tab presses in the dialog reach \*\*Review\*\*, then Enter/u, 'Work to Review keyboard destination');
+	const workToReview = cueMatch(markdown, /Work receipt → Review:\s*eleven Shift\+Tab presses to reach \*\*Tools\*\*, then Enter; three Tab presses in the dialog reach \*\*Review\*\*, then Enter/u, 'Work to Review keyboard destination');
 	const reviewToNext = cueMatch(markdown, /Review receipt → Next:\s*three Shift\+Tab presses to reach \*\*Tools\*\*, then Enter; four Tab presses in the dialog reach \*\*Next\*\*, then Enter/u, 'Review to Next keyboard destination');
 	const nextToWork = cueMatch(markdown, /Prepared Next receipt → Work:\s*five Shift\+Tab presses, then Enter on \*\*Work\*\*/u, 'Next to Work keyboard destination');
-	const workToPending = cueMatch(markdown, /Work Draft receipt → pending decision:\s*fifteen Shift\+Tab presses to reach \*\*Pending 1\*\*, then Enter; two Tab presses in the dialog reach \*\*Review on Next\*\*, then Enter/u, 'Work to pending keyboard destination');
+	const workToPending = cueMatch(markdown, /Work Draft receipt → pending decision:\s*thirteen Shift\+Tab presses to reach \*\*Pending 1\*\*, then Enter; two Tab presses in the dialog reach \*\*Review on Next\*\*, then Enter/u, 'Work to pending keyboard destination');
 	const landingToGuide = cueMatch(markdown, /Landing → Guide: press Tab on the page body to reclaim focus, then use five additional Tab presses to reach \*\*Open the handoff workflow\*\* and press Enter; any earlier or later destination fails the take/u, 'Landing to Guide keyboard destination');
 	const guideToPriority = cueMatch(markdown, /Guide → Priority:\s*five Tab presses to reach \*\*Tools\*\*, then Enter; two Tab presses in the dialog reach \*\*Priority\*\*, then Enter/u, 'Guide to Priority keyboard destination');
 	const guideBodyTab = cueMatch(markdown, /press Tab once on the page body to reclaim page focus/u, 'Guide reader body-owned Tab');
@@ -353,12 +353,12 @@ export function parseRecordingCueSheet(markdown) {
 			priorityToGuideShiftTabs: 5,
 			guideToFastBriefShiftTabs: 5,
 			guideToWorkTabs: 9,
-			workToToolsShiftTabs: 13,
+			workToToolsShiftTabs: 11,
 			toolsToReviewTabs: 3,
 			reviewToToolsShiftTabs: 3,
 			toolsToNextTabs: 4,
 			nextToWorkShiftTabs: 5,
-			workToPendingShiftTabs: 15,
+			workToPendingShiftTabs: 13,
 			pendingToNextTabs: 2,
 			guideReaderBodyTabs: 1
 		},

@@ -86,7 +86,20 @@ try {
 			}
 		});
 	});
-	await page.goto(`${origin}/work`, { waitUntil: 'networkidle' });
+	const seedRequested = Promise.withResolvers();
+	const seedRelease = Promise.withResolvers();
+	await page.route('**/data/demo-packs.json', async (route) => {
+		seedRequested.resolve();
+		await seedRelease.promise;
+		await route.continue();
+	});
+	await page.goto(`${origin}/work`, { waitUntil: 'domcontentloaded' });
+	await seedRequested.promise;
+	await page.getByRole('status', { name: 'Loading' }).waitFor({ state: 'visible' });
+	assert.equal(await page.getByText('No sample work available', { exact: true }).count(), 0, 'Cold Work load never flashes a false empty state.');
+	seedRelease.resolve();
+	await page.waitForLoadState('networkidle');
+	await page.unroute('**/data/demo-packs.json');
 	await page.evaluate((key) => {
 		localStorage.setItem(key, JSON.stringify({
 			packs: [
@@ -157,8 +170,21 @@ try {
 	await page.getByRole('button', { name: 'Additional work filters' }).click();
 	await page.getByRole('tab', { name: 'Cards' }).click();
 	await assertCardCommands(page, 'card');
-	await page.locator('#sort-work').selectOption('manual');
 	const manualCard = page.locator('[data-pack-id="same-destination"]');
+	assert.equal(await manualCard.getAttribute('draggable'), null, 'The full Work card is not an undisclosed drag source.');
+	const moveHandle = manualCard.locator('[data-work-drag-handle]');
+	assert.equal(await moveHandle.getAttribute('draggable'), 'true', 'Card dragging begins from the labeled Move handle.');
+	await manualCard.locator('summary').filter({ hasText: 'Other actions' }).click();
+	const energySelect = manualCard.getByRole('combobox', { name: 'Set energy for Same destination' });
+	await energySelect.selectOption('high');
+	await page.waitForFunction((key) => {
+		const raw = localStorage.getItem(key);
+		if (!raw) return false;
+		const parsed = JSON.parse(raw);
+		const state = parsed.state ?? parsed;
+		return state.packs?.find((pack) => pack.id === 'same-destination')?.energy === 'high';
+	}, storageKey);
+	await page.locator('#sort-work').selectOption('manual');
 	await manualCard.focus();
 	await page.getByRole('button', { name: 'Move focused down' }).click();
 	await page.waitForFunction((key) => {
@@ -224,6 +250,20 @@ try {
 			]
 		}));
 	}, storageKey);
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.goto(`${origin}/work`, { waitUntil: 'networkidle' });
+	const ordinaryDecision = page.locator('[data-decision-workspace]');
+	await ordinaryDecision.waitFor({ state: 'visible' });
+	assert.equal(
+		await ordinaryDecision.locator('.decision-workspace-disclosure').getAttribute('open'),
+		null,
+		'An ordinary Work visit starts with the Decision Workspace summarized.'
+	);
+	assert.equal(await ordinaryDecision.locator('.decision-workspace-body').isVisible(), false);
+	const firstWorkTop = await page.locator('[data-work-item]').first().evaluate((item) => item.getBoundingClientRect().top);
+	assert.ok(firstWorkTop < 900, `The first Work card should enter the 900px desktop viewport; observed y=${firstWorkTop}.`);
+
+	await page.setViewportSize({ width: 900, height: 800 });
 	await page.goto(`${origin}/work?focus=inline-decision&context=pending-decision`, { waitUntil: 'networkidle' });
 
 	const decision = page.locator('[data-decision-workspace]');
@@ -232,11 +272,12 @@ try {
 	assert.equal(await decision.getAttribute('data-decision-pack-id'), 'inline-decision', 'The pending link wins over the first ranked decision.');
 	assert.equal(await decision.getAttribute('data-decision-resumed'), 'true');
 	assert.equal(await decision.getAttribute('data-decision-outside-view'), 'true');
+	assert.equal(await decision.locator('.decision-workspace-disclosure').getAttribute('open'), '', 'A resumed pending decision automatically opens its editor.');
 	assert.match((await decision.locator('[data-decision-resume-status]').textContent()) ?? '', /outside the current list filters[\s\S]*left unchanged/u);
 	assert.match((await decision.locator('[data-decision-workspace-title]').textContent()) ?? '', /Confirm launch handoff/u);
 	assert.doesNotMatch((await decision.locator('[data-decision-workspace-title]').textContent()) ?? '', /First ranked decision/u);
 	assert.match((await decision.locator('[data-decision-evidence]').textContent()) ?? '', /Workflow[\s\S]*Blocked[\s\S]*Blocker[\s\S]*Waiting on final details/u);
-	assert.match((await decision.textContent()) ?? '', /Find[\s\S]*Prove[\s\S]*Prepare[\s\S]*Decide/u);
+	assert.match((await decision.textContent()) ?? '', /Observe[\s\S]*Narrow[\s\S]*Prepare[\s\S]*Decide/u);
 	await decision.getByRole('button', { name: 'Why this decision is surfaced' }).click();
 	assert.equal(await decision.locator('[data-decision-workspace-review]').count(), 1, 'Review remains a secondary deep link.');
 	assert.equal(await decision.locator('[data-decision-workspace-next]').count(), 1, 'Next remains a secondary full-editor deep link.');
@@ -361,6 +402,7 @@ try {
 
 	console.log(JSON.stringify({
 		cards: { grid: 'same-destination suppressed; distinct navigation and mutation retained', card: 'same-destination suppressed; distinct navigation and mutation retained' },
+		workViewport: { coldLoad: 'loading without false empty', ordinaryDecision: 'collapsed', firstCardTop: firstWorkTop, energy: 'high via labeled select', dragOwner: 'Move handle' },
 		commandPalette: { keyboard: 'combobox active-descendant navigation', disabled: 'skipped', escape: 'trigger focus restored' },
 		unifiedDecision: { route: '/work', focus: 'exact pending decision outside unchanged filters', evidence: 'visible', draft: 'prepared', approval: 'saved without navigation' },
 		visualRhythm: { desktop: desktopDecisionRhythm, compact: compactDecisionRhythm },

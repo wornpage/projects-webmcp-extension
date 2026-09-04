@@ -38,8 +38,9 @@
 	onclick={() => (open = true)}
 >
 	<span class="webmcp-status-dot" aria-hidden="true"></span>
-	<span>WebMCP</span>
+	<span class="webmcp-status-name">WebMCP</span>
 	<span class="webmcp-tool-count">{toolCountLabel}</span>
+	<span class="webmcp-status-word">{statusLabel}</span>
 </button>
 
 <WornDialog bind:open title="WebMCP tools on this page" size="sm">
@@ -87,7 +88,7 @@
 		font-weight: 700;
 		gap: 7px;
 		justify-self: end;
-		min-height: 36px;
+		min-height: var(--worn-target-min);
 		padding: 6px 10px;
 		white-space: nowrap;
 	}
@@ -119,6 +120,17 @@
 	[data-webmcp-status='error'] .webmcp-status-dot {
 		background: #b3261e;
 		box-shadow: 0 0 0 2px color-mix(in srgb, #b3261e 18%, transparent);
+	}
+
+	.webmcp-status-word {
+		background: var(--worn-selected-bg);
+		border: 1px solid var(--worn-border);
+		border-radius: 999px;
+		color: var(--worn-text-secondary);
+		font-size: 10px;
+		font-weight: 750;
+		padding: 2px 6px;
+		text-transform: capitalize;
 	}
 
 	.webmcp-tool-count {
@@ -225,7 +237,20 @@
 
 	@media (max-width: 500px) {
 		.webmcp-status-pill {
-			min-height: 34px;
+			gap: 4px;
+			padding-inline: 7px;
+		}
+
+		.webmcp-status-name {
+			display: none;
+		}
+
+		.webmcp-status-word {
+			padding-inline: 4px;
+		}
+
+		.webmcp-tool-count {
+			font-size: 10px;
 		}
 
 		.webmcp-catalog {
@@ -240,4 +265,5 @@
 			justify-self: start;
 		}
 	}
+
 </style>
