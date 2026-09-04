@@ -37,6 +37,23 @@ async function assertCardCommands(page, density) {
 	assert.equal(await mutation.locator('[data-work-primary-mutation]').count(), 1, `${density} cards retain mutation commands.`);
 }
 
+async function waitForActiveCommand(page, expectedLabel) {
+	await page.waitForFunction((label) => {
+		const input = document.querySelector('input[aria-label="Filter work commands"]');
+		const activeId = input?.getAttribute('aria-activedescendant');
+		const active = activeId ? document.getElementById(activeId) : null;
+		return active?.querySelector('span')?.textContent?.trim() === label;
+	}, expectedLabel);
+}
+
+async function assertPaletteInputFocus(page) {
+	assert.equal(
+		await page.evaluate(() => document.activeElement?.getAttribute('aria-label')),
+		'Filter work commands',
+		'Command navigation keeps DOM focus in the combobox input.'
+	);
+}
+
 try {
 	await waitForServer();
 	browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined });
@@ -72,6 +89,51 @@ try {
 	assert.deepEqual(registrationsBeforeQuickAdd.map((tool) => tool.name), ['get_current_work_view', 'show_work_search', 'create_work_drafts']);
 	await assertCardCommands(page, 'grid');
 
+	const paletteTrigger = page.getByRole('button', { name: 'Command palette' });
+	await paletteTrigger.focus();
+	await page.keyboard.press('Control+K');
+	const paletteDialog = page.getByRole('dialog', { name: 'Work command palette' });
+	await paletteDialog.waitFor({ state: 'visible' });
+	await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Filter work commands');
+	const paletteInput = page.getByRole('combobox', { name: 'Filter work commands' });
+	assert.equal(await paletteInput.getAttribute('aria-controls'), 'work-command-listbox');
+	assert.equal(await paletteInput.getAttribute('aria-expanded'), 'true');
+	assert.equal(await paletteInput.getAttribute('aria-autocomplete'), 'list');
+	const paletteOptions = page.locator('#work-command-listbox [role="option"]');
+	assert.equal(await paletteOptions.count(), 9, 'Every rendered command participates in one listbox.');
+	assert.ok(await page.locator('#work-command-listbox [role="option"][aria-disabled="true"]').count() >= 2, 'Unavailable commands stay exposed and disabled.');
+	await waitForActiveCommand(page, 'Focus search');
+	await assertPaletteInputFocus(page);
+
+	await paletteInput.press('ArrowUp');
+	await waitForActiveCommand(page, 'Show advanced controls');
+	await assertPaletteInputFocus(page);
+	await paletteInput.press('ArrowDown');
+	await waitForActiveCommand(page, 'Focus search');
+	await paletteInput.press('ArrowDown');
+	await waitForActiveCommand(page, 'Open Review');
+	await paletteInput.press('ArrowDown');
+	await waitForActiveCommand(page, 'Open WebMCP guide');
+	await paletteInput.press('ArrowDown');
+	await waitForActiveCommand(page, 'Clear all filters');
+	await assertPaletteInputFocus(page);
+
+	await paletteInput.fill('search');
+	await waitForActiveCommand(page, 'Focus search');
+	await paletteInput.press('Enter');
+	await paletteDialog.waitFor({ state: 'hidden' });
+	await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Filter work items by text');
+
+	await paletteTrigger.focus();
+	await paletteTrigger.click();
+	await paletteDialog.waitFor({ state: 'visible' });
+	const reopenedPaletteInput = page.getByRole('combobox', { name: 'Filter work commands' });
+	await reopenedPaletteInput.fill('advanced');
+	await waitForActiveCommand(page, 'Show advanced controls');
+	await reopenedPaletteInput.press('Escape');
+	await paletteDialog.waitFor({ state: 'hidden' });
+	await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Command palette');
+
 	await page.getByRole('button', { name: 'Additional work filters' }).click();
 	await page.getByRole('tab', { name: 'Cards' }).click();
 	await assertCardCommands(page, 'card');
@@ -100,8 +162,42 @@ try {
 	await page.locator('#work-receipt').waitFor({ state: 'visible' });
 	assert.match((await page.locator('#work-receipt').textContent()) ?? '', /Created Quick add receipt smoke\./u);
 	assert.equal(await page.locator('[data-work-item]').filter({ hasText: title }).count(), 1, 'Quick Add persists the created item with its receipt.');
+
+	await page.goto(`${origin}/next?pack=same-destination`, { waitUntil: 'networkidle' });
+	await page.locator('[data-next-advanced-options] .worn-collapsible').waitFor({ state: 'visible' });
+	const desktopSpacing = await page.evaluate(() => {
+		const editor = document.querySelector('.next-action-editor');
+		const wrapper = document.querySelector('[data-next-advanced-options]');
+		const disclosure = wrapper?.querySelector('.worn-collapsible');
+		if (!(editor instanceof HTMLElement) || !(wrapper instanceof HTMLElement) || !(disclosure instanceof HTMLElement)) return null;
+		return {
+			padding: Number.parseFloat(getComputedStyle(wrapper).paddingBlockStart),
+			gap: disclosure.getBoundingClientRect().top - editor.getBoundingClientRect().bottom
+		};
+	});
+	assert.ok(desktopSpacing, 'Next renders the Advanced options spacing boundary.');
+	assert.equal(desktopSpacing.padding, 16);
+	assert.ok(desktopSpacing.gap >= 15, 'Advanced options clears the action buttons by at least its desktop padding.');
+
+	await page.setViewportSize({ width: 390, height: 800 });
+	const compactSpacing = await page.evaluate(() => {
+		const editor = document.querySelector('.next-action-editor');
+		const wrapper = document.querySelector('[data-next-advanced-options]');
+		const disclosure = wrapper?.querySelector('.worn-collapsible');
+		if (!(editor instanceof HTMLElement) || !(wrapper instanceof HTMLElement) || !(disclosure instanceof HTMLElement)) return null;
+		return {
+			padding: Number.parseFloat(getComputedStyle(wrapper).paddingBlockStart),
+			gap: disclosure.getBoundingClientRect().top - editor.getBoundingClientRect().bottom
+		};
+	});
+	assert.ok(compactSpacing, 'Next keeps the Advanced options spacing boundary on compact screens.');
+	assert.equal(compactSpacing.padding, 12);
+	assert.ok(compactSpacing.gap >= 11, 'Advanced options clears the action buttons by at least its compact padding.');
+
 	console.log(JSON.stringify({
 		cards: { grid: 'same-destination suppressed; distinct navigation and mutation retained', card: 'same-destination suppressed; distinct navigation and mutation retained' },
+		commandPalette: { keyboard: 'combobox active-descendant navigation', disabled: 'skipped', escape: 'trigger focus restored' },
+		advancedOptions: { desktop: desktopSpacing, compact: compactSpacing },
 		quickAdd: { receipt: 'visible, focused, and durable after reload' },
 		webMcp: registrationsBeforeQuickAdd.map((tool) => tool.name)
 	}));

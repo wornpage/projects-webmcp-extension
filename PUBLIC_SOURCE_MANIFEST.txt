@@ -51,6 +51,7 @@ svelte-frontend/src/lib/canonical-text.mjs
 svelte-frontend/src/lib/components/index.ts
 svelte-frontend/src/lib/components/WorkGridCard.svelte
 svelte-frontend/src/lib/components/WorkListCard.svelte
+svelte-frontend/src/lib/components/WornInteractiveSurface.svelte
 svelte-frontend/src/lib/components/WornPage.svelte
 svelte-frontend/src/lib/components/WornToast.svelte
 svelte-frontend/src/lib/decision-workspace-navigation.mjs
