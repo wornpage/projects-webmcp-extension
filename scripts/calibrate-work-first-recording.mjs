@@ -16,7 +16,7 @@ let browser;
 async function waitForServer() {
   for (let attempt = 0; attempt < 80; attempt += 1) {
     try {
-      const response = await fetch(`${origin}/`);
+      const response = await fetch(`${origin}/webmcp-challenge`);
       if (response.ok) return;
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 250));
@@ -98,12 +98,10 @@ try {
     forbiddenHumanActivations: ['Start', 'Save next action', 'Approve and save', 'Discard draft']
   });
   const page = await context.newPage();
-  await page.goto(`${origin}/`, { waitUntil: 'networkidle' });
-  await bodyTab(page, 1);
-  await pressUntil(page, 'Tab', 'landing-primary-work', (focus) => focus?.href === '/webmcp-challenge' && /Open the handoff workflow/u.test(focus.visibleText));
-  await page.keyboard.press('Enter');
+  await page.goto(`${origin}/webmcp-challenge`, { waitUntil: 'networkidle' });
   await waitForRoute(page, '/webmcp-challenge');
 
+  // Measure the current Work-first application focus order from stable body reclaims.
   await bodyTab(page, 1);
   await pressUntil(page, 'Tab', 'guide-header-work', (focus) => focus?.href === '/work' && focus.visibleText === 'Work');
   await page.keyboard.press('Enter');
