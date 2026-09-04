@@ -38,7 +38,7 @@ try {
 	assert.equal(heroProof.marker, true, 'the first fold upgrades to the signature product proof');
 	assert.match(
 		heroProof.text,
-		/Verified action trail[\s\S]*?One accountable handoff[\s\S]*?3 verified · 1 pending[\s\S]*?Work 4 of 8 · Review 2 facts[\s\S]*?Agent stopped before Save[\s\S]*?Workflow[\s\S]*?Blocked[\s\S]*?Blocker[\s\S]*?Waiting on final details[\s\S]*?Proposed next action[\s\S]*?Confirm handoff details[\s\S]*?Not saved[\s\S]*?Human approval required/u
+		/Verified action trail[\s\S]*?One accountable handoff[\s\S]*?3 verified · 1 pending[\s\S]*?Work 4 of 8 · Review 2 facts[\s\S]*?Agent stopped before Save[\s\S]*?Not saved[\s\S]*?Workflow[\s\S]*?Blocked[\s\S]*?Blocker[\s\S]*?Waiting on final details[\s\S]*?Proposed next action[\s\S]*?Confirm handoff details[\s\S]*?Human approval required/u
 	);
 	assert.deepEqual(heroProof.actions, ['Discard draft', 'Approve and save']);
 
