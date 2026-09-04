@@ -1,6 +1,53 @@
 // The landing page keeps behavior in one external file so its CSP
 // can reject inline scripts.
 (function () {
+  var panel = document.querySelector(".lp-preview .lp-panel");
+  if (panel) {
+    // The checked-in HTML remains a useful no-script fallback. With JavaScript,
+    // the first fold advances to the product's signature end state so the hero
+    // and the interactive replay tell one consistent story.
+    panel.setAttribute("data-hero-product-proof", "");
+    panel.innerHTML = [
+      '<div class="lp-panel-head">',
+      '  <div>',
+      '    <span class="lp-eyebrow">Verified action trail</span>',
+      '    <h2>One accountable handoff</h2>',
+      '  </div>',
+      '  <span class="lp-panel-status">3 verified · 1 pending</span>',
+      '</div>',
+      '<div class="lp-proof-toolbar">',
+      '  <strong>Work 4 of 8 · Review 2 facts</strong>',
+      '  <span class="lp-proof-unchanged">Agent stopped before Save</span>',
+      '</div>',
+      '<div class="lp-proof-receipt">',
+      '  <header>',
+      '    <div>',
+      '      <span>Verified evidence</span>',
+      '      <strong>Prepare the client handoff</strong>',
+      '    </div>',
+      '    <span class="lp-pill lp-pill-warn">Not saved</span>',
+      '  </header>',
+      '  <dl class="lp-proof-facts">',
+      '    <div><dt>Workflow</dt><dd>Blocked</dd></div>',
+      '    <div><dt>Blocker</dt><dd>Waiting on final details</dd></div>',
+      '  </dl>',
+      '  <div class="lp-proof-proposal">',
+      '    <span>Proposed next action</span>',
+      '    <strong>Confirm handoff details</strong>',
+      '  </div>',
+      '  <footer>',
+      '    <span>Unsaved proposal</span>',
+      '    <strong>Human approval required</strong>',
+      '  </footer>',
+      '  <div class="lp-proof-actions">',
+      '    <span class="lp-proof-action">Discard draft</span>',
+      '    <span class="lp-proof-action is-primary">Approve and save</span>',
+      '  </div>',
+      '</div>'
+    ].join("");
+    document.documentElement.setAttribute("data-hero-product-proof", "ready");
+  }
+
   var footerScope = document.getElementById("lp-footer-scope");
   if (footerScope) {
     footerScope.textContent = "The sample opens in Work and stays in this browser.";
@@ -16,7 +63,7 @@
   var note = document.getElementById("replay-note");
   var views = demo ? demo.querySelectorAll("[data-replay-view]") : [];
   var progress = demo ? demo.querySelectorAll("[data-replay-progress]") : [];
-  if (!btn || !demo || !steps.length || steps.length !== views.length) return;
+  if (document.documentElement.getAttribute("data-hero-product-proof") !== "ready" || !btn || !demo || !steps.length || steps.length !== views.length) return;
 
   var STEP_MS = 2200;
   var DEFAULT_NOTE = "Press play — four steps, about ten seconds. No account, no setup.";
