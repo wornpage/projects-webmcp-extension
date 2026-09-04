@@ -27,6 +27,7 @@ PUBLIC_SOURCE_MANIFEST.txt
 README.md
 scripts/build-static-publish.mjs
 scripts/build-svelte-frontend.mjs
+scripts/calibrate-work-first-recording.mjs
 scripts/generate-public-manifest.mjs
 scripts/inline-script-bodies.mjs
 scripts/offline-browser-smoke.mjs
