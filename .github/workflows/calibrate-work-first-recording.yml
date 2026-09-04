@@ -30,5 +30,28 @@ jobs:
           test -n "$chrome"
           echo "CHROME_EXECUTABLE_PATH=$chrome" >> "$GITHUB_ENV"
       - run: npm run build
+      - name: Route Work to Review through Tools for calibration
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/calibrate-work-first-recording.mjs')
+          source = path.read_text()
+          old = """  await page.locator('[data-webmcp-receipt=\"work\"]').waitFor({ state: 'visible' });
+            await pressUntil(page, 'Shift+Tab', 'work-review-in-queue', (focus) => focus?.href.startsWith('/review?focus=') && focus.visibleText === 'Review in queue');
+            await page.keyboard.press('Enter');
+            await waitForRoute(page, '/review');
+          """.replace('            ', '  ')
+          new = """  await page.locator('[data-webmcp-receipt=\"work\"]').waitFor({ state: 'visible' });
+            await pressUntil(page, 'Shift+Tab', 'work-header-tools', (focus) => focus?.data.tools === true);
+            await page.keyboard.press('Enter');
+            await page.getByRole('dialog', { name: 'Tools' }).waitFor({ state: 'visible' });
+            await pressUntil(page, 'Tab', 'tools-review', (focus) => focus?.href === '/review');
+            await page.keyboard.press('Enter');
+            await waitForRoute(page, '/review');
+          """.replace('            ', '  ')
+          if old not in source:
+              raise SystemExit('Work-to-Review calibration block not found')
+          path.write_text(source.replace(old, new, 1))
+          PY
       - name: Measure application-only Work-first focus order
         run: node scripts/calibrate-work-first-recording.mjs
