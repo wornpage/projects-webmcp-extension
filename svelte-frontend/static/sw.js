@@ -77,18 +77,12 @@ async function cachedOrOfflineFallback(request) {
 
 async function precacheRequiredAssets() {
 	// A production generation is content-derived, so clearing it cannot disturb
-	// the cache owned by the currently controlling worker.
+	// the cache owned by the currently controlling worker. Cache.addAll is the
+	// browser's batch install path and rejects the install if any request fails.
 	await caches.delete(ACTIVE_CACHE_NAME);
 	const cache = await activeCache();
 	try {
-		const entries = await Promise.all(PRECACHE.map(async (url) => {
-			const response = await fetch(new Request(url, { cache: 'reload' }));
-			if (!isCacheable(response)) {
-				throw new Error(`Required offline asset failed to load: ${url} (${response.status})`);
-			}
-			return { url, response };
-		}));
-		await Promise.all(entries.map(({ url, response }) => cache.put(url, response)));
+		await cache.addAll(PRECACHE.map((url) => new Request(url, { cache: 'reload' })));
 	} catch (error) {
 		await caches.delete(ACTIVE_CACHE_NAME);
 		throw error;
