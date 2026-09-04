@@ -138,8 +138,8 @@ function renderedGuideDocument(fixture) {
 }
 
 test('Projects workflow surfaces keep the Guide compact and product-labeled', () => {
-	assert.match(layoutSource, /<nav aria-label="Projects workflow navigation">/u);
-	assert.doesNotMatch(layoutSource, /aria-label="Challenge pages"/u);
+	assert.match(layoutSource, /<nav aria-label="Projects application navigation">/u);
+	assert.doesNotMatch(layoutSource, /aria-label="Challenge pages"|Projects workflow navigation/u);
 	assert.match(pageSource, /Choose visible work and edit the brief; the browser agent can inspect, prepare, or add bounded Drafts while you control Start and final Save\./u);
 	assert.match(pageSource, /<WornAccordion label="Authority boundary">/u);
 	assert.match(pageSource, /<WornAccordion label="Workspace portability">[\s\S]*?Import export/u);
@@ -180,15 +180,23 @@ test('Guide editable fields include their live character bounds in accessible de
 	assert.match(editorSource, /<input[\s\S]*?id="agent-work-query-input"[\s\S]*?aria-describedby="agent-work-query-help agent-work-query-limit agent-brief-status"/u);
 });
 
-test('compact navigation gives pending approvals the existing second row', () => {
+test('work-first navigation keeps Pending and Tools in one compact row', () => {
+	assert.match(layoutSource, /class="challenge-nav-control challenge-work-link"[\s\S]*?href="\/work"[\s\S]*?data-nav-label="Work"/u);
+	assert.match(layoutSource, /data-nav-label=\{`Pending \$\{pendingNavigation\.count\}`\}/u);
+	assert.match(layoutSource, /data-nav-label="Guide"[\s\S]*?data-tools-trigger[\s\S]*?data-nav-label="Tools"/u);
+	assert.match(layoutSource, /aria-label=\{activeToolRoute \? `Tools, \$\{activeToolRoute\.label\} is the current view` : 'Tools'\}/u);
+	assert.match(layoutSource, /<WornDialog bind:open=\{toolsOpen\} title="Tools" size="sm" onclose=\{restoreToolsFocus\}>/u);
+	assert.match(layoutSource, /requestAnimationFrame\(\(\) => toolsTrigger\?\.focus\(\{ preventScroll: true \}\)\)/u);
+	assert.match(layoutSource, /Priority[\s\S]*?Standalone recommendation view[\s\S]*?Review[\s\S]*?Full evidence queue[\s\S]*?Next[\s\S]*?Full next-action editor/u);
+	assert.doesNotMatch(layoutSource, /label: '1 Work'|label: '2 Review'|label: '3 Next'/u);
 	const compactStart = layoutSource.indexOf('@media (max-width: 700px)');
 	const compactEnd = layoutSource.indexOf('@media (prefers-reduced-motion: reduce)', compactStart);
 	assert.notEqual(compactStart, -1);
 	assert.notEqual(compactEnd, -1);
 	const compactSource = layoutSource.slice(compactStart, compactEnd);
-	assert.match(compactSource, /\.pending-approval-link\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/u);
-	assert.doesNotMatch(layoutSource.slice(0, compactStart), /\.pending-approval-link[^}]*grid-column:/u);
-	assert.doesNotMatch(layoutSource.slice(compactEnd), /\.pending-approval-link[^}]*grid-column:/u);
+	assert.match(compactSource, /\.challenge-shell-nav nav \{[\s\S]*?display: flex;[\s\S]*?flex-wrap: nowrap;[\s\S]*?width: 100%;/u);
+	assert.match(compactSource, /\.challenge-shell-nav \.challenge-nav-control \{[\s\S]*?flex: 1 1 0;/u);
+	assert.doesNotMatch(compactSource, /pending-approval-link[^}]*grid-column:\s*1\s*\/\s*-1/u);
 });
 
 test('Guide derives bounded scope choices from stable fields and the supplied Work search counter', () => {

@@ -6,31 +6,39 @@
 	import WornToast from '$lib/components/WornToast.svelte';
 	import WebMcpHandoffRail from '$lib/WebMcpHandoffRail.svelte';
 	import WebMcpStatus from '$lib/WebMcpStatus.svelte';
-	import { WornButton } from '$lib/components';
+	import { WornButton, WornDialog } from '$lib/components';
 	import PendingApprovalsCenter from '$lib/PendingApprovalsCenter.svelte';
 
+	type RoutePath = '/webmcp-challenge' | '/priority' | '/work' | '/review' | '/next';
 	type RouteItem = {
-		href: '/webmcp-challenge' | '/priority' | '/work' | '/review' | '/next';
+		href: RoutePath;
 		label: string;
+		description?: string;
 	};
 
 	const ROUTES: readonly RouteItem[] = [
+		{ href: '/work', label: 'Work' },
 		{ href: '/webmcp-challenge', label: 'Guide' },
-		{ href: '/priority', label: 'Priority' },
-		{ href: '/work', label: '1 Work' },
-		{ href: '/review', label: '2 Review' },
-		{ href: '/next', label: '3 Next' }
+		{ href: '/priority', label: 'Priority', description: 'Standalone recommendation view' },
+		{ href: '/review', label: 'Review', description: 'Full evidence queue' },
+		{ href: '/next', label: 'Next', description: 'Full next-action editor' }
 	];
+	const TOOL_ROUTES = ROUTES.filter((item) =>
+		item.href === '/priority' || item.href === '/review' || item.href === '/next'
+	);
 
 	let { children }: { children: any } = $props();
 	let pathname = $derived($page.url.pathname);
 	let routeLabel = $derived(ROUTES.find((item) => item.href === pathname)?.label ?? 'WebMCP demo');
+	let activeToolRoute = $derived(TOOL_ROUTES.find((item) => item.href === pathname) ?? null);
 	let pendingApprovals = $derived(pendingNextActionDrafts($demoState));
 	let pendingNavigation = $derived(pendingDraftNavigation({ pendingNextActionDrafts: pendingApprovals }));
 	let pendingResumeHref = $derived(pendingNavigation.resumeHref);
 	let recoveryBusy = $state(false);
 	let recoveryError = $state('');
 	let pendingCenterOpen = $state(false);
+	let toolsOpen = $state(false);
+	let toolsTrigger: HTMLButtonElement | null = $state(null);
 	let online = $state(true);
 	let updateAvailable = $state(false);
 	let waitingWorker = $state<ServiceWorker | null>(null);
@@ -60,6 +68,10 @@
 			window.removeEventListener('offline', setOnline);
 		};
 	});
+
+	function restoreToolsFocus() {
+		requestAnimationFrame(() => toolsTrigger?.focus({ preventScroll: true }));
+	}
 
 	function dismissToast(id: string) {
 		toasts.update((items) => items.filter((item) => item.id !== id));
@@ -99,17 +111,45 @@
 			<small>WebMCP edition</small>
 		</a>
 
-		<nav aria-label="Projects workflow navigation">
-			{#each ROUTES as item (item.href)}
-				<a href={item.href} aria-current={pathname === item.href ? 'page' : undefined}>
-					{item.label}
-				</a>
-			{/each}
+		<nav aria-label="Projects application navigation">
+			<a
+				class="challenge-nav-control challenge-work-link"
+				href="/work"
+				data-nav-label="Work"
+				aria-current={pathname === '/work' ? 'page' : undefined}
+			>Work</a>
 			{#if pendingNavigation.count > 0}
-				<a class="pending-approval-link" href={pendingResumeHref} aria-label={`Resume ${pendingNavigation.count} pending approval${pendingNavigation.count === 1 ? '' : 's'}`} onclick={(event) => { event.preventDefault(); pendingCenterOpen = true; }}>
-					Pending {pendingNavigation.count}
-				</a>
+				<a
+					class="challenge-nav-control pending-approval-link"
+					href={pendingResumeHref}
+					data-nav-label={`Pending ${pendingNavigation.count}`}
+					aria-label={`Resume ${pendingNavigation.count} pending approval${pendingNavigation.count === 1 ? '' : 's'}`}
+					onclick={(event) => { event.preventDefault(); pendingCenterOpen = true; }}
+				>Pending {pendingNavigation.count}</a>
 			{/if}
+			<a
+				class="challenge-nav-control"
+				href="/webmcp-challenge"
+				data-nav-label="Guide"
+				aria-current={pathname === '/webmcp-challenge' ? 'page' : undefined}
+			>Guide</a>
+			<button
+				class="challenge-nav-control tools-trigger"
+				class:contains-current-route={Boolean(activeToolRoute)}
+				type="button"
+				data-tools-trigger
+				data-nav-label="Tools"
+				data-route-active={activeToolRoute ? 'true' : undefined}
+				aria-haspopup="dialog"
+				aria-expanded={toolsOpen}
+				aria-controls="workflow-tools-panel"
+				aria-label={activeToolRoute ? `Tools, ${activeToolRoute.label} is the current view` : 'Tools'}
+				bind:this={toolsTrigger}
+				onclick={() => (toolsOpen = true)}
+			>
+				<span>Tools</span>
+				{#if activeToolRoute}<small aria-hidden="true">{activeToolRoute.label}</small>{/if}
+			</button>
 		</nav>
 
 		<WebMcpStatus />
@@ -143,6 +183,27 @@
 	</main>
 
 	<PendingApprovalsCenter bind:open={pendingCenterOpen} drafts={pendingApprovals} packs={($demoState?.packs ?? []) as any} />
+
+	<WornDialog bind:open={toolsOpen} title="Tools" size="sm" onclose={restoreToolsFocus}>
+		<div id="workflow-tools-panel" class="workflow-tools-panel" data-workflow-tools-panel>
+			<p class="workflow-tools-intro">Focused views support the Work decision workspace without turning them back into mandatory steps.</p>
+			<nav class="workflow-tools-list" aria-label="Project tools">
+				{#each TOOL_ROUTES as item (item.href)}
+					<a
+						class="workflow-tools-link"
+						href={item.href}
+						data-workflow-tool-link
+						data-tool-label={item.label}
+						aria-current={pathname === item.href ? 'page' : undefined}
+						onclick={() => (toolsOpen = false)}
+					>
+						<strong>{item.label}</strong>
+						<span>{item.description}</span>
+					</a>
+				{/each}
+			</nav>
+		</div>
+	</WornDialog>
 </div>
 
 <style>
@@ -218,15 +279,17 @@
 	}
 
 	.challenge-shell-nav nav {
+		align-items: center;
 		display: flex;
 		flex: 0 1 auto;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
 		gap: 4px;
 		justify-content: flex-end;
+		min-width: 0;
 	}
 
-	/* At tablet widths the brand and status share a compact row, while the
-	   complete workflow (including Pending) stays together below it. */
+	/* Tablet and compact layouts retain one deliberate application row:
+	   Work, Pending when present, Guide, and the secondary Tools surface. */
 	@media (max-width: 900px) and (min-width: 701px) {
 		.challenge-shell-nav {
 			display: grid;
@@ -235,23 +298,32 @@
 			padding: 6px 8px;
 		}
 		.challenge-shell-nav :global(.webmcp-status-pill) { grid-column: 2; grid-row: 1; }
-		.challenge-shell-nav nav { flex-wrap: nowrap; gap: 2px; grid-column: 1 / -1; justify-content: stretch; }
-		.challenge-shell-nav nav a { flex: 1 1 auto; font-size: 11px; justify-content: center; min-height: 36px; padding-inline: 7px; }
+		.challenge-shell-nav nav { gap: 4px; grid-column: 1 / -1; justify-content: stretch; }
+		.challenge-shell-nav .challenge-nav-control { flex: 1 1 0; font-size: 11px; justify-content: center; min-height: 38px; padding-inline: 8px; }
 		.challenge-brand { min-height: 36px; padding-inline: 8px; }
 	}
 
-	.challenge-shell-nav nav a {
+	.challenge-nav-control {
 		align-items: center;
+		appearance: none;
+		background: transparent;
 		border: 1px solid transparent;
 		border-radius: var(--worn-radius-sm);
+		box-sizing: border-box;
 		color: var(--worn-text-secondary);
+		cursor: pointer;
 		display: inline-flex;
 		font-family: var(--font-typewriter);
 		font-size: 12px;
 		font-weight: 650;
+		justify-content: center;
+		line-height: 1;
+		margin: 0;
 		min-height: 44px;
+		min-width: 0;
 		padding: 0 12px;
 		text-decoration: none;
+		white-space: nowrap;
 		transition:
 			background-color 180ms ease,
 			border-color 180ms ease,
@@ -260,7 +332,31 @@
 			translate 180ms ease;
 	}
 
-	.challenge-shell-nav nav a[aria-current='page'] {
+	.challenge-work-link {
+		background: color-mix(in srgb, var(--worn-accent) 8%, transparent);
+		color: var(--worn-text);
+		font-weight: 800;
+	}
+
+	.pending-approval-link {
+		border-color: color-mix(in srgb, var(--worn-warning-text) 35%, var(--worn-border));
+	}
+
+	.tools-trigger {
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.tools-trigger small {
+		color: inherit;
+		font-family: var(--font-typewriter);
+		font-size: 9px;
+		font-weight: 750;
+		line-height: 1;
+	}
+
+	.challenge-nav-control[aria-current='page'],
+	.tools-trigger[data-route-active='true'] {
 		background: var(--worn-selected-bg);
 		border-color: var(--worn-border-strong);
 		box-shadow: inset 0 -2px 0 var(--worn-accent);
@@ -268,8 +364,56 @@
 		translate: 0 -1px;
 	}
 
+	.workflow-tools-panel {
+		display: grid;
+		gap: 14px;
+		max-inline-size: 100%;
+		min-inline-size: 0;
+	}
+
+	.workflow-tools-intro {
+		color: var(--worn-text-secondary);
+		font-size: 14px;
+		line-height: 1.5;
+		margin: 0;
+	}
+
+	.workflow-tools-list {
+		display: grid;
+		gap: 8px;
+	}
+
+	.workflow-tools-link {
+		background: var(--worn-surface);
+		border: 1px solid var(--worn-border);
+		border-radius: var(--worn-radius-sm);
+		color: var(--worn-text);
+		display: grid;
+		gap: 3px;
+		min-width: 0;
+		padding: 12px 14px;
+		text-decoration: none;
+	}
+
+	.workflow-tools-link strong {
+		font-size: 15px;
+	}
+
+	.workflow-tools-link span {
+		color: var(--worn-text-secondary);
+		font-size: 13px;
+		line-height: 1.4;
+	}
+
+	.workflow-tools-link[aria-current='page'] {
+		background: var(--worn-selected-bg);
+		border-color: var(--worn-border-strong);
+		box-shadow: inset 0 -2px 0 var(--worn-accent);
+	}
+
 	.challenge-brand:focus-visible,
-	.challenge-shell-nav nav a:focus-visible {
+	.challenge-nav-control:focus-visible,
+	.workflow-tools-link:focus-visible {
 		outline: 2px solid var(--challenge-focus-mint);
 		outline-offset: 2px;
 	}
@@ -408,7 +552,8 @@
 
 	@media (hover: hover) and (pointer: fine) {
 		.challenge-brand:hover,
-		.challenge-shell-nav nav a:hover {
+		.challenge-nav-control:hover,
+		.workflow-tools-link:hover {
 			background: var(--worn-hover-bg);
 			color: var(--worn-text);
 		}
@@ -430,19 +575,23 @@
 		.challenge-shell-nav :global(.webmcp-status-pill) { grid-column: 2; grid-row: 1; }
 
 		.challenge-shell-nav nav {
-			display: grid;
+			display: flex;
+			flex-wrap: nowrap;
 			grid-column: 1 / -1;
 			grid-row: 2;
-			grid-template-columns: repeat(5, minmax(0, 1fr));
+			justify-content: stretch;
+			width: 100%;
 		}
 
-		.challenge-shell-nav nav a {
+		.challenge-shell-nav .challenge-nav-control {
+			flex: 1 1 0;
+			font-size: 11px;
 			justify-content: center;
 			padding-inline: 4px;
 		}
 
-		.challenge-shell-nav nav .pending-approval-link {
-			grid-column: 1 / -1;
+		.tools-trigger small {
+			display: none;
 		}
 
 		.challenge-route :global(.worn-receipt) {
@@ -466,7 +615,8 @@
 			transform: none;
 		}
 
-		.challenge-shell-nav nav a {
+		.challenge-nav-control,
+		.workflow-tools-link {
 			transition: none;
 		}
 
@@ -480,8 +630,8 @@
 		.challenge-brand small {
 			display: none;
 		}
-		.challenge-shell-nav nav a {
-			font-size: 11px;
+		.challenge-nav-control {
+			font-size: 10px;
 		}
 	}
 </style>

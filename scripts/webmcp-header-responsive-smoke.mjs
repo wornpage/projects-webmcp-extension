@@ -116,24 +116,80 @@ try {
 		await page.setViewportSize({ width, height: 900 });
 		await page.reload({ waitUntil: 'networkidle' });
 		await page.waitForSelector('.pending-approval-link', { state: 'visible' });
-		const result = await page.locator('.challenge-shell-nav').evaluate((header) => { const nav = header.querySelector('nav'); const links = [...header.querySelectorAll('nav a')]; const navRect = nav.getBoundingClientRect(); const headerRect = header.getBoundingClientRect(); const brandRect = header.querySelector('.challenge-brand').getBoundingClientRect(); const pendingRect = header.querySelector('.pending-approval-link').getBoundingClientRect(); return { linkCount: links.length, labels: links.map((link) => link.textContent.trim()), navTop: navRect.top, navWidth: navRect.width, pendingTop: pendingRect.top, pendingWidth: pendingRect.width, brandWidth: brandRect.width, headerHeight: headerRect.height, statusTop: header.querySelector('.webmcp-status-pill').getBoundingClientRect().top, documentWidth: document.documentElement.scrollWidth, viewportWidth: document.documentElement.clientWidth, saveBoundary: [...document.querySelectorAll('button')].some((button) => button.textContent.trim() === 'Approve and save') }; });
-		assert.equal(result.linkCount, 6);
-		assert.deepEqual(result.labels, ['Guide', 'Priority', '1 Work', '2 Review', '3 Next', 'Pending 1']);
+		const result = await page.locator('.challenge-shell-nav').evaluate((header) => {
+			const nav = header.querySelector(':scope > nav');
+			const controls = [...nav.querySelectorAll(':scope > .challenge-nav-control')];
+			const navRect = nav.getBoundingClientRect();
+			const headerRect = header.getBoundingClientRect();
+			const brandRect = header.querySelector('.challenge-brand').getBoundingClientRect();
+			const pending = header.querySelector('.pending-approval-link');
+			const work = header.querySelector('.challenge-work-link');
+			const tools = header.querySelector('[data-tools-trigger]');
+			return {
+				controlCount: controls.length,
+				labels: controls.map((control) => control.dataset.navLabel),
+				controlTops: controls.map((control) => Math.round(control.getBoundingClientRect().top)),
+				navTop: Math.round(navRect.top),
+				navWidth: navRect.width,
+				pendingTop: Math.round(pending.getBoundingClientRect().top),
+				pendingWidth: pending.getBoundingClientRect().width,
+				workTop: Math.round(work.getBoundingClientRect().top),
+				toolsTop: Math.round(tools.getBoundingClientRect().top),
+				brandWidth: brandRect.width,
+				headerHeight: headerRect.height,
+				statusTop: Math.round(header.querySelector('.webmcp-status-pill').getBoundingClientRect().top),
+				documentWidth: document.documentElement.scrollWidth,
+				viewportWidth: document.documentElement.clientWidth,
+				toolsActive: tools.dataset.routeActive === 'true',
+				toolsLabel: tools.getAttribute('aria-label'),
+				workDefault: work.classList.contains('challenge-work-link'),
+				workCurrent: work.getAttribute('aria-current'),
+				saveBoundary: [...document.querySelectorAll('button')].some((button) => button.textContent.trim() === 'Approve and save')
+			};
+		});
+		assert.equal(result.controlCount, 4);
+		assert.deepEqual(result.labels, ['Work', 'Pending 1', 'Guide', 'Tools']);
 		assert.ok(result.headerHeight < 180, `header should remain compact, got ${result.headerHeight}px`);
-		assert.ok(result.statusTop < result.navTop, 'WebMCP status should remain grouped above the workflow links');
-		assert.ok(result.navWidth > 0, 'navigation should use the full available row');
+		assert.ok(result.statusTop < result.navTop, 'WebMCP status should remain grouped above the application row');
+		assert.ok(result.navWidth > 0, 'application navigation should use the available row');
 		assert.ok(result.documentWidth <= result.viewportWidth, `header should not overflow horizontally: ${result.documentWidth}px > ${result.viewportWidth}px`);
-		assert.ok(result.brandWidth > 200, 'Wornpage Projects brand should retain readable width');
-		if (width === 768) assert.equal(result.pendingTop, result.navTop);
-		if (width === 700) {
-			assert.ok(result.pendingTop > result.navTop, 'compact Pending link should occupy its own navigation row');
-			assert.ok(result.pendingWidth >= result.navWidth - 2, 'compact Pending row should use the full available width');
-		}
+		assert.ok(result.brandWidth > 180, 'Wornpage Projects brand should retain readable width');
+		assert.ok(result.controlTops.every((top) => Math.abs(top - result.controlTops[0]) <= 1), 'all primary navigation controls should share one row');
+		assert.equal(result.pendingTop, result.workTop);
+		assert.equal(result.toolsTop, result.workTop);
+		assert.ok(result.pendingWidth > 0);
+		assert.equal(result.toolsActive, true, 'Tools should visibly own the current Next route');
+		assert.match(result.toolsLabel ?? '', /Tools, Next is the current view/u);
+		assert.equal(result.workDefault, true);
+		assert.equal(result.workCurrent, null, 'Work keeps default prominence without falsely claiming the current Next route');
 		assert.equal(result.saveBoundary, true, 'human-only Approve and save boundary remains visible');
 		console.log(JSON.stringify({ viewport: `${width}x900`, ...result }));
 	}
+	await checkViewport(390);
 	await checkViewport(700);
 	await checkViewport(768);
+
+	const toolsTrigger = page.locator('[data-tools-trigger]');
+	await toolsTrigger.focus();
+	await page.keyboard.press('Enter');
+	const toolsDialog = page.getByRole('dialog', { name: 'Tools' });
+	await toolsDialog.waitFor({ state: 'visible' });
+	const toolsState = await toolsDialog.locator('[data-workflow-tool-link]').evaluateAll((links) =>
+		links.map((link) => ({
+			label: link.dataset.toolLabel,
+			current: link.getAttribute('aria-current'),
+			description: link.querySelector('span')?.textContent?.trim()
+		}))
+	);
+	assert.deepEqual(toolsState, [
+		{ label: 'Priority', current: null, description: 'Standalone recommendation view' },
+		{ label: 'Review', current: null, description: 'Full evidence queue' },
+		{ label: 'Next', current: 'page', description: 'Full next-action editor' }
+	]);
+	await page.keyboard.press('Escape');
+	await toolsDialog.waitFor({ state: 'hidden' });
+	await page.waitForFunction(() => document.activeElement?.hasAttribute('data-tools-trigger'));
+	assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute('data-tools-trigger')), true, 'Tools dismissal restores trigger focus');
 } finally {
 	await browser?.close();
 	server.kill();
