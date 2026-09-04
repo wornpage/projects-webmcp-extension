@@ -177,6 +177,13 @@
 			activate(boundary === 'first' ? enabled[0] || null : enabled.at(-1) || null, items);
 		}
 
+		function runAnnouncedCommand() {
+			const items = options();
+			const active = currentActive(items);
+			if (!active || active.disabled) return;
+			active.click();
+		}
+
 		function handleKeydown(event: KeyboardEvent) {
 			const field = input();
 			if (!field || event.target !== field) return;
@@ -190,6 +197,12 @@
 				event.preventDefault();
 				event.stopPropagation();
 				moveToBoundary(event.key === 'Home' ? 'first' : 'last');
+				return;
+			}
+			if (event.key === 'Enter') {
+				event.preventDefault();
+				event.stopPropagation();
+				runAnnouncedCommand();
 			}
 		}
 
