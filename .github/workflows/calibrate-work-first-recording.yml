@@ -30,4 +30,5 @@ jobs:
           test -n "$chrome"
           echo "CHROME_EXECUTABLE_PATH=$chrome" >> "$GITHUB_ENV"
       - run: npm run build
-      - run: node scripts/calibrate-work-first-recording.mjs
+      - name: Measure current Work-first focus order
+        run: node scripts/calibrate-work-first-recording.mjs
