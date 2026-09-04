@@ -11,3 +11,6 @@
 
 /_app/immutable/*
   Cache-Control: public, max-age=31536000, immutable
+
+/assets/og-image-7876d230.png
+  Cache-Control: public, max-age=31536000, immutable
