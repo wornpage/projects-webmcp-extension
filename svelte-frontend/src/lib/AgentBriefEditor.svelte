@@ -312,7 +312,7 @@
 		border: 1px solid var(--worn-border);
 		border-radius: var(--worn-radius);
 		box-sizing: border-box;
-		color: var(--worn-text-primary);
+		color: var(--worn-text);
 		font: inherit;
 		line-height: 1.5;
 		padding: 10px 12px;

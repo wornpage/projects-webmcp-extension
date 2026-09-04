@@ -255,8 +255,11 @@ test('one shared rail records only successful scoped receipts and reset clears t
 	assert.match(reducerSource, /'work-scope'[\s\S]*?'review-scope'[\s\S]*?'next-proposal'[\s\S]*?'draft-batch'[\s\S]*?'human-decision'/u);
 	assert.doesNotMatch(`${reducerSource}\n${storeSource}`, /localStorage|sessionStorage|fetch\(|apiFetch|goto\(|runPackAction|saveBrowserState/u);
 	assert.equal((layoutSource.match(/<WebMcpHandoffRail \/>/gu) ?? []).length, 1);
-	assert.match(railSource, /Verified action trail[\s\S]*?Agent finds\. Evidence proves\. You decide\.[\s\S]*?trail\.completedCount[\s\S]*?trail\.pendingCount[\s\S]*?Ready for one bounded run[\s\S]*?currentStep\?\.summary/u);
-	assert.match(railSource, /Agent-to-human handoff path[\s\S]*?Find[\s\S]*?Narrow visible work[\s\S]*?Prove[\s\S]*?Verify exact evidence[\s\S]*?Stop[\s\S]*?Leave Save to you/u);
+	assert.match(railSource, /Verified action trail[\s\S]*?Observe → Narrow → Prepare → Decide[\s\S]*?\(human-owned\)[\s\S]*?trail\.completedCount[\s\S]*?trail\.pendingCount[\s\S]*?Ready for one bounded run[\s\S]*?currentStep\?\.summary/u);
+	assert.match(railSource, /class:has-steps=\{hasSteps\}[\s\S]*?\{#if hasSteps\}[\s\S]*?class="webmcp-handoff-steps"[\s\S]*?Recorded outcomes[\s\S]*?trail\.outcomeSummary/u);
+	assert.match(railSource, /class="webmcp-handoff-progress" role="status" aria-live="polite" aria-atomic="true">\{progressAnnouncement\}/u);
+	assert.doesNotMatch(railSource.match(/<section[\s\S]*?>/u)?.[0] ?? '', /aria-live/u);
+	assert.doesNotMatch(railSource, /webmcp-handoff-toggle|webmcp-handoff-details|aria-expanded|aria-controls|matchMedia|\$effect|onMount/u);
 	assert.match(railSource, /\{#each steps as step[\s\S]*?class:is-complete=\{step\.status === 'complete'\}[\s\S]*?class:is-pending=\{step\.status === 'pending'\}[\s\S]*?STEP_LABELS\[step\.id\][\s\S]*?Your decision[\s\S]*?step\.summary/u);
 	assert.match(railSource, /Recorded outcomes[\s\S]*?trail\.outcomeSummary[\s\S]*?Human-only Start and final Save/u);
 	assert.doesNotMatch(railSource, /of 5|0 saved · 0 started|Workspace unchanged|Agent authority|STAGES/u);

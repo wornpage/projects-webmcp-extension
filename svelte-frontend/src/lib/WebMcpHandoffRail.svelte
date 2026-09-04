@@ -26,18 +26,22 @@
 	let steps = $derived(trail.steps);
 	let currentStep = $derived(trail.currentStep);
 	let hasSteps = $derived(steps.length > 0);
+
+	let progressAnnouncement = $derived(currentStep
+		? `Action trail: ${trail.completedCount} verified actions, ${trail.pendingCount} pending. ${currentStep.title}.`
+		: `Action trail ready. ${trail.outcomeSummary}. 0 verified actions, 0 pending.`);
 </script>
 
 <section
 	class="webmcp-handoff-rail"
 	class:has-pending={trail.pendingCount > 0}
+	class:has-steps={hasSteps}
 	data-webmcp-handoff-session
 	aria-label="Verified action trail"
-	aria-live="polite"
 >
 	<div class="webmcp-handoff-summary">
 		<p>Verified action trail</p>
-		<span class="webmcp-handoff-thesis">Agent finds. Evidence proves. You decide.</span>
+		<span class="webmcp-handoff-cue">Observe → Narrow → Prepare → Decide <small>(human-owned)</small></span>
 		<strong>{currentStep ? `${trail.completedCount} verified${trail.pendingCount ? ` · ${trail.pendingCount} pending` : ''} · ${currentStep.title}` : 'Ready for one bounded run'}</strong>
 		<small title={currentStep?.summary || undefined}>{currentStep?.summary || 'No agent action recorded.'}</small>
 	</div>
@@ -61,21 +65,14 @@
 				</li>
 			{/each}
 		</ol>
-	{:else}
-		<div class="webmcp-handoff-promise" aria-label="Agent-to-human handoff path">
-			<span><small>Find</small><strong>Narrow visible work</strong></span>
-			<span><small>Prove</small><strong>Verify exact evidence</strong></span>
-			<span><small>Stop</small><strong>Leave Save to you</strong></span>
+		<div class="webmcp-handoff-authority">
+			<span>Recorded outcomes</span>
+			<strong>{trail.outcomeSummary}</strong>
+			<small>Human-only Start and final Save</small>
 		</div>
 	{/if}
 
-	<div class="webmcp-handoff-authority">
-		<span>Recorded outcomes</span>
-		<strong>{trail.outcomeSummary}</strong>
-		<small>Human-only Start and final Save</small>
-	</div>
-
-	<span class="webmcp-handoff-progress">{trail.completedCount} verified actions, {trail.pendingCount} pending</span>
+	<span class="webmcp-handoff-progress" role="status" aria-live="polite" aria-atomic="true">{progressAnnouncement}</span>
 </section>
 
 <style>
@@ -88,7 +85,7 @@
 		box-shadow: var(--worn-shadow-sm);
 		display: grid;
 		gap: 10px 16px;
-		grid-template-columns: minmax(260px, 1fr) minmax(220px, auto);
+		grid-template-columns: minmax(0, 1fr);
 		min-width: 0;
 		overflow: hidden;
 		padding: 12px 14px;
@@ -97,6 +94,10 @@
 
 	.webmcp-handoff-rail.has-pending {
 		border-color: var(--worn-accent);
+	}
+
+	.webmcp-handoff-rail.has-steps {
+		grid-template-columns: minmax(260px, 1fr) minmax(220px, auto);
 	}
 
 	.webmcp-handoff-summary,
@@ -108,8 +109,8 @@
 
 	.webmcp-handoff-summary p,
 	.webmcp-handoff-summary strong,
-	.webmcp-handoff-summary small,
-	.webmcp-handoff-thesis,
+	.webmcp-handoff-summary > small,
+	.webmcp-handoff-cue,
 	.webmcp-handoff-authority span,
 	.webmcp-handoff-authority strong,
 	.webmcp-handoff-authority small,
@@ -119,7 +120,6 @@
 
 	.webmcp-handoff-summary p,
 	.webmcp-handoff-authority span,
-	.webmcp-handoff-promise small,
 	.webmcp-handoff-steps li > small {
 		color: var(--worn-link);
 		font-size: 11px;
@@ -128,12 +128,19 @@
 		text-transform: uppercase;
 	}
 
-	.webmcp-handoff-thesis {
+	.webmcp-handoff-cue {
 		color: var(--worn-text);
-		font-size: clamp(17px, 2vw, 22px);
-		font-weight: 760;
-		letter-spacing: -0.02em;
-		line-height: 1.15;
+		font-family: var(--font-typewriter);
+		font-size: clamp(12px, 1.6vw, 15px);
+		font-weight: 750;
+		line-height: 1.35;
+	}
+
+	.webmcp-handoff-cue small {
+		color: var(--worn-text-muted);
+		font-size: 11px;
+		font-weight: 650;
+		white-space: nowrap;
 	}
 
 	.webmcp-handoff-summary > strong {
@@ -144,7 +151,7 @@
 		line-height: 1.35;
 	}
 
-	.webmcp-handoff-summary small,
+	.webmcp-handoff-summary > small,
 	.webmcp-handoff-authority small {
 		color: var(--worn-text-secondary);
 		font-size: 12px;
@@ -160,6 +167,8 @@
 		border: 1px solid var(--worn-border);
 		border-radius: var(--worn-radius-sm);
 		justify-content: end;
+		grid-column: 2;
+		grid-row: 1;
 		padding: 9px 11px;
 		text-align: right;
 	}
@@ -170,21 +179,16 @@
 		line-height: 1.3;
 	}
 
-	.webmcp-handoff-steps,
-	.webmcp-handoff-promise {
-		grid-column: 1 / -1;
-	}
-
 	.webmcp-handoff-steps {
 		display: grid;
 		gap: 8px;
+		grid-column: 1 / -1;
 		grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
 		list-style: none;
 		padding: 0;
 	}
 
-	.webmcp-handoff-steps li,
-	.webmcp-handoff-promise > span {
+	.webmcp-handoff-steps li {
 		background: color-mix(in srgb, var(--worn-surface) 92%, transparent);
 		border: 1px solid var(--worn-border);
 		border-radius: var(--worn-radius-sm);
@@ -222,8 +226,7 @@
 		text-transform: uppercase;
 	}
 
-	.webmcp-handoff-steps li > strong,
-	.webmcp-handoff-promise strong {
+	.webmcp-handoff-steps li > strong {
 		color: var(--worn-text);
 		font-size: 13px;
 		line-height: 1.3;
@@ -254,18 +257,6 @@
 		transform: translateY(-1px);
 	}
 
-	.webmcp-handoff-promise {
-		display: grid;
-		gap: 8px;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-
-	.webmcp-handoff-promise > span {
-		align-items: baseline;
-		gap: 4px 9px;
-		grid-template-columns: auto minmax(0, 1fr);
-	}
-
 	.webmcp-handoff-progress {
 		clip: rect(0 0 0 0);
 		clip-path: inset(50%);
@@ -276,28 +267,16 @@
 		width: 1px;
 	}
 
-	@media (max-width: 760px) {
-		.webmcp-handoff-rail {
-			grid-template-columns: minmax(0, 1fr) auto;
-		}
-
-		.webmcp-handoff-authority {
-			max-width: 280px;
-		}
-	}
-
 	@media (max-width: 560px) {
-		.webmcp-handoff-rail {
+		.webmcp-handoff-rail.has-steps {
 			grid-template-columns: 1fr;
 		}
 
 		.webmcp-handoff-authority {
+			grid-column: 1;
+			grid-row: auto;
 			max-width: none;
 			text-align: left;
-		}
-
-		.webmcp-handoff-promise {
-			grid-template-columns: 1fr;
 		}
 	}
 

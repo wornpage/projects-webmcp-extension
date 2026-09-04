@@ -1,6 +1,6 @@
 # Projects WebMCP extension design
 
-This public extraction keeps five task routes—Guide, Work, Review, Next, and Priority—legible across its eight supported themes. It is a compact workflow surface: visible facts, bounded choices, and a person who retains approval authority.
+This public extraction keeps five task routes—Guide, Work, Review, Next, and Priority—legible across its supported light and dark color schemes. It is a compact workflow surface: visible facts, bounded choices, and a person who retains approval authority.
 
 ## Surface language
 

@@ -123,6 +123,8 @@ test('Manual sort owns a stable persisted order and keyboard controls', () => {
 	assert.deepEqual(orderPacks(packs, 'manual', ['c', 'a', 'b']).map((pack) => pack.id), ['c', 'a', 'b']);
 	assert.match(workflowSource, /orderPacks\(packs: DemoPack\[\], sortBy = 'urgency', manualOrder: string\[\] = \[\]\)/u);
 	assert.match(routeSource, /sortBy === 'manual' && e\.altKey[\s\S]*?moveFocusedManual/u);
+	const cardKeys = routeSource.slice(routeSource.indexOf('function handleCardKeys'), routeSource.indexOf('\n\t// "/" focuses the filter'));
+	assert.ok(cardKeys.indexOf("sortBy === 'manual' && e.altKey") < cardKeys.indexOf("if (e.key === 'ArrowDown')"), 'Alt+Arrow manual ordering wins before ordinary roving focus');
 	assert.match(routeSource, /Manual ordering controls[\s\S]*?Move focused up[\s\S]*?Move focused down[\s\S]*?aria-live="polite"/u);
 	assert.match(routeSource, /Card to reorder[\s\S]*?manualTargetId[\s\S]*?moveFocusedManual/u);
 	assert.match(workFilterControlsSource, /value: 'manual', label: 'Manual'/u);
@@ -926,4 +928,35 @@ test('expanded Recent activity follows the Work page heading hierarchy', () => {
 		{ id: 'active', title: 'Active', archived: false, activity: ['[2026-09-03 12:00:00] Started.'] },
 		{ id: 'archived', title: 'Archived', archived: true, activity: ['[2026-09-03 13:00:00] Started.'] }
 	]), [{ at: '2026-09-03 12:00:00', text: 'Started.', packId: 'active', packTitle: 'Active' }]);
+});
+
+test('Work waits for first workspace resolution before rendering a real empty state', () => {
+	assert.match(routeSource, /let workspaceLoaded = \$derived\(\$demoState !== null\);/u);
+	assert.match(routeSource, /<WornPage[^>]*loading=\{!workspaceLoaded && \(\$demoStateLoading \|\| !\$demoStateError\)\}/u);
+	assert.equal(
+		routeSource.match(/workspaceLoaded && visible\.length === 0/gu)?.length,
+		2,
+		'Both density views gate their empty state on completed workspace hydration'
+	);
+});
+
+test('Work uses the canonical stages and progressively discloses the decision editor', () => {
+	assert.match(routeSource, /sectionLabel="Step 1 of 3 · Observe"/u);
+	assert.doesNotMatch(routeSource, /Step 1 of 3 · Inspect/u);
+	assert.match(workDecisionWorkspaceSource, /let workspaceOpen = \$state\(false\);[\s\S]*?if \(resumed \|\| pendingDraft\) workspaceOpen = true/u);
+	assert.doesNotMatch(workDecisionWorkspaceSource, /matchMedia|onMount/u);
+	assert.match(workDecisionWorkspaceSource, /<details class="decision-workspace-disclosure" bind:open=\{workspaceOpen\}>[\s\S]*?<summary class="decision-workspace-summary">[\s\S]*?\{workspaceOpen \? 'Hide details' : 'Review decision'\}/u);
+	assert.match(workDecisionWorkspaceSource, /aria-label="Observe, narrow, prepare, decide"[\s\S]*?<span>Observe<\/span>[\s\S]*?<span>Narrow<\/span>[\s\S]*?<span>Prepare<\/span>[\s\S]*?<span>Decide<\/span>/u);
+});
+
+test('Work names its command surface and gives card energy and drag explicit controls', () => {
+	assert.match(routeSource, /import Command from '@lucide\/svelte\/icons\/command';/u);
+	assert.match(routeSource, /<WornButton[\s\S]*?class="work-command-trigger"[\s\S]*?aria-label="Command palette"[\s\S]*?<Command aria-hidden="true" \/>[\s\S]*?<span>Commands<\/span>/u);
+	const listCardSurface = workListCardSource.match(/<WornFoldedSurface[\s\S]*?>/u)?.[0] ?? '';
+	assert.doesNotMatch(listCardSurface, /\bdraggable=/u);
+	assert.doesNotMatch(listCardSurface, /\bondragstart=/u);
+	assert.match(workListCardSource, /class="work-card-move-handle"[\s\S]*?draggable="true"[\s\S]*?data-work-drag-handle[\s\S]*?Drag to reorder or change energy/u);
+	assert.match(workListCardSource, /<label for=\{energySelectId\}>Energy<\/label>[\s\S]*?<WornSelect[\s\S]*?data-action="set-energy"[\s\S]*?aria-label=\{`Set energy for \$\{workTitle\(pack\)\}`\}[\s\S]*?onSetEnergy/u);
+	assert.match(routeSource, /async function setPackEnergy\(pack: DemoPack, energy: string\)[\s\S]*?!PACK_ENERGIES\.includes\(energy\)[\s\S]*?savePackBrowserFields\(pack\.id[\s\S]*?target\.energy = energy/u);
+	assert.match(routeSource, /<WorkListCard[\s\S]*?onSetEnergy=\{setPackEnergy\}/u);
 });

@@ -129,6 +129,7 @@ try {
 				controlCount: controls.length,
 				labels: controls.map((control) => control.dataset.navLabel),
 				controlTops: controls.map((control) => Math.round(control.getBoundingClientRect().top)),
+				controlHeights: controls.map((control) => Math.round(control.getBoundingClientRect().height)),
 				navTop: Math.round(navRect.top),
 				navWidth: navRect.width,
 				pendingTop: Math.round(pending.getBoundingClientRect().top),
@@ -138,10 +139,16 @@ try {
 				brandWidth: brandRect.width,
 				headerHeight: headerRect.height,
 				statusTop: Math.round(header.querySelector('.webmcp-status-pill').getBoundingClientRect().top),
+				statusHeight: Math.round(header.querySelector('.webmcp-status-pill').getBoundingClientRect().height),
+				statusWord: header.querySelector('.webmcp-status-word')?.textContent?.trim(),
+				statusToolCount: header.querySelector('.webmcp-tool-count')?.textContent?.trim(),
+				statusToolCountVisible: header.querySelector('.webmcp-tool-count')?.getClientRects().length === 1,
 				documentWidth: document.documentElement.scrollWidth,
 				viewportWidth: document.documentElement.clientWidth,
 				toolsActive: tools.dataset.routeActive === 'true',
 				toolsLabel: tools.getAttribute('aria-label'),
+				toolsText: tools.textContent?.replace(/\s+/gu, ' ').trim(),
+				toolsCurrentFits: tools.querySelector('small')?.scrollWidth <= tools.querySelector('small')?.clientWidth + 1,
 				workDefault: work.classList.contains('challenge-work-link'),
 				workCurrent: work.getAttribute('aria-current'),
 				saveBoundary: [...document.querySelectorAll('button')].some((button) => button.textContent.trim() === 'Approve and save')
@@ -151,23 +158,55 @@ try {
 		assert.deepEqual(result.labels, ['Work', 'Pending 1', 'Guide', 'Tools']);
 		assert.ok(result.headerHeight < 180, `header should remain compact, got ${result.headerHeight}px`);
 		assert.ok(result.statusTop < result.navTop, 'WebMCP status should remain grouped above the application row');
+		assert.ok(result.statusHeight >= 44, `WebMCP status should keep the shared target minimum, got ${result.statusHeight}px`);
+		assert.equal(result.statusWord, 'unavailable', 'WebMCP status must remain visible as text');
+		assert.equal(result.statusToolCount, '2 tools', 'WebMCP status must show the exact current-page tool count');
+		assert.equal(result.statusToolCountVisible, true, 'WebMCP tool count must remain visible');
 		assert.ok(result.navWidth > 0, 'application navigation should use the available row');
 		assert.ok(result.documentWidth <= result.viewportWidth, `header should not overflow horizontally: ${result.documentWidth}px > ${result.viewportWidth}px`);
-		assert.ok(result.brandWidth > 180, 'Wornpage Projects brand should retain readable width');
+		assert.ok(result.brandWidth > (width <= 360 ? 130 : 180), 'Wornpage Projects brand should retain readable width');
 		assert.ok(result.controlTops.every((top) => Math.abs(top - result.controlTops[0]) <= 1), 'all primary navigation controls should share one row');
+		assert.ok(result.controlHeights.every((height) => height >= 44), `navigation controls should keep the shared target minimum: ${result.controlHeights.join(', ')}`);
 		assert.ok(Math.abs(result.pendingTop - result.workTop) <= 1, 'Pending stays on the Work row');
 		assert.ok(Math.abs(result.toolsTop - result.workTop) <= 1, 'Tools stays on the Work row');
 		assert.ok(result.pendingWidth > 0);
 		assert.equal(result.toolsActive, true, 'Tools should visibly own the current Next route');
 		assert.match(result.toolsLabel ?? '', /Tools, Next is the current view/u);
+		assert.match(result.toolsText ?? '', /Tools Next/u);
+		assert.equal(result.toolsCurrentFits, true, 'current view wording should remain fully visible');
 		assert.equal(result.workDefault, true);
 		assert.equal(result.workCurrent, null, 'Work keeps default prominence without falsely claiming the current Next route');
 		assert.equal(result.saveBoundary, true, 'human-only Approve and save boundary remains visible');
 		console.log(JSON.stringify({ viewport: `${width}x900`, ...result }));
 	}
+	await checkViewport(320);
 	await checkViewport(390);
 	await checkViewport(700);
 	await checkViewport(768);
+
+	await page.setViewportSize({ width: 320, height: 900 });
+	await page.reload({ waitUntil: 'networkidle' });
+	const handoffRail = page.locator('[data-webmcp-handoff-session]');
+	const collapsedRailHeight = await handoffRail.evaluate((rail) => rail.getBoundingClientRect().height);
+	assert.ok(collapsedRailHeight < 180, `idle action trail should stay compact, got ${collapsedRailHeight}px`);
+	assert.equal(await handoffRail.locator('button, a, input, select, textarea').count(), 0, 'idle action trail adds no focus stop');
+	assert.match(await handoffRail.innerText(), /Observe[\s\S]*Narrow[\s\S]*Prepare[\s\S]*Decide[\s\S]*human-owned/iu);
+	await page.evaluate(async () => {
+		const { recordWebMcpHandoffStep } = await import('/src/lib/webmcp-handoff-store.ts');
+		recordWebMcpHandoffStep({
+			id: 'work-scope',
+			title: 'Work narrowed',
+			summary: '4 matching of 8',
+			status: 'complete',
+			outcome: 'scope-verified'
+		});
+	});
+	await handoffRail.locator('[data-webmcp-handoff-step="work-scope"]').waitFor({ state: 'visible' });
+	const activeRailHeight = await handoffRail.evaluate((rail) => rail.getBoundingClientRect().height);
+	assert.ok(activeRailHeight > collapsedRailHeight, 'recorded evidence should appear automatically');
+	await page.setViewportSize({ width: 768, height: 900 });
+	assert.equal(await handoffRail.locator('[data-webmcp-handoff-step="work-scope"]').isVisible(), true, 'wide screens show recorded evidence by default');
+	console.log(JSON.stringify({ actionTrail: { viewport: '320x900', collapsedRailHeight, activeRailHeight, emptyFocusStops: 0, activeNarrowEvidenceVisible: true, activeWideEvidenceVisible: true } }));
 
 	const toolsTrigger = page.locator('[data-tools-trigger]');
 	await toolsTrigger.focus();

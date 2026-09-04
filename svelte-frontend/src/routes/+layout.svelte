@@ -186,7 +186,7 @@
 
 	<WornDialog bind:open={toolsOpen} title="Tools" size="sm" onclose={restoreToolsFocus}>
 		<div id="workflow-tools-panel" class="workflow-tools-panel" data-workflow-tools-panel>
-			<p class="workflow-tools-intro">Focused views support the Work decision workspace without turning them back into mandatory steps.</p>
+			<p class="workflow-tools-intro">Optional focused views support Work: narrow evidence, prepare a handoff, then return for the human decision.</p>
 			<nav class="workflow-tools-list" aria-label="Project tools">
 				{#each TOOL_ROUTES as item (item.href)}
 					<a
@@ -299,8 +299,8 @@
 		}
 		.challenge-shell-nav :global(.webmcp-status-pill) { grid-column: 2; grid-row: 1; }
 		.challenge-shell-nav nav { gap: var(--worn-space-1); grid-column: 1 / -1; justify-content: stretch; }
-		.challenge-shell-nav .challenge-nav-control { flex: 1 1 0; font-size: var(--worn-text-xs); justify-content: center; min-height: 38px; padding-inline: var(--worn-space-2); }
-		.challenge-brand { min-height: 36px; padding-inline: var(--worn-space-2); }
+		.challenge-shell-nav .challenge-nav-control { flex: 1 1 0; font-size: var(--worn-text-xs); justify-content: center; min-height: var(--worn-target-min); padding-inline: var(--worn-space-2); }
+		.challenge-brand { min-height: var(--worn-target-min); padding-inline: var(--worn-space-2); }
 	}
 
 	.challenge-nav-control {
@@ -353,6 +353,10 @@
 		font-size: 9px;
 		font-weight: 750;
 		line-height: 1;
+		max-inline-size: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.challenge-nav-control[aria-current='page'],
@@ -428,7 +432,7 @@
 	.demo-recovery { align-items: center; background: var(--worn-surface); border: 1px solid var(--worn-border-strong); border-radius: var(--worn-radius); display: flex; flex-wrap: wrap; gap: var(--worn-space-3); justify-content: space-between; padding: var(--worn-space-3) var(--worn-space-4); }
 	.demo-recovery div { display: grid; gap: var(--worn-space-1); min-width: 0; }
 	.demo-recovery span { color: var(--worn-text-secondary); font-size: var(--worn-text-sm); }
-	.demo-recovery-error { color: var(--worn-danger); flex-basis: 100%; }
+	.demo-recovery-error { color: var(--worn-danger-text); flex-basis: 100%; }
 
 	.challenge-route > :global(.demo-panel) {
 		animation: challenge-route-arrive 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -590,10 +594,6 @@
 			padding-inline: var(--worn-space-1);
 		}
 
-		.tools-trigger small {
-			display: none;
-		}
-
 		.challenge-route :global(.worn-receipt) {
 			margin-block: var(--worn-space-3) var(--worn-space-4);
 			padding: var(--worn-space-4);
@@ -629,6 +629,15 @@
 	@media (max-width: 360px) {
 		.challenge-brand small {
 			display: none;
+		}
+		.challenge-shell-nav :global(.webmcp-status-pill) {
+			grid-column: 1 / -1;
+			grid-row: 2;
+			justify-content: center;
+			justify-self: stretch;
+		}
+		.challenge-shell-nav nav {
+			grid-row: 3;
 		}
 		.challenge-nav-control {
 			font-size: 10px;

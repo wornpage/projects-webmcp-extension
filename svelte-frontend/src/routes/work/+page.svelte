@@ -4,9 +4,9 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { SvelteSet } from 'svelte/reactivity';
+	import Command from '@lucide/svelte/icons/command';
 	import Focus from '@lucide/svelte/icons/focus';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
-	import Search from '@lucide/svelte/icons/search';
 	import {
 		demoState,
 		demoStateError,
@@ -631,11 +631,11 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
   const cards = document.querySelectorAll('[data-work-item][data-pack-id]');
   if (!cards.length) return;
   const current = Array.from(cards).indexOf(document.activeElement as Element);
+  if (sortBy === 'manual' && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); void moveFocusedManual(e.key === 'ArrowUp' ? -1 : 1); return; }
   if (e.key === 'ArrowDown') { e.preventDefault(); const next = (current + 1) % cards.length; (cards[next] as HTMLElement)?.focus(); focusedIndex = next; return; }
   if (e.key === 'ArrowUp') { e.preventDefault(); const prev = (current - 1 + cards.length) % cards.length; (cards[prev] as HTMLElement)?.focus(); focusedIndex = prev; return; }
   // Action shortcuts on focused cards
 	if (current < 0) return;
-	if (sortBy === 'manual' && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); void moveFocusedManual(e.key === 'ArrowUp' ? -1 : 1); return; }
   const packId = (cards[current] as HTMLElement)?.dataset?.packId;
   if (!packId) return;
   const pack = packs.find(p => p.id === packId);
@@ -1045,6 +1045,23 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		}
 	}
 
+	async function setPackEnergy(pack: DemoPack, energy: string) {
+		if (!pack.id || busyId || !PACK_ENERGIES.includes(energy)) return;
+		busyId = pack.id;
+		busyAction = 'energy';
+		try {
+			await savePackBrowserFields(pack.id, (target) => {
+				target.energy = energy;
+			});
+			displayToast(`Energy set to ${energy}.`, 'success');
+		} catch {
+			displayToast('Energy change failed', 'error');
+		} finally {
+			busyId = '';
+			busyAction = '';
+		}
+	}
+
 	async function snoozePack(pack: DemoPack, days: number) {
 		if (!pack.id || busyId) return;
 		const current = pack.due ? parseDateOnly(pack.due) : new Date();
@@ -1118,7 +1135,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		if (batchMode) { e.preventDefault(); return; }
 		dragSrcId = packId;
 		e.dataTransfer!.effectAllowed = 'move';
-		(e.currentTarget as HTMLElement | null)?.classList.add('dragging');
+		(e.currentTarget as HTMLElement | null)?.closest<HTMLElement>('[data-work-item][data-pack-id]')?.classList.add('dragging');
 	}
 	function handleDragOver(e: DragEvent, packId: string) {
 		if (batchMode) return;
@@ -1229,20 +1246,22 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 
 <!-- Keep existing browser-local items visible during a background refresh;
      show the skeleton only when there is genuinely nothing to render. -->
-<WornPage sectionLabel="Step 1 of 3 · Inspect" title="Work" status={workStatus} variant="list" loading={$demoStateLoading && packs.length === 0}>
+<WornPage sectionLabel="Step 1 of 3 · Observe" title="Work" status={workStatus} variant="list" loading={!workspaceLoaded && ($demoStateLoading || !$demoStateError)}>
 
 	{#snippet headActions()}
 		<div class="work-head-actions">
 			<WorkShortcutHelp bind:open={shortcutHelpOpen} />
-			<WornIconButton
+			<WornButton
+				class="work-command-trigger"
 				size="sm"
-				label="Command palette"
+				aria-label="Command palette"
 				title="Open command palette (⌘/Ctrl + K)"
 				aria-haspopup="dialog"
 				onclick={openWorkCommandPalette}
 			>
-				<Search aria-hidden="true" />
-			</WornIconButton>
+				<Command aria-hidden="true" />
+				<span>Commands</span>
+			</WornButton>
 			{#if packs.length > 1 || batchMode}
 				<WornIconButton class={batchMode ? 'work-mode-active' : undefined} size="sm" label="Batch" title="Toggle batch select mode" data-action="batch-mode" aria-pressed={batchMode} disabled={busyId === 'batch'} onclick={toggleBatchMode}>
 					<ListChecks aria-hidden="true" />
@@ -1394,7 +1413,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				<WornButton type="button" size="sm" data-action="show-more-work" onclick={showMoreWork}>Show {Math.min(WORK_RENDER_LIMIT, visible.length - renderedVisible.length)} more</WornButton>
 			</div>
 		{/if}
-	{#if visible.length === 0}
+	{#if workspaceLoaded && visible.length === 0}
 		{@render workEmptyState()}
 	{/if}
 	{:else}
@@ -1439,6 +1458,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				onRepeatPack={repeatPack}
 				onReactPack={reactPack}
 				onUndoReceipt={undoReceipt}
+				onSetEnergy={setPackEnergy}
 			/>
 		{/each}
 		{#if hasMoreVisible}
@@ -1446,7 +1466,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 				<span aria-live="polite">{renderedVisible.length} of {visible.length} shown</span>
 				<WornButton type="button" size="sm" data-action="show-more-work" onclick={showMoreWork}>Show {Math.min(WORK_RENDER_LIMIT, visible.length - renderedVisible.length)} more</WornButton>
 			</div>
-		{:else if visible.length === 0}
+		{:else if workspaceLoaded && visible.length === 0}
 			{@render workEmptyState()}
 		{/if}
 	</div>
@@ -1505,6 +1525,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 		gap: 8px;
 		justify-content: flex-end;
 	}
+	:global(.work-command-trigger svg) { height: 16px; width: 16px; }
 	:global(.work-mode-active) {
 		background: var(--worn-accent) !important;
 		border-color: var(--worn-accent) !important;
@@ -1538,7 +1559,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	.work-command-entry { appearance: none; background: var(--worn-surface); border: 1px solid var(--worn-border); border-radius: var(--worn-radius-sm); color: var(--worn-text); display: grid; font: inherit; gap: 4px; padding: 10px 12px; text-align: left; width: 100%; }
 	.work-command-entry:hover,
 	.work-command-entry:focus-visible,
-	.work-command-entry-active { background: var(--worn-surface-secondary); border-color: var(--worn-accent); outline: 0; }
+	.work-command-entry-active { background: var(--worn-selected-bg); border-color: var(--worn-accent); outline: 0; }
 	.work-command-entry:disabled { opacity: 0.6; }
 	.work-command-entry span { font-weight: 610; }
 	.work-command-entry small { color: var(--worn-text-muted); font-size: 12px; }

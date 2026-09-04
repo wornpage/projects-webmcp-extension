@@ -74,6 +74,7 @@
 	let errorText = $state('');
 	let outcomeText = $state('');
 	let outcomeTarget = $state<HTMLElement | null>(null);
+	let workspaceOpen = $state(false);
 	let editorMode = $derived<EditorMode>(selectedOption === CUSTOM_ACTION ? 'custom' : 'preset');
 	let editorChoice = $derived(
 		(editorMode === 'custom' ? customChoice : selectedOption).trim().slice(0, NEXT_ACTION_MAX_LENGTH)
@@ -107,6 +108,20 @@
 						? outcomeText
 						: 'No draft yet · workspace unchanged'
 	);
+	let summaryStatus = $derived(
+		pendingDraftStale
+			? 'Draft evidence changed'
+			: pendingDraft
+				? editorMatchesDraft ? 'Draft ready for human approval' : 'Draft needs an update'
+				: outcomeText || 'No prepared draft'
+	);
+
+	// Ordinary visits begin with a truthful summary so filters and work items
+	// stay near the first viewport. Routed and prepared decisions open because
+	// they already carry an explicit continuation intent.
+	$effect(() => {
+		if (resumed || pendingDraft) workspaceOpen = true;
+	});
 
 	$effect(() => {
 		const draftKey = pendingDraft
@@ -285,18 +300,27 @@
 	id="work-decision-workspace"
 	tabindex="-1"
 >
-	<div class="decision-workspace-heading">
-		<div>
-			<h2 id="decision-workspace-title">Decision workspace</h2>
-			<p class="decision-workspace-kicker">Needs a decision</p>
-		</div>
-		<div class="decision-workspace-meta" aria-label="Decision context">
-			{#if recommendation.pack.due}<span class="due-{dueUrgency(recommendation.pack)}">{dueDateLabel(recommendation.pack)}</span>{/if}
-			{#if recommendation.pack.area}<WornBadge variant="muted" label={recommendation.pack.area} />{/if}
-			{#if decider}<span data-decision-workspace-decider>{decider}</span>{/if}
-		</div>
-		<h3 class="decision-workspace-item-title" data-decision-workspace-title>{workTitle(recommendation.pack)}</h3>
-	</div>
+	<details class="decision-workspace-disclosure" bind:open={workspaceOpen}>
+		<summary class="decision-workspace-summary">
+			<div class="decision-workspace-heading">
+				<div>
+					<h2 id="decision-workspace-title">Decision workspace</h2>
+					<p class="decision-workspace-kicker">Needs a decision</p>
+				</div>
+				<div class="decision-workspace-meta" aria-label="Decision context">
+					{#if recommendation.pack.due}<span class="due-{dueUrgency(recommendation.pack)}">{dueDateLabel(recommendation.pack)}</span>{/if}
+					{#if recommendation.pack.area}<WornBadge variant="muted" label={recommendation.pack.area} />{/if}
+					{#if decider}<span data-decision-workspace-decider>{decider}</span>{/if}
+				</div>
+				<h3 class="decision-workspace-item-title" data-decision-workspace-title>{workTitle(recommendation.pack)}</h3>
+			</div>
+			<div class="decision-workspace-summary-action">
+				<span>{summaryStatus}</span>
+				<strong>{workspaceOpen ? 'Hide details' : 'Review decision'}</strong>
+			</div>
+		</summary>
+
+		<div class="decision-workspace-body">
 
 	{#if resumed}
 		<div class="decision-resume-status" data-decision-resume-status role="status">
@@ -305,9 +329,9 @@
 		</div>
 	{/if}
 
-	<ol class="decision-workspace-path" aria-label="Find, prove, prepare, decide">
-		<li class="is-complete"><span>Find</span><strong>Selected from current Work</strong></li>
-		<li class="is-complete"><span>Prove</span><strong>Current evidence visible</strong></li>
+	<ol class="decision-workspace-path" aria-label="Observe, narrow, prepare, decide">
+		<li class="is-complete"><span>Observe</span><strong>Selected from current Work</strong></li>
+		<li class="is-complete"><span>Narrow</span><strong>Current evidence visible</strong></li>
 		<li class:is-complete={editorMatchesDraft}><span>Prepare</span><strong>{editorMatchesDraft ? 'Draft ready' : 'Choose an action'}</strong></li>
 		<li class:is-current={editorMatchesDraft}><span>Decide</span><strong>Human-only Save</strong></li>
 	</ol>
@@ -425,6 +449,8 @@
 			</div>
 		</WornCollapsible>
 	</div>
+		</div>
+	</details>
 </section>
 
 <style>
@@ -440,6 +466,44 @@
 		padding: var(--worn-space-5);
 		width: 100%;
 	}
+	.decision-workspace-disclosure { min-width: 0; }
+	.decision-workspace-summary {
+		cursor: pointer;
+		display: grid;
+		gap: var(--worn-space-3);
+		list-style: none;
+		min-width: 0;
+	}
+	.decision-workspace-summary::-webkit-details-marker { display: none; }
+	.decision-workspace-summary:focus-visible {
+		outline: 2px dashed var(--worn-focus);
+		outline-offset: var(--worn-space-2);
+	}
+	.decision-workspace-summary-action {
+		align-items: center;
+		border-top: 1px solid color-mix(in srgb, var(--worn-border) 72%, transparent);
+		display: flex;
+		gap: var(--worn-space-3);
+		justify-content: space-between;
+		min-width: 0;
+		padding-block-start: var(--worn-space-3);
+	}
+	.decision-workspace-summary-action span {
+		color: var(--worn-text-secondary);
+		font-size: var(--worn-text-sm);
+		overflow-wrap: anywhere;
+	}
+	.decision-workspace-summary-action strong {
+		color: var(--worn-link);
+		font-family: var(--font-typewriter);
+		font-size: var(--worn-text-sm);
+		white-space: nowrap;
+	}
+	.decision-workspace-disclosure[open] > .decision-workspace-summary {
+		border-bottom: 1px solid color-mix(in srgb, var(--worn-border) 72%, transparent);
+		padding-block-end: var(--worn-space-4);
+	}
+	.decision-workspace-body { min-width: 0; }
 	.decision-workspace-heading { display: grid; gap: var(--worn-space-2); }
 	.decision-workspace-heading > div:first-child {
 		align-items: baseline;
@@ -667,6 +731,7 @@
 
 	@media (max-width: 420px) {
 		.decision-workspace { padding: var(--worn-space-3); }
+		.decision-workspace-summary-action { align-items: flex-start; flex-direction: column; gap: var(--worn-space-2); }
 		.decision-workspace-explanation { padding-block-start: var(--worn-space-3); }
 		.decision-editor-actions { align-items: stretch; flex-direction: column; }
 		.decision-editor-actions :global(.worn-btn),

@@ -476,7 +476,13 @@
 </svelte:head>
 
 <!-- Keep existing browser-local items visible during a background refresh. -->
-<WornPage sectionLabel="Step 2 of 3 · Narrow" title="Review" status={reviewTitle} variant="list" loading={$demoStateLoading && packs.length === 0}>
+<WornPage
+	sectionLabel="Step 2 of 3 · Narrow"
+	title="Review"
+	status={reviewTitle}
+	variant="list"
+	loading={($demoState === null && !$demoStateError) || ($demoStateLoading && packs.length === 0)}
+>
 	{#snippet headActions()}
 		<div class="review-head-actions">
 			{#if filteredVisible.length > 0}
@@ -542,7 +548,7 @@
 	{#if receipt?.summary && receipt?.pack?.id}
 		<WornReceipt
 			summary={receipt.summary}
-			announce={false}
+			announce={true}
 			cells={receiptCells(receipt.pack)}
 		undoAvailable={!!($receiptUndo?.type === 'action' && $receiptUndo.packId === receipt.pack.id)}
 			onundo={() => undoReceipt()}
@@ -622,7 +628,7 @@
 			>
 				<WornButton type="button" onclick={clearReviewFilters}>Clear filters</WornButton>
 			</WornEmpty>
-		{:else if reviewTotal === 0}
+		{:else if reviewTotal === 0 && $demoState !== null && !$demoStateLoading && !$demoStateError}
 			<WornEmpty
 				title="Review is clear"
 				description="No items are currently waiting for review."

@@ -85,7 +85,7 @@ test('one deep-frozen recording specification owns the exact 1:50 choreography',
 		},
 		{
 			landingGuide: 5, guideTools: 5, toolsPriority: 2, priorityGuide: 5, guideFast: 5, guideWork: 9,
-			workTools: 13, toolsReview: 3, reviewTools: 3, toolsNext: 4, nextWork: 5, workPending: 15, pendingNext: 2
+			workTools: 11, toolsReview: 3, reviewTools: 3, toolsNext: 4, nextWork: 5, workPending: 13, pendingNext: 2
 		}
 	);
 	assert.deepEqual(RECORDING_PREFLIGHT_SPEC.denominators, {
@@ -186,7 +186,7 @@ test('the human cue sheet parses to the exact executable recording specification
 		/missing its exact Guide to Priority keyboard destination/u
 	);
 	assert.throws(
-		() => parseRecordingCueSheet(cueSource.replace('Work receipt → Review: thirteen Shift+Tab presses to reach **Tools**, then Enter; three Tab presses in the dialog reach **Review**, then Enter', 'Work receipt → Review: seven Shift+Tab presses, then Enter on **Review in queue**')),
+		() => parseRecordingCueSheet(cueSource.replace('Work receipt → Review: eleven Shift+Tab presses to reach **Tools**, then Enter; three Tab presses in the dialog reach **Review**, then Enter', 'Work receipt → Review: seven Shift+Tab presses, then Enter on **Review in queue**')),
 		/missing its exact Work to Review keyboard destination/u
 	);
 	assert.throws(
@@ -194,7 +194,7 @@ test('the human cue sheet parses to the exact executable recording specification
 		/missing its exact Review to Next keyboard destination/u
 	);
 	assert.throws(
-		() => parseRecordingCueSheet(cueSource.replace('Work Draft receipt → pending decision: fifteen Shift+Tab presses to reach **Pending 1**, then Enter; two Tab presses in the dialog reach **Review on Next**, then Enter', 'Work Draft receipt → pending decision: ten Shift+Tab presses, then Enter on **Pending 1**')),
+		() => parseRecordingCueSheet(cueSource.replace('Work Draft receipt → pending decision: thirteen Shift+Tab presses to reach **Pending 1**, then Enter; two Tab presses in the dialog reach **Review on Next**, then Enter', 'Work Draft receipt → pending decision: ten Shift+Tab presses, then Enter on **Pending 1**')),
 		/missing its exact Work to pending keyboard destination/u
 	);
 	assert.throws(
