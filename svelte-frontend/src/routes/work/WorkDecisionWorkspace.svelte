@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { WornBadge, WornButton } from '$lib/components';
+	import { WornBadge, WornButton, WornCollapsible } from '$lib/components';
 	import {
 		dueDateLabel,
 		dueUrgency,
@@ -29,6 +29,7 @@
 	data-decision-workspace
 	data-decision-pack-id={recommendation.pack.id}
 	aria-labelledby="decision-workspace-title"
+	id="work-decision-workspace"
 >
 	<div class="decision-workspace-heading">
 		<h2 id="decision-workspace-title">Decision workspace</h2>
@@ -40,26 +41,28 @@
 			{#if decider}<span data-decision-workspace-decider>{decider}</span>{/if}
 		</div>
 	</div>
-	<div class="decision-workspace-detail">
-		<div>
-			<h3>Why this is surfaced</h3>
+	<div class="decision-workspace-primary">
+		<p class="decision-workspace-authority-note">Human review is required before any next action is saved.</p>
+		<WornButton data-decision-workspace-next variant="primary" href={decisionWorkspaceNextHref(recommendation.pack.id)}>Set next action</WornButton>
+	</div>
+
+	<WornCollapsible summary="Why this decision is surfaced">
+		<div class="decision-workspace-detail">
 			<p data-decision-workspace-reason>{reason}</p>
 			<ul class="decision-workspace-signals" aria-label="Current Work view signals">
-				<li data-decision-workspace-signal="decisions" data-decision-workspace-signal-count={recommendation.visibleDecisionCount}><strong>{recommendation.visibleDecisionCount}</strong> open {recommendation.visibleDecisionCount === 1 ? 'decision' : 'decisions'}</li>
+				<li data-decision-workspace-signal="decisions" data-decision-workspace-signal-count={recommendation.visibleDecisionCount}><strong>{recommendation.visibleDecisionCount}</strong> open {recommendation.visibleDecisionCount === 1 ? 'decision' : 'decisions'} in view</li>
 				<li data-decision-workspace-signal="blocked" data-decision-workspace-signal-count={recommendation.visibleBlockedCount}><strong>{recommendation.visibleBlockedCount}</strong> blocked {recommendation.visibleBlockedCount === 1 ? 'item' : 'items'} in view</li>
 				<li data-decision-workspace-signal="overdue" data-decision-workspace-signal-count={recommendation.visibleOverdueCount}><strong>{recommendation.visibleOverdueCount}</strong> overdue {recommendation.visibleOverdueCount === 1 ? 'item' : 'items'} in view</li>
 				<li data-decision-workspace-signal="sources" data-decision-workspace-signal-count={sourceCount}><strong>{sourceCount}</strong> linked {sourceCount === 1 ? 'source' : 'sources'}</li>
 			</ul>
-		</div>
-		<div class="decision-workspace-authority">
-			<h3>You control</h3>
-			<p>Review the decision in the existing queue, choose the next action, and save only the choice you approve.</p>
+			<div class="decision-workspace-authority">
+				<p>Review this item in the review queue before deciding how to proceed.</p>
+			</div>
 			<div class="decision-workspace-actions">
-				<WornButton data-decision-workspace-review variant="primary" size="sm" href={decisionWorkspaceReviewHref(recommendation.pack.id)}>Review in queue</WornButton>
-				<WornButton data-decision-workspace-next size="sm" href={decisionWorkspaceNextHref(recommendation.pack.id)}>Set next action</WornButton>
+				<WornButton data-decision-workspace-review variant="default" size="sm" href={decisionWorkspaceReviewHref(recommendation.pack.id)}>Review in queue</WornButton>
 			</div>
 		</div>
-	</div>
+	</WornCollapsible>
 </section>
 
 <style>
@@ -70,21 +73,27 @@
 	.decision-workspace h2{font-size:16px;line-height:1.15;overflow-wrap:anywhere}
 	.decision-workspace h3{font-size:14px}
 	.decision-workspace .decision-workspace-item-title{font-size:clamp(20px,3vw,28px);line-height:1.15;overflow-wrap:anywhere}
+	.decision-workspace-primary{align-items:center;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;min-width:0}
+	.decision-workspace-authority-note{color:var(--worn-text-muted);font-size:13px;line-height:1.4;max-width:100%;margin:0}
+	.decision-workspace-authority-note,
+	.decision-workspace-detail p{color:var(--worn-text-secondary)}
 	.decision-workspace-meta{align-items:center;color:var(--worn-text-muted);display:flex;flex-wrap:wrap;gap:8px;font-size:13px;min-width:0}
 	.decision-workspace-meta span{min-width:0;overflow-wrap:anywhere}
-	.decision-workspace-detail{display:grid;gap:14px;grid-template-columns:minmax(0,1.35fr) minmax(220px,1fr);margin-top:14px}
-	.decision-workspace-detail p{color:var(--worn-text-muted);font-size:14px;line-height:1.45;margin:5px 0 0}
+	.decision-workspace-detail{display:grid;gap:12px;max-width:100%;min-width:0}
+	.decision-workspace-detail p{color:var(--worn-text-secondary);font-size:14px;line-height:1.45;margin:0}
 	.decision-workspace-signals{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:10px 0 0;padding:0}
 	.decision-workspace-signals li{background:var(--worn-surface);border:1px solid var(--worn-border);border-radius:999px;font-size:12px;padding:4px 8px}
 	.decision-workspace-signals strong{color:var(--worn-text);font-size:13px}
-	.decision-workspace-authority{border-inline-start:1px solid var(--worn-border);padding-inline-start:14px}
+	.decision-workspace-authority{display:grid;gap:8px}
 	.decision-workspace-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+	:global(.decision-workspace .worn-collapsible summary){font-size:12px}
 	@media(max-width:700px){
-		.decision-workspace-detail{grid-template-columns:1fr}
-		.decision-workspace-authority{border-inline-start:0;border-top:1px solid var(--worn-border);padding-inline-start:0;padding-top:12px}
+		.decision-workspace .decision-workspace-item-title{font-size:clamp(18px,7vw,24px)}
 	}
 	@media(max-width:420px){
 		.decision-workspace{padding:13px}
-		.decision-workspace-actions :global(.worn-btn){flex:1 1 100%;justify-content:center}
+		.decision-workspace-primary{align-items:stretch}
+		.decision-workspace-actions :global(.worn-btn),
+		.decision-workspace-primary :global(.worn-btn){flex:1 1 100%;justify-content:center;min-width:0;width:100%}
 	}
 </style>
