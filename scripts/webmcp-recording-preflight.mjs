@@ -107,15 +107,19 @@ export const RECORDING_PREFLIGHT_SPEC = deepFreeze({
 	keyboard: {
 		landingBodyTabs: 1,
 		landingToGuideTabs: 5,
-		guideToPriorityTabs: 4,
-		priorityToGuideTabs: 7,
-		guideToFastBriefShiftTabs: 3,
+		guideToToolsTabs: 5,
+		toolsToPriorityTabs: 2,
+		priorityToGuideShiftTabs: 5,
+		guideToFastBriefShiftTabs: 5,
 		guideReaderBodyTabs: 1,
 		guideToWorkTabs: 9,
-		workToReviewShiftTabs: 7,
-		reviewToNextShiftTabs: 3,
+		workToToolsShiftTabs: 13,
+		toolsToReviewTabs: 3,
+		reviewToToolsShiftTabs: 3,
+		toolsToNextTabs: 4,
 		nextToWorkShiftTabs: 5,
-		workToPendingShiftTabs: 10,
+		workToPendingShiftTabs: 15,
+		pendingToNextTabs: 2,
 		guideBodyPageDowns: 1,
 		nextBodyArrowDowns: 4,
 		finalBodyArrowDowns: 8
@@ -223,14 +227,18 @@ export function recordingCueProjectionFromSpec(spec = RECORDING_PREFLIGHT_SPEC) 
 		keyboard: {
 			landingBodyTabs: spec.keyboard.landingBodyTabs,
 			landingToGuideTabs: spec.keyboard.landingToGuideTabs,
-			guideToPriorityTabs: spec.keyboard.guideToPriorityTabs,
-			priorityToGuideShiftTabs: spec.keyboard.priorityToGuideTabs,
+			guideToToolsTabs: spec.keyboard.guideToToolsTabs,
+			toolsToPriorityTabs: spec.keyboard.toolsToPriorityTabs,
+			priorityToGuideShiftTabs: spec.keyboard.priorityToGuideShiftTabs,
 			guideToFastBriefShiftTabs: spec.keyboard.guideToFastBriefShiftTabs,
 			guideToWorkTabs: spec.keyboard.guideToWorkTabs,
-			workToReviewShiftTabs: spec.keyboard.workToReviewShiftTabs,
-			reviewToNextShiftTabs: spec.keyboard.reviewToNextShiftTabs,
+			workToToolsShiftTabs: spec.keyboard.workToToolsShiftTabs,
+			toolsToReviewTabs: spec.keyboard.toolsToReviewTabs,
+			reviewToToolsShiftTabs: spec.keyboard.reviewToToolsShiftTabs,
+			toolsToNextTabs: spec.keyboard.toolsToNextTabs,
 			nextToWorkShiftTabs: spec.keyboard.nextToWorkShiftTabs,
 			workToPendingShiftTabs: spec.keyboard.workToPendingShiftTabs,
+			pendingToNextTabs: spec.keyboard.pendingToNextTabs,
 			guideReaderBodyTabs: spec.keyboard.guideReaderBodyTabs
 		},
 		bodyScrolls: {
@@ -275,16 +283,16 @@ export function parseRecordingCueSheet(markdown) {
 		const match = cueMatch(entry, /^`([a-z][a-z0-9-]+)@(\d{2}):(\d{2})\.(\d{3})`$/u, 'timeline event');
 		return { id: match[1], atMs: (integer(match[2]) * 60 + integer(match[3])) * 1_000 + integer(match[4]) };
 	});
-	const workToReview = cueMatch(markdown, /Work receipt → Review:\s*seven Shift\+Tab presses/u, 'Work to Review keyboard destination');
-	const reviewToNext = cueMatch(markdown, /Review receipt → Next:\s*three Shift\+Tab presses/u, 'Review to Next keyboard destination');
-	const nextToWork = cueMatch(markdown, /Prepared Next receipt → Work:\s*five Shift\+Tab presses/u, 'Next to Work keyboard destination');
-	const workToPending = cueMatch(markdown, /Work Draft receipt → pending decision:\s*ten Shift\+Tab presses/u, 'Work to pending keyboard destination');
+	const workToReview = cueMatch(markdown, /Work receipt → Review:\s*thirteen Shift\+Tab presses to reach \*\*Tools\*\*, then Enter; three Tab presses in the dialog reach \*\*Review\*\*, then Enter/u, 'Work to Review keyboard destination');
+	const reviewToNext = cueMatch(markdown, /Review receipt → Next:\s*three Shift\+Tab presses to reach \*\*Tools\*\*, then Enter; four Tab presses in the dialog reach \*\*Next\*\*, then Enter/u, 'Review to Next keyboard destination');
+	const nextToWork = cueMatch(markdown, /Prepared Next receipt → Work:\s*five Shift\+Tab presses, then Enter on \*\*Work\*\*/u, 'Next to Work keyboard destination');
+	const workToPending = cueMatch(markdown, /Work Draft receipt → pending decision:\s*fifteen Shift\+Tab presses to reach \*\*Pending 1\*\*, then Enter; two Tab presses in the dialog reach \*\*Review on Next\*\*, then Enter/u, 'Work to pending keyboard destination');
 	const landingToGuide = cueMatch(markdown, /Landing → Guide: press Tab on the page body to reclaim focus, then use five additional Tab presses to reach \*\*Open the handoff workflow\*\* and press Enter; any earlier or later destination fails the take/u, 'Landing to Guide keyboard destination');
-	const guideToPriority = cueMatch(markdown, /Guide → Priority:\s*four Tab presses/u, 'Guide to Priority keyboard destination');
+	const guideToPriority = cueMatch(markdown, /Guide → Priority:\s*five Tab presses to reach \*\*Tools\*\*, then Enter; two Tab presses in the dialog reach \*\*Priority\*\*, then Enter/u, 'Guide to Priority keyboard destination');
 	const guideBodyTab = cueMatch(markdown, /press Tab once on the page body to reclaim page focus/u, 'Guide reader body-owned Tab');
-	const priorityToGuide = cueMatch(markdown, /Priority → Guide:\s*seven Shift\+Tab presses/u, 'Priority to Guide keyboard destination');
-	const guideToFastBrief = cueMatch(markdown, /Returned Guide → fast brief:\s*three Shift\+Tab presses/u, 'Guide to fast brief keyboard destination');
-	const guideToWork = cueMatch(markdown, /After the Guide reader inserts its receipt, reclaim page focus with one body-owned Tab, then use nine additional Tabs to reach \*\*1 Work\*\*/u, 'Guide reader to Work keyboard destination');
+	const priorityToGuide = cueMatch(markdown, /Priority → Guide:\s*five Shift\+Tab presses/u, 'Priority to Guide keyboard destination');
+	const guideToFastBrief = cueMatch(markdown, /Returned Guide → fast brief:\s*five Shift\+Tab presses/u, 'Guide to fast brief keyboard destination');
+	const guideToWork = cueMatch(markdown, /After the Guide reader inserts its receipt, reclaim page focus with one body-owned Tab, then use nine additional Tabs to reach \*\*Work\*\*/u, 'Guide reader to Work keyboard destination');
 	const guidePageDown = cueMatch(markdown, /Guide:[^\n]*?one PageDown pressed on the page body/u, 'Guide body PageDown');
 	const nextArrowDown = cueMatch(markdown, /Next:[^\n]*?four ArrowDown presses on the page body/u, 'prepared Next body ArrowDown');
 	const finalArrowDown = cueMatch(markdown, /then send ArrowDown to the page body eight times at 01:43/u, 'final body ArrowDown');
@@ -340,14 +348,18 @@ export function parseRecordingCueSheet(markdown) {
 		keyboard: {
 			landingBodyTabs: 1,
 			landingToGuideTabs: 5,
-			guideToPriorityTabs: 4,
-			priorityToGuideShiftTabs: 7,
-			guideToFastBriefShiftTabs: 3,
+			guideToToolsTabs: 5,
+			toolsToPriorityTabs: 2,
+			priorityToGuideShiftTabs: 5,
+			guideToFastBriefShiftTabs: 5,
 			guideToWorkTabs: 9,
-			workToReviewShiftTabs: 7,
-			reviewToNextShiftTabs: 3,
+			workToToolsShiftTabs: 13,
+			toolsToReviewTabs: 3,
+			reviewToToolsShiftTabs: 3,
+			toolsToNextTabs: 4,
 			nextToWorkShiftTabs: 5,
-			workToPendingShiftTabs: 10,
+			workToPendingShiftTabs: 15,
+			pendingToNextTabs: 2,
 			guideReaderBodyTabs: 1
 		},
 		bodyScrolls: {
@@ -792,6 +804,20 @@ async function activateRoute(page, routeName) {
 	await waitForRouteReady(page, routeName, activatedAt);
 }
 
+async function activateDialog(page, accessibleName, checkpoint) {
+	const activatedAt = performance.now();
+	const expectedAccessibleName = accessibleName instanceof RegExp ? accessibleName.toString() : accessibleName;
+	await page.keyboard.press('Enter');
+	await page.getByRole('dialog', { name: accessibleName }).waitFor({
+		state: 'visible',
+		timeout: RECORDING_PREFLIGHT_SPEC.routeSettleMs
+	});
+	await settleKeyboardStep(page);
+	const settleMs = Math.round(performance.now() - activatedAt);
+	assert.ok(settleMs <= RECORDING_PREFLIGHT_SPEC.routeSettleMs, `${checkpoint} dialog settled in ${settleMs}ms.`);
+	emit('dialog', { checkpoint, expected: { accessibleName: expectedAccessibleName, settleMsAtMost: RECORDING_PREFLIGHT_SPEC.routeSettleMs }, actual: { settleMs, focus: await activeFocus(page) } });
+}
+
 async function executeRegisteredTool(page, toolName, input) {
 	const serializedInput = JSON.stringify(input);
 	const result = await bounded(page.evaluate(async ({ toolName, serializedInput }) => {
@@ -1093,13 +1119,15 @@ async function runChoreography(page, diagnostics) {
 	await assertGuideLowerFrame(page);
 
 	await waitUntil(startedAt, cueAt('guide-to-priority'));
-	await pressExact(page, 'Tab', spec.keyboard.guideToPriorityTabs, { text: 'Priority', path: spec.routes.priority.path });
+	await pressExact(page, 'Tab', spec.keyboard.guideToToolsTabs, { text: 'Tools' });
+	await activateDialog(page, 'Tools', 'guide-tools');
+	await pressExact(page, 'Tab', spec.keyboard.toolsToPriorityTabs, { text: 'Priority Standalone recommendation view', path: spec.routes.priority.path });
 	await activateRoute(page, 'priority');
 	await page.locator('[data-priority-next-recommendation]').waitFor({ state: 'visible', timeout: spec.routeSettleMs });
 	await assertPriorityFrame(page);
 
 	await waitUntil(startedAt, cueAt('priority-to-guide'));
-	await pressExact(page, 'Shift+Tab', spec.keyboard.priorityToGuideTabs, { text: 'Guide', path: spec.routes.guide.path });
+	await pressExact(page, 'Shift+Tab', spec.keyboard.priorityToGuideShiftTabs, { text: 'Guide', path: spec.routes.guide.path });
 	await activateRoute(page, 'guide');
 	await pressExact(page, 'Shift+Tab', spec.keyboard.guideToFastBriefShiftTabs, { text: 'Use fast-create brief' });
 	await page.keyboard.press('Enter');
@@ -1121,7 +1149,7 @@ async function runChoreography(page, diagnostics) {
 
 	await waitUntil(startedAt, cueAt('guide-to-work'));
 	await bodyTab(page, spec.keyboard.guideReaderBodyTabs, 'guide-reader-reclaim');
-	await pressExact(page, 'Tab', spec.keyboard.guideToWorkTabs, { text: '1 Work', path: spec.routes.work.path });
+	await pressExact(page, 'Tab', spec.keyboard.guideToWorkTabs, { text: 'Work', path: spec.routes.work.path });
 	await activateRoute(page, 'work');
 	const initialWork = await executeRegisteredTool(page, 'get_current_work_view', {});
 	assert.equal(initialWork.counts.workspace, spec.denominators.work.workspace);
@@ -1138,7 +1166,9 @@ async function runChoreography(page, diagnostics) {
 	await assertZeroOverflow(page, 'work-narrowed');
 
 	await waitUntil(startedAt, cueAt('work-to-review'));
-	await pressExact(page, 'Shift+Tab', spec.keyboard.workToReviewShiftTabs, { text: 'Review in queue', path: spec.routes.review.path });
+	await pressExact(page, 'Shift+Tab', spec.keyboard.workToToolsShiftTabs, { text: 'Tools' });
+	await activateDialog(page, 'Tools', 'work-tools');
+	await pressExact(page, 'Tab', spec.keyboard.toolsToReviewTabs, { text: 'Review Full evidence queue', path: spec.routes.review.path });
 	await activateRoute(page, 'review');
 	const initialReview = await executeRegisteredTool(page, 'get_current_review_queue', {});
 	assert.equal(initialReview.counts.totalReview, spec.denominators.review.total);
@@ -1155,7 +1185,9 @@ async function runChoreography(page, diagnostics) {
 	await assertZeroOverflow(page, 'review-scoped');
 
 	await waitUntil(startedAt, cueAt('review-to-next'));
-	await pressExact(page, 'Shift+Tab', spec.keyboard.reviewToNextShiftTabs, { text: '3 Next', path: spec.routes.next.path });
+	await pressExact(page, 'Shift+Tab', spec.keyboard.reviewToToolsShiftTabs, { text: 'Tools, Review is the current view', visibleText: 'Tools Review' });
+	await activateDialog(page, 'Tools', 'review-tools');
+	await pressExact(page, 'Tab', spec.keyboard.toolsToNextTabs, { text: 'Next Full next-action editor', path: spec.routes.next.path });
 	await activateRoute(page, 'next');
 	const nextEditor = await executeRegisteredTool(page, 'get_current_next_editor', {});
 	const evidence = evidenceForCurrentNext(nextEditor, narrowedWork.work, scopedReview);
@@ -1188,7 +1220,7 @@ async function runChoreography(page, diagnostics) {
 	await assertPreparedNextFrame(page);
 
 	await waitUntil(startedAt, cueAt('next-to-work'));
-	await pressExact(page, 'Shift+Tab', spec.keyboard.nextToWorkShiftTabs, { text: '1 Work', path: spec.routes.work.path });
+	await pressExact(page, 'Shift+Tab', spec.keyboard.nextToWorkShiftTabs, { text: 'Work', path: spec.routes.work.path });
 	await activateRoute(page, 'work');
 	const currentWork = await executeRegisteredTool(page, 'get_current_work_view', {});
 	assert.equal(currentWork.counts.workspace, spec.denominators.drafts.before);
@@ -1217,6 +1249,8 @@ async function runChoreography(page, diagnostics) {
 
 	await waitUntil(startedAt, cueAt('work-to-pending'));
 	await pressExact(page, 'Shift+Tab', spec.keyboard.workToPendingShiftTabs, { text: 'Resume 1 pending approval', visibleText: 'Pending 1', path: spec.routes.next.path });
+	await activateDialog(page, /^Pending approvals \(1\)$/u, 'pending-approvals');
+	await pressExact(page, 'Tab', spec.keyboard.pendingToNextTabs, { text: 'Review on Next', path: spec.routes.next.path });
 	await activateRoute(page, 'next');
 	await page.locator('#next-preparation-receipt').waitFor({ state: 'visible', timeout: spec.routeSettleMs });
 	await assertTrail(page, 'final');

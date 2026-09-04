@@ -18,9 +18,11 @@ import {
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.dirname(scriptsDirectory);
 const harnessPath = path.join(scriptsDirectory, 'webmcp-recording-preflight.mjs');
+const calibrationPath = path.join(scriptsDirectory, 'calibrate-work-first-recording.mjs');
 const cuePath = path.join(repositoryRoot, 'docs', 'submission', 'webmcp', 'chrome-recording-script.md');
-const [harnessSource, cueSource] = await Promise.all([
+const [harnessSource, calibrationSource, cueSource] = await Promise.all([
 	fs.readFile(harnessPath, 'utf8'),
+	fs.readFile(calibrationPath, 'utf8'),
 	fs.readFile(cuePath, 'utf8')
 ]);
 
@@ -68,16 +70,23 @@ test('one deep-frozen recording specification owns the exact 1:50 choreography',
 	assert.deepEqual(
 		{
 			landingGuide: RECORDING_PREFLIGHT_SPEC.keyboard.landingToGuideTabs,
-			guidePriority: RECORDING_PREFLIGHT_SPEC.keyboard.guideToPriorityTabs,
-			priorityGuide: RECORDING_PREFLIGHT_SPEC.keyboard.priorityToGuideTabs,
+			guideTools: RECORDING_PREFLIGHT_SPEC.keyboard.guideToToolsTabs,
+			toolsPriority: RECORDING_PREFLIGHT_SPEC.keyboard.toolsToPriorityTabs,
+			priorityGuide: RECORDING_PREFLIGHT_SPEC.keyboard.priorityToGuideShiftTabs,
 			guideFast: RECORDING_PREFLIGHT_SPEC.keyboard.guideToFastBriefShiftTabs,
 			guideWork: RECORDING_PREFLIGHT_SPEC.keyboard.guideToWorkTabs,
-			workReview: RECORDING_PREFLIGHT_SPEC.keyboard.workToReviewShiftTabs,
-			reviewNext: RECORDING_PREFLIGHT_SPEC.keyboard.reviewToNextShiftTabs,
+			workTools: RECORDING_PREFLIGHT_SPEC.keyboard.workToToolsShiftTabs,
+			toolsReview: RECORDING_PREFLIGHT_SPEC.keyboard.toolsToReviewTabs,
+			reviewTools: RECORDING_PREFLIGHT_SPEC.keyboard.reviewToToolsShiftTabs,
+			toolsNext: RECORDING_PREFLIGHT_SPEC.keyboard.toolsToNextTabs,
 			nextWork: RECORDING_PREFLIGHT_SPEC.keyboard.nextToWorkShiftTabs,
-			workPending: RECORDING_PREFLIGHT_SPEC.keyboard.workToPendingShiftTabs
+			workPending: RECORDING_PREFLIGHT_SPEC.keyboard.workToPendingShiftTabs,
+			pendingNext: RECORDING_PREFLIGHT_SPEC.keyboard.pendingToNextTabs
 		},
-		{ landingGuide: 5, guidePriority: 4, priorityGuide: 7, guideFast: 3, guideWork: 9, workReview: 7, reviewNext: 3, nextWork: 5, workPending: 10 }
+		{
+			landingGuide: 5, guideTools: 5, toolsPriority: 2, priorityGuide: 5, guideFast: 5, guideWork: 9,
+			workTools: 13, toolsReview: 3, reviewTools: 3, toolsNext: 4, nextWork: 5, workPending: 15, pendingNext: 2
+		}
 	);
 	assert.deepEqual(RECORDING_PREFLIGHT_SPEC.denominators, {
 		guide: { visible: 8, workspace: 8 },
@@ -166,29 +175,38 @@ test('the human cue sheet parses to the exact executable recording specification
 	assert.deepEqual(parsed.guideOpeningFrame, RECORDING_PREFLIGHT_SPEC.guideOpeningFrame);
 	assert.deepEqual(parsed.guideLowerFrame, RECORDING_PREFLIGHT_SPEC.guideLowerFrame);
 	assert.deepEqual(parsed.activityFrames, RECORDING_PREFLIGHT_SPEC.activityFrames);
+	assert.doesNotMatch(cueSource, /\*\*(?:1 Work|Review in queue|3 Next)\*\*/u);
 
 	assert.throws(
 		() => parseRecordingCueSheet(cueSource.replace('then use five additional Tab presses to reach **Open the handoff workflow**', 'then use four additional Tab presses to reach **Open the handoff workflow**')),
 		/missing its exact Landing to Guide keyboard destination/u
 	);
 	assert.throws(
-		() => parseRecordingCueSheet(cueSource.replace('Guide → Priority: four Tab presses', 'Guide → Priority: five Tab presses')),
+		() => parseRecordingCueSheet(cueSource.replace('Guide → Priority: five Tab presses to reach **Tools**, then Enter; two Tab presses in the dialog reach **Priority**, then Enter', 'Guide → Priority: four Tab presses, then Enter')),
 		/missing its exact Guide to Priority keyboard destination/u
 	);
 	assert.throws(
-		() => parseRecordingCueSheet(cueSource.replace('Work receipt → Review: seven Shift+Tab presses', 'Work receipt → Review: six Shift+Tab presses')),
+		() => parseRecordingCueSheet(cueSource.replace('Work receipt → Review: thirteen Shift+Tab presses to reach **Tools**, then Enter; three Tab presses in the dialog reach **Review**, then Enter', 'Work receipt → Review: seven Shift+Tab presses, then Enter on **Review in queue**')),
 		/missing its exact Work to Review keyboard destination/u
 	);
 	assert.throws(
-		() => parseRecordingCueSheet(cueSource.replace('Priority → Guide: seven Shift+Tab presses', 'Priority → Guide: eight Shift+Tab presses')),
+		() => parseRecordingCueSheet(cueSource.replace('Review receipt → Next: three Shift+Tab presses to reach **Tools**, then Enter; four Tab presses in the dialog reach **Next**, then Enter', 'Review receipt → Next: three Shift+Tab presses, then Enter on **3 Next**')),
+		/missing its exact Review to Next keyboard destination/u
+	);
+	assert.throws(
+		() => parseRecordingCueSheet(cueSource.replace('Work Draft receipt → pending decision: fifteen Shift+Tab presses to reach **Pending 1**, then Enter; two Tab presses in the dialog reach **Review on Next**, then Enter', 'Work Draft receipt → pending decision: ten Shift+Tab presses, then Enter on **Pending 1**')),
+		/missing its exact Work to pending keyboard destination/u
+	);
+	assert.throws(
+		() => parseRecordingCueSheet(cueSource.replace('Priority → Guide: five Shift+Tab presses', 'Priority → Guide: six Shift+Tab presses')),
 		/missing its exact Priority to Guide keyboard destination/u
 	);
 	assert.throws(
-		() => parseRecordingCueSheet(cueSource.replace('Returned Guide → fast brief: three Shift+Tab presses', 'Returned Guide → fast brief: four Shift+Tab presses')),
+		() => parseRecordingCueSheet(cueSource.replace('Returned Guide → fast brief: five Shift+Tab presses', 'Returned Guide → fast brief: four Shift+Tab presses')),
 		/missing its exact Guide to fast brief keyboard destination/u
 	);
 	assert.throws(
-		() => parseRecordingCueSheet(cueSource.replace('then use nine additional Tabs to reach **1 Work**', 'then use five additional Tabs to reach **1 Work**')),
+		() => parseRecordingCueSheet(cueSource.replace('then use nine additional Tabs to reach **Work**', 'then use five additional Tabs to reach **Work**')),
 		/missing its exact Guide reader to Work keyboard destination/u
 	);
 	assert.notDeepEqual(
@@ -222,6 +240,15 @@ test('the test-only modelContext probe preserves descriptor identity, serializat
 });
 
 test('the CLI owns installed Chrome, native viewport, exact keyboard order, diagnostics, and bounded cleanup', () => {
+	assert.match(calibrationSource, /import \{ buildModelContextProbeInitScript, RECORDING_PREFLIGHT_SPEC \} from '\.\/webmcp-recording-preflight\.mjs'/u);
+	assert.match(calibrationSource, /async function pressExactly\(page, key, label, expectedCount, predicate\)[\s\S]*?target-arrived-early[\s\S]*?exact-step-mismatch[\s\S]*?assert\.ok\(matched/u);
+	for (const key of [
+		'guideToToolsTabs', 'toolsToPriorityTabs', 'priorityToGuideShiftTabs', 'guideToFastBriefShiftTabs',
+		'guideToWorkTabs', 'workToToolsShiftTabs', 'toolsToReviewTabs', 'reviewToToolsShiftTabs',
+		'toolsToNextTabs', 'nextToWorkShiftTabs', 'workToPendingShiftTabs', 'pendingToNextTabs'
+	]) assert.match(calibrationSource, new RegExp(`RECORDING_PREFLIGHT_SPEC\\.keyboard\\.${key}`, 'u'));
+	assert.doesNotMatch(calibrationSource, /pressUntil|pressExactly\([^\n]+,\s*\d+\s*,/u);
+	assert.match(calibrationSource, /guide-header-tools[\s\S]*?tools-priority[\s\S]*?priority-header-guide[\s\S]*?guide-fast-brief[\s\S]*?guide-header-work[\s\S]*?work-header-tools[\s\S]*?tools-review[\s\S]*?review-header-tools[\s\S]*?tools-next[\s\S]*?next-header-work[\s\S]*?work-header-pending[\s\S]*?pending-review-on-next[\s\S]*?waitForRoute\(page, '\/next'\)/u);
 	assert.match(harnessSource, /await import\('playwright-core'\)/u);
 	assert.doesNotMatch(harnessSource.split("await import('playwright-core')")[0], /from ['"]playwright-core['"]/u);
 	assert.match(harnessSource, /fs\.mkdtemp\(path\.join\(os\.tmpdir\(\), RECORDING_PREFLIGHT_SPEC\.browser\.profilePrefix\)\)/u);
@@ -236,9 +263,15 @@ test('the CLI owns installed Chrome, native viewport, exact keyboard order, diag
 	assert.match(harnessSource, /const serializedInput = JSON\.stringify\(input\)[\s\S]*?modelContext\.getTools\(\)[\s\S]*?modelContext\.executeTool\(descriptor, serializedInput\)/u);
 	assert.match(harnessSource, /async function settleKeyboardStep\(page\) \{[\s\S]*?bounded\([\s\S]*?requestAnimationFrame\(\(\) => \{[\s\S]*?settledFocus = document\.activeElement[\s\S]*?requestAnimationFrame\(\(\) => \{[\s\S]*?document\.activeElement !== settledFocus[\s\S]*?Exact keyboard step focus changed between rendered frames[\s\S]*?Exact keyboard step render settlement[\s\S]*?async function pressExact\(page, key, count, destination\) \{[\s\S]*?page\.keyboard\.press\(key\);[\s\S]*?settleKeyboardStep\(page\);/u);
 	assert.match(harnessSource, /function focusMatchesDestination\(focus, \{ text, visibleText, path: expectedPath \}\)[\s\S]*?focus\.text !== text[\s\S]*?focus\.visibleText !== visibleText[\s\S]*?!focus\.href[\s\S]*?pathname !== expectedPath[\s\S]*?index < count - 1[\s\S]*?focusMatchesDestination\(focus, destination\)[\s\S]*?emit\('keyboard-rejection'[\s\S]*?Keyboard reached its declared destination after/iu);
+	assert.match(harnessSource, /async function activateDialog\(page, accessibleName, checkpoint\) \{[\s\S]*?page\.keyboard\.press\('Enter'\)[\s\S]*?getByRole\('dialog', \{ name: accessibleName \}\)\.waitFor[\s\S]*?settleKeyboardStep\(page\)[\s\S]*?emit\('dialog'/u);
 	assert.match(harnessSource, /async function bodyTab\(page, count, checkpoint\) \{[\s\S]*?body\.press\('Tab'\)[\s\S]*?settleKeyboardStep\(page\)/u);
 	assert.match(harnessSource, /bodyTab\(page, spec\.keyboard\.landingBodyTabs, 'landing-reclaim'\)[\s\S]*?pressExact\(page, 'Tab', spec\.keyboard\.landingToGuideTabs, \{ path: spec\.routes\.guide\.path, text: 'Open the handoff workflow →' \}\)/u);
-	assert.match(harnessSource, /bodyTab\(page, spec\.keyboard\.guideReaderBodyTabs, 'guide-reader-reclaim'\)[\s\S]*?pressExact\(page, 'Tab', spec\.keyboard\.guideToWorkTabs, \{ text: '1 Work', path: spec\.routes\.work\.path \}\)/u);
+	assert.match(harnessSource, /bodyTab\(page, spec\.keyboard\.guideReaderBodyTabs, 'guide-reader-reclaim'\)[\s\S]*?pressExact\(page, 'Tab', spec\.keyboard\.guideToWorkTabs, \{ text: 'Work', path: spec\.routes\.work\.path \}\)/u);
+	assert.match(harnessSource, /guideToToolsTabs, \{ text: 'Tools' \}\)[\s\S]*?activateDialog\(page, 'Tools', 'guide-tools'\)[\s\S]*?toolsToPriorityTabs, \{ text: 'Priority Standalone recommendation view'/u);
+	assert.match(harnessSource, /workToToolsShiftTabs, \{ text: 'Tools' \}\)[\s\S]*?activateDialog\(page, 'Tools', 'work-tools'\)[\s\S]*?toolsToReviewTabs, \{ text: 'Review Full evidence queue'/u);
+	assert.match(harnessSource, /reviewToToolsShiftTabs, \{ text: 'Tools, Review is the current view', visibleText: 'Tools Review' \}\)[\s\S]*?activateDialog\(page, 'Tools', 'review-tools'\)[\s\S]*?toolsToNextTabs, \{ text: 'Next Full next-action editor'/u);
+	assert.match(harnessSource, /workToPendingShiftTabs, \{ text: 'Resume 1 pending approval', visibleText: 'Pending 1'[\s\S]*?activateDialog\(page, \/\^Pending approvals[\s\S]*?pendingToNextTabs, \{ text: 'Review on Next'/u);
+	assert.doesNotMatch(harnessSource, /guideToPriorityTabs|workToReviewShiftTabs|reviewToNextShiftTabs|'1 Work'|'Review in queue'|'3 Next'/u);
 	assert.doesNotMatch(harnessSource, /seekForward|MaxTabs/u);
 	assert.match(harnessSource, /executeRegisteredTool\(page, 'get_projects_handoff_guide'[\s\S]*?locator\('\[data-webmcp-receipt="guide"\]'\)\.waitFor\(\{ state: 'visible'[\s\S]*?emit\('reader-receipt'[\s\S]*?actionFocusClaimed: false/u);
 	assert.doesNotMatch(harnessSource, /assertVisibleFocus\(page, 'guide-reader'\)/u);
@@ -264,7 +297,7 @@ test('the CLI owns installed Chrome, native viewport, exact keyboard order, diag
 	assert.match(harnessSource, /waitUntil\(startedAt, cueAt\('final-body-arrow-downs'\)\)[\s\S]*?bodyKeyScroll\(page, 'ArrowDown', spec\.keyboard\.finalBodyArrowDowns, 'next-final'\)[\s\S]*?assertZeroOverflow\(page, 'next-final'\)[\s\S]*?assertActivityFrame\(page, 'next', 'restored-final'\)[\s\S]*?assertFinalHumanFrame\(page\)/u);
 	assert.doesNotMatch(harnessSource, /waitUntil\(startedAt, \d/u);
 	assert.match(harnessSource, /emit\('final-frame-observation', \{ actual: frame \}\)[\s\S]*?frame\.receipt\?\.fullyVisible[\s\S]*?frame\.buttons\.every/u);
-	assert.match(harnessSource, /workToPendingShiftTabs, \{ text: 'Resume 1 pending approval', visibleText: 'Pending 1', path: spec\.routes\.next\.path \}/u);
+	assert.match(harnessSource, /workToPendingShiftTabs, \{ text: 'Resume 1 pending approval', visibleText: 'Pending 1', path: spec\.routes\.next\.path \}[\s\S]*?pendingToNextTabs, \{ text: 'Review on Next', path: spec\.routes\.next\.path \}/u);
 	assert.match(harnessSource, /assertFocusedDestination\(page, \{ text, visibleText, path: expectedPath \}\)[\s\S]*?if \(visibleText\) assert\.equal\(focus\.visibleText, visibleText\)/u);
 	assert.equal((harnessSource.match(/#next-preparation-receipt/gu) ?? []).length, 3, 'Prepared-hold and restored-frame checks own the canonical Next receipt id.');
 	assert.doesNotMatch(harnessSource, /#next-webmcp-preparation/u);
