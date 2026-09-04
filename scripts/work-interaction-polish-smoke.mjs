@@ -54,6 +54,15 @@ async function assertPaletteInputFocus(page) {
 	);
 }
 
+async function readWorkspace(page) {
+	return page.evaluate((key) => {
+		const raw = localStorage.getItem(key);
+		if (!raw) return null;
+		const parsed = JSON.parse(raw);
+		return parsed.state ?? parsed;
+	}, storageKey);
+}
+
 try {
 	await waitForServer();
 	browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined });
@@ -163,7 +172,79 @@ try {
 	assert.match((await page.locator('#work-receipt').textContent()) ?? '', /Created Quick add receipt smoke\./u);
 	assert.equal(await page.locator('[data-work-item]').filter({ hasText: title }).count(), 1, 'Quick Add persists the created item with its receipt.');
 
-	await page.goto(`${origin}/next?pack=same-destination`, { waitUntil: 'networkidle' });
+	// Replace the fixture with one explicit decision and prove the complete
+	// human flow now finishes on Work without Review -> Next route hopping.
+	await page.evaluate((key) => {
+		localStorage.setItem(key, JSON.stringify({
+			packs: [
+				{
+					id: 'inline-decision',
+					title: 'Confirm launch handoff',
+					status: 'blocked',
+					blocker: 'Waiting on final details',
+					next: 'Open',
+					decision: true,
+					decider: 'Launch owner',
+					area: 'Launch',
+					sources: ['Launch brief'],
+					activity: ['[2026-09-03 09:00] Created.']
+				},
+				{
+					id: 'supporting-work',
+					title: 'Package release notes',
+					status: 'active',
+					blocker: 'none',
+					next: 'Open',
+					area: 'Launch',
+					activity: ['[2026-09-03 09:00] Created.']
+				}
+			]
+		}));
+	}, storageKey);
+	await page.goto(`${origin}/work`, { waitUntil: 'networkidle' });
+
+	const decision = page.locator('[data-decision-workspace]');
+	await decision.waitFor({ state: 'visible' });
+	assert.equal(new URL(page.url()).pathname, '/work');
+	assert.match((await decision.locator('[data-decision-evidence]').textContent()) ?? '', /Workflow[\s\S]*Blocked[\s\S]*Blocker[\s\S]*Waiting on final details/u);
+	assert.match((await decision.textContent()) ?? '', /Find[\s\S]*Prove[\s\S]*Prepare[\s\S]*Decide/u);
+	assert.equal(await decision.locator('[data-decision-workspace-review]').count(), 1, 'Review remains a secondary deep link.');
+	assert.equal(await decision.locator('[data-decision-workspace-next]').count(), 1, 'Next remains a secondary full-editor deep link.');
+
+	await decision.locator('#decision-next-action').selectOption('Focus');
+	await decision.getByRole('button', { name: 'Prepare for approval' }).click();
+	await page.waitForFunction((key) => {
+		const raw = localStorage.getItem(key);
+		if (!raw) return false;
+		const parsed = JSON.parse(raw);
+		const state = parsed.state ?? parsed;
+		const draft = state.pendingNextActionDrafts?.find((candidate) => candidate.workId === 'inline-decision');
+		return draft?.choice === 'Focus' && draft?.source === 'human' && draft?.evidence?.length === 2;
+	}, storageKey);
+	await decision.getByText(/Human-prepared · Not saved · Human approval required/u).waitFor({ state: 'visible' });
+	assert.match((await decision.locator('[data-decision-draft-evidence]').textContent()) ?? '', /Confirm launch handoff[\s\S]*Workflow: Blocked[\s\S]*Blocker: Waiting on final details/u);
+	assert.equal(new URL(page.url()).pathname, '/work', 'Preparing the draft stays on Work.');
+
+	await decision.getByRole('button', { name: 'Approve and save' }).click();
+	await page.waitForFunction((key) => {
+		const raw = localStorage.getItem(key);
+		if (!raw) return false;
+		const parsed = JSON.parse(raw);
+		const state = parsed.state ?? parsed;
+		const pack = state.packs?.find((candidate) => candidate.id === 'inline-decision');
+		return pack?.next === 'Focus' && !(state.pendingNextActionDrafts || []).some((draft) => draft.workId === 'inline-decision');
+	}, storageKey);
+	assert.equal(new URL(page.url()).pathname, '/work', 'Approval completes without navigating away from Work.');
+	await decision.locator('[data-decision-outcome]').waitFor({ state: 'visible' });
+	assert.match((await decision.locator('[data-decision-outcome]').textContent()) ?? '', /Next action set to "Focus"\.[\s\S]*Approved by you\./u);
+	assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute('data-decision-outcome')), true, 'Approval lands focus on the completed inline decision state.');
+	assert.deepEqual(
+		(await readWorkspace(page)).pendingNextActionDrafts || [],
+		[],
+		'The approved inline draft is consumed atomically.'
+	);
+
+	await page.goto(`${origin}/next?pack=inline-decision`, { waitUntil: 'networkidle' });
 	await page.locator('[data-next-advanced-options] .worn-collapsible').waitFor({ state: 'visible' });
 	const desktopSpacing = await page.evaluate(() => {
 		const editor = document.querySelector('.next-action-editor');
@@ -197,6 +278,7 @@ try {
 	console.log(JSON.stringify({
 		cards: { grid: 'same-destination suppressed; distinct navigation and mutation retained', card: 'same-destination suppressed; distinct navigation and mutation retained' },
 		commandPalette: { keyboard: 'combobox active-descendant navigation', disabled: 'skipped', escape: 'trigger focus restored' },
+		unifiedDecision: { route: '/work', evidence: 'visible', draft: 'prepared', approval: 'saved without navigation' },
 		advancedOptions: { desktop: desktopSpacing, compact: compactSpacing },
 		quickAdd: { receipt: 'visible, focused, and durable after reload' },
 		webMcp: registrationsBeforeQuickAdd.map((tool) => tool.name)
