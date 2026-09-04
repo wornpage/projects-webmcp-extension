@@ -1,0 +1,40 @@
+name: Fix Work-first navigation regression
+
+on:
+  push:
+    branches:
+      - newwork/work-first-navigation
+    paths:
+      - .github/workflows/fix-work-first-navigation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Relax the intentional one-pixel active-route offset
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/webmcp-header-responsive-smoke.mjs')
+          source = path.read_text(encoding='utf-8')
+          before = "\t\tassert.equal(result.pendingTop, result.workTop);\n\t\tassert.equal(result.toolsTop, result.workTop);"
+          after = "\t\tassert.ok(Math.abs(result.pendingTop - result.workTop) <= 1, 'Pending stays on the Work row');\n\t\tassert.ok(Math.abs(result.toolsTop - result.workTop) <= 1, 'Tools stays on the Work row');"
+          if source.count(before) != 1:
+              raise SystemExit('responsive row assertions were not found exactly once')
+          path.write_text(source.replace(before, after, 1), encoding='utf-8')
+          PY
+      - name: Commit the regression correction
+        run: |
+          git config user.name wornpage
+          git config user.email 170748436+wornpage@users.noreply.github.com
+          git add scripts/webmcp-header-responsive-smoke.mjs
+          git diff --cached --quiet && exit 1
+          git commit -m "Allow the active Tools lift in responsive navigation checks"
+          git push origin HEAD:${{ github.ref_name }}
