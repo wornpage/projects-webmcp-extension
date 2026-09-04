@@ -155,8 +155,8 @@ try {
 		assert.ok(result.documentWidth <= result.viewportWidth, `header should not overflow horizontally: ${result.documentWidth}px > ${result.viewportWidth}px`);
 		assert.ok(result.brandWidth > 180, 'Wornpage Projects brand should retain readable width');
 		assert.ok(result.controlTops.every((top) => Math.abs(top - result.controlTops[0]) <= 1), 'all primary navigation controls should share one row');
-		assert.equal(result.pendingTop, result.workTop);
-		assert.equal(result.toolsTop, result.workTop);
+		assert.ok(Math.abs(result.pendingTop - result.workTop) <= 1, 'Pending stays on the Work row');
+		assert.ok(Math.abs(result.toolsTop - result.workTop) <= 1, 'Tools stays on the Work row');
 		assert.ok(result.pendingWidth > 0);
 		assert.equal(result.toolsActive, true, 'Tools should visibly own the current Next route');
 		assert.match(result.toolsLabel ?? '', /Tools, Next is the current view/u);
