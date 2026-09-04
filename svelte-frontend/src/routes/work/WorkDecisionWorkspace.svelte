@@ -42,7 +42,7 @@
 		</div>
 	</div>
 	<div class="decision-workspace-primary">
-		<p class="decision-workspace-authority-note">Human review is required before any next action is saved.</p>
+		<p class="decision-workspace-authority-note" data-decision-workspace-review-required>Human review is required before any next action is saved.</p>
 		<WornButton data-decision-workspace-next variant="primary" href={decisionWorkspaceNextHref(recommendation.pack.id)}>Set next action</WornButton>
 	</div>
 
