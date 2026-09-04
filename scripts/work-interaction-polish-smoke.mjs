@@ -208,6 +208,7 @@ try {
 	assert.equal(new URL(page.url()).pathname, '/work');
 	assert.match((await decision.locator('[data-decision-evidence]').textContent()) ?? '', /Workflow[\s\S]*Blocked[\s\S]*Blocker[\s\S]*Waiting on final details/u);
 	assert.match((await decision.textContent()) ?? '', /Find[\s\S]*Prove[\s\S]*Prepare[\s\S]*Decide/u);
+	await decision.getByRole('button', { name: 'Why this decision is surfaced' }).click();
 	assert.equal(await decision.locator('[data-decision-workspace-review]').count(), 1, 'Review remains a secondary deep link.');
 	assert.equal(await decision.locator('[data-decision-workspace-next]').count(), 1, 'Next remains a secondary full-editor deep link.');
 
