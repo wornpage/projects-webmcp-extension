@@ -21,6 +21,7 @@
 		primaryCommandNavigation,
 		workflowCardClass,
 		workflowLabel,
+		canSetNextAction,
 		workTitle,
 		type DemoPack
 	} from '$lib/demo-workflow';
@@ -103,7 +104,7 @@
 
 	let command = $derived(primaryCommand(pack));
 	let commandHref = $derived(PACK_ACTIONS.has(command.action) ? undefined : primaryCommandNavigation(pack));
-	let titleHref = $derived(`/next?pack=${encodeURIComponent(pack.id || '')}`);
+	let titleHref = $derived(canSetNextAction(pack) ? `/next?pack=${encodeURIComponent(pack.id || '')}` : null);
 	let workflow = $derived(workflowLabel(pack));
 	let cardCls = $derived(workflowCardClass(pack, false, false));
 	let packKey = $derived(pack.id || '');
@@ -134,10 +135,17 @@
 		{@render batchCheckbox(pack)}
 	{/if}
 	<div class="demo-card-head">
+		{#if titleHref}
 		<a class="demo-card-title" data-action="select" data-pack={pack.id} title="Set the next action for {workTitle(pack)}" aria-label="Set the next action for {workTitle(pack)}" href={titleHref} onclick={() => onTrackRecent(pack.id!)}>
 			{#if pack.pinned}<span class="demo-pin-flag" role="img" title="Pinned to the top of the list" aria-label="Pinned"></span>{/if}
 			{workTitle(pack)}
 		</a>
+		{:else}
+		<span class="demo-card-title" data-work-terminal-title>
+			{#if pack.pinned}<span class="demo-pin-flag" role="img" title="Pinned to the top of the list" aria-label="Pinned"></span>{/if}
+			{workTitle(pack)}
+		</span>
+		{/if}
 		{#if hasDistinctType(pack.type)}
 			<span class="demo-type-badge" data-type={pack.type}>{displayedTypeLabel(pack.type)}</span>
 			<span class="demo-age">{packAge(pack)}</span>
@@ -152,7 +160,7 @@
 			<div class="demo-card-fact"><span>Blocker</span><strong>{blockerText(pack)}</strong></div>
 		</div>
 	{/if}
-	{#if !commandHref || commandHref !== titleHref}
+	{#if canSetNextAction(pack) && (!commandHref || commandHref !== titleHref)}
 	<div class="work-command-row">
 		{#if commandHref}
 			<WornButton data-work-primary-navigation variant="primary" href={commandHref} aria-label={`${command.label} for ${workTitle(pack)}`} data-action="run-next" data-pack={pack.id}>

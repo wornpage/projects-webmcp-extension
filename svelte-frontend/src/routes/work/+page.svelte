@@ -35,6 +35,7 @@
 		primaryCommandNavigation,
 		hasBlocker,
 		isMissingOwnerValue,
+		canSetNextAction,
 		isReview,
 		isOpenDecision,
 		dueUrgency,
@@ -138,7 +139,7 @@
 	let recentIds = $state<string[]>([]);
 	let recentPacks = $derived(recentIds
 		.map((id) => packs.find((pack) => pack.id === id))
-		.filter((pack): pack is DemoPack => Boolean(pack && !pack.archived)));
+		.filter((pack): pack is DemoPack => Boolean(pack && canSetNextAction(pack))));
 	let snoozeDays = $state<Record<string, string>>({});
 	let quickAddBusy = $state(false);
 	let sortBy = $state('urgency');
@@ -160,6 +161,7 @@
 		const normalized = commandPaletteQuery.trim().toLowerCase();
 		const selectedId = $demoState?.selectedId;
 		const selectedPack = packs.find((pack) => pack.id === selectedId) || null;
+		const selectedCanSetNext = Boolean(selectedPack && canSetNextAction(selectedPack));
 		const all: WorkCommand[] = [
 			{
 				id: 'search',
@@ -188,10 +190,10 @@
 			{
 				id: 'next-selected',
 				label: 'Open next for selected',
-				description: selectedPack ? `Open ${workTitle(selectedPack)} in Next` : 'Select a work item first.',
-				disabled: !selectedPack,
+				description: selectedCanSetNext ? `Open ${workTitle(selectedPack!)} in Next` : selectedPack ? 'Completed work has no next action to edit.' : 'Select a work item first.',
+				disabled: !selectedCanSetNext,
 				run: () => {
-					if (!selectedPack) return;
+					if (!selectedPack || !canSetNextAction(selectedPack)) return;
 					goto(`/next?pack=${encodeURIComponent(selectedPack.id || '')}`);
 				}
 			},
@@ -963,6 +965,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	}
 
 	function runPrimary(pack: DemoPack) {
+		if (!canSetNextAction(pack)) return;
 		const command = primaryCommand(pack);
 		if (PACK_ACTIONS.has(command.action)) {
 			doAction(pack, command.action);
@@ -1022,7 +1025,7 @@ function handleCardKeys(e: KeyboardEvent, cardIndex: number = -1) {
 	}
 
 	function selectPack(pack: DemoPack) {
-		if (!pack.id) return;
+		if (!pack.id || !canSetNextAction(pack)) return;
 		trackRecent(pack.id);
 		goto(`/next?pack=${encodeURIComponent(pack.id)}`);
 	}

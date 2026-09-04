@@ -23,6 +23,7 @@
 		nextChoiceForwardPath,
 		blockerText,
 		evidenceFacts,
+		canSetNextAction,
 		isReview,
 		hasBlocker,
 		isOpenDecision,
@@ -143,7 +144,7 @@
 	let saveFocusFrame: number | null = null;
 	let stopNextWebMcp: (() => void) | null = null;
 	let packs = $derived(
-		(($demoState?.packs ?? []) as DemoPack[]).filter((candidate) => candidate.archived !== true)
+		(($demoState?.packs ?? []) as DemoPack[]).filter(canSetNextAction)
 	);
 	let requestedPackId = $derived(browser ? ($page.url.searchParams.get('pack') || '') : '');
 	let decisionWorkspaceContextId = $derived(

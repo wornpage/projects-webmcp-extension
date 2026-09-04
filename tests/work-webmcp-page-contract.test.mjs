@@ -114,7 +114,7 @@ test('archived work appears only in the archived status view', () => {
 	assert.deepEqual(filterPacks(packs, 'active', '').map((pack) => pack.id), ['active']);
 	assert.deepEqual(filterPacks(packs, 'all', '').map((pack) => pack.id), ['active']);
 	assert.deepEqual(filterPacks(packs, 'archived', '').map((pack) => pack.id), ['archived-active']);
-	assert.match(routeSource, /let recentPacks = \$derived\([\s\S]*?Boolean\(pack && !pack\.archived\)/u);
+	assert.match(routeSource, /let recentPacks = \$derived\([\s\S]*?Boolean\(pack && canSetNextAction\(pack\)\)/u);
 	assert.match(routeSource, /if \(!pack\.archived\) next\[pack\.status \|\| ''\]/u);
 });
 
@@ -746,8 +746,9 @@ test('Work titles own same-destination Next navigation while distinct commands r
 	assert.equal(primaryCommandNavigation({ id: 'blocked', blocker: 'Waiting', next: 'Open' }), '/review?focus=blocked');
 	assert.equal(primaryCommand({ id: 'finish', next: 'Done' }).action, 'done');
 	for (const source of [workGridCardSource, workListCardSource]) {
-		assert.match(source, /let titleHref = \$derived\(`\/next\?pack=\$\{encodeURIComponent\(pack\.id \|\| ''\)\}`\);/u);
-		assert.match(source, /\{#if !commandHref \|\| commandHref !== titleHref\}/u);
+		assert.match(source, /let titleHref = \$derived\(canSetNextAction\(pack\) \? `\/next\?pack=\$\{encodeURIComponent\(pack\.id \|\| ''\)\}` : null\);/u);
+		assert.match(source, /\{#if canSetNextAction\(pack\) && \(!commandHref \|\| commandHref !== titleHref\)\}/u);
+		assert.match(source, /\{:else\}[\s\S]*?data-work-terminal-title/u);
 		assert.doesNotMatch(source, /commandHref === titleHref/u);
 	}
 	assert.match(workGridCardSource, /<a class="grid-card-title" href=\{titleHref\}/u);
@@ -914,7 +915,7 @@ test('expanded Recent activity follows the Work page heading hierarchy', () => {
 	assert.match(routeSource, /import WorkRecentActivity from '\.\/WorkRecentActivity\.svelte';[\s\S]*?<WorkRecentActivity \{packs\} \/>/u);
 	assert.doesNotMatch(routeSource, /RECENT_ACTIVITY_LIMIT|allRecentActivity|recentActivity|recentTimelineEntries|recentPackActivity|activityEvidenceText|activityActor|demo-work-recent/u);
 	assert.match(workRecentActivitySource, /const RECENT_ACTIVITY_LIMIT = 6;[\s\S]*?recentPackActivity\(packs, Math\.max\(RECENT_ACTIVITY_LIMIT, packs\.length\)\)\.slice\(0, RECENT_ACTIVITY_LIMIT\)/u);
-	assert.match(workRecentActivitySource, /description: activityEvidenceText\(entry\),[\s\S]*?href: `\/next\?pack=\$\{encodeURIComponent\(entry\.packId\)\}`,[\s\S]*?meta: activityActor\(entry\) \|\| undefined,[\s\S]*?title: entry\.packTitle/u);
+	assert.match(workRecentActivitySource, /description: activityEvidenceText\(entry\),[\s\S]*?href: canSetNextAction\([\s\S]*?\? `\/next\?pack=\$\{encodeURIComponent\(entry\.packId\)\}`[\s\S]*?: `\/work\?focus=\$\{encodeURIComponent\(entry\.packId\)\}`,[\s\S]*?meta: activityActor\(entry\) \|\| undefined,[\s\S]*?title: entry\.packTitle/u);
 	const recentTimeline = workRecentActivitySource.match(/<WornAccordion label="Recent activity">[\s\S]*?<WornTimeline[\s\S]*?\/>/u)?.[0] ?? '';
 	assert.match(recentTimeline, /entries=\{timelineEntries\}[\s\S]*?ariaLabel="Recent work activity"[\s\S]*?density="compact"/u);
 	assert.match(recentTimeline, /headingLevel=\{2\}/u);

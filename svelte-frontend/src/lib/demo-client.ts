@@ -15,6 +15,7 @@ import {
 	VALID_PACK_STATUSES,
 	parseDateOnly,
 	evidenceFacts,
+	canSetNextAction,
 	workTitle
 } from '$lib/demo-workflow';
 import {
@@ -179,6 +180,12 @@ function assertDemoState(value: unknown): asserts value is DemoState {
 	if (pending !== undefined && (!Array.isArray(pending) || pending.some((draft) => !isPendingNextActionDraft(draft)))) {
 		throw new ChallengeStateError('Saved pending approvals are invalid. Clear this site\'s local data to restart.');
 	}
+	for (const draft of pending || []) {
+		const target = (value as DemoState).packs.find((pack) => pack.id === draft.workId);
+		if (!target || !canSetNextAction(target)) {
+			throw new ChallengeStateError('Saved pending approvals contain a terminal or missing work item.');
+		}
+	}
 	const dependencyIds = new Set((value as DemoState).packs.map((pack) => pack.id));
 	for (const pack of (value as DemoState).packs) {
 		if (pack.blockedBy && !dependencyIds.has(pack.blockedBy)) {
@@ -211,7 +218,8 @@ function recoverPersistedState(value: unknown): DemoState {
 		}
 	}
 	const pending = (source.pendingNextActionDrafts || []).filter((draft) => {
-		const valid = isPendingNextActionDraft(draft) && ids.has(draft.workId) && draft.evidence.every((fact) => ids.has(fact.workId));
+		const target = packs.find((pack) => pack.id === draft.workId);
+		const valid = isPendingNextActionDraft(draft) && Boolean(target && canSetNextAction(target)) && draft.evidence.every((fact) => ids.has(fact.workId));
 		if (!valid) quarantined.push({ id: draft?.workId || 'pending-approval', reason: 'Pending approval referenced an invalid or missing record.' });
 		return valid;
 	});
@@ -260,9 +268,19 @@ export function pendingNextActionDraftFor(state: DemoState | null, workId: strin
 	return pendingNextActionDrafts(state).find((draft) => draft.workId === workId) ?? null;
 }
 
+function requireNextActionTarget(state: DemoState, workId: string): DemoPack {
+	const pack = state.packs.find((candidate) => candidate.id === workId);
+	if (!pack) throw new ChallengeStateError('Pending approval work item was not found.');
+	if (!canSetNextAction(pack)) {
+		throw new ChallengeStateError('Completed or archived work cannot have a next-action draft.');
+	}
+	return pack;
+}
+
 export async function savePendingNextActionDraft(draft: PendingNextActionDraft): Promise<DemoState | null> {
 	if (!isPendingNextActionDraft(draft)) throw new ChallengeStateError('Pending approval draft is invalid.');
 	return saveBrowserState((state) => {
+		requireNextActionTarget(state, draft.workId);
 		upsertPendingDraft(state, draft);
 	});
 }
@@ -273,6 +291,7 @@ export async function revisePendingNextActionDraftChoice(
 	mode: 'preset' | 'custom'
 ): Promise<DemoState | null> {
 	return saveBrowserState((state) => {
+		requireNextActionTarget(state, workId);
 		revisePendingDraftChoice(state, { workId, choice, mode }, pendingPackProjection);
 	});
 }
@@ -297,6 +316,7 @@ function pendingPackProjection(pack: DemoPack) {
 
 export async function setPackNextAction(workId: string): Promise<{ saved: true; pack: DemoPack; receipt: DemoReceipt; state: DemoState }> {
 	const written = await saveBrowserState((state) => {
+		requireNextActionTarget(state, workId);
 		let approved;
 		try {
 			approved = approvePendingDraft(state, workId, {
@@ -674,6 +694,7 @@ export async function runPackAction(packId: string, rawAction: string): Promise<
 			changed = appendActivity(pack, 'Opened.');
 		} else {
 			Object.assign(pack, packActionEffect(pack, action));
+			if (action === 'done') discardPendingDraft(draft, pack.id);
 			changed = actionSignature(pack) !== before;
 			if (changed) {
 				const detail = action === 'start'
@@ -734,6 +755,7 @@ export async function runPackBatchAction(
 				const pack = draft.packs.find((candidate) => candidate.id === id)!;
 				const wasDone = pack.status === 'done';
 				Object.assign(pack, packActionEffect(pack, action));
+				if (action === 'done') discardPendingDraft(draft, pack.id);
 				appendActivity(pack, action === 'start' ? 'Started.' : action === 'block' ? 'Blocked.' : proofActivity(pack));
 				if (action === 'done' && !wasDone) {
 					unblockPacksBlockedBy(draft.packs, pack, { onActivity: appendActivity, workTitle });
@@ -915,6 +937,7 @@ export async function savePackPath(
 		if (statusBefore !== 'done' && pack.status === 'done') {
 			pack.blocker = DEMO_BLOCKER_NONE;
 			pack.blockedBy = '';
+			discardPendingDraft(draft, pack.id);
 			unblockedCount = unblockPacksBlockedBy(draft.packs, pack, { onActivity: appendActivity, workTitle }).length;
 		}
 		const summary = [

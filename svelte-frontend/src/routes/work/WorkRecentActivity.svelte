@@ -6,7 +6,7 @@
 		relativeActivityTime
 	} from '$lib/activity';
 	import { WornAccordion, WornTimeline } from '$lib/components';
-	import type { DemoPack } from '$lib/demo-workflow';
+	import { canSetNextAction, type DemoPack } from '$lib/demo-workflow';
 
 	let { packs }: { packs: DemoPack[] } = $props();
 
@@ -17,7 +17,9 @@
 	let timelineEntries = $derived(recentActivity.map((entry) => ({
 		date: entry.at,
 		description: activityEvidenceText(entry),
-		href: `/next?pack=${encodeURIComponent(entry.packId)}`,
+		href: canSetNextAction(packs.find((pack) => pack.id === entry.packId) || { id: entry.packId, status: 'done' })
+			? `/next?pack=${encodeURIComponent(entry.packId)}`
+			: `/work?focus=${encodeURIComponent(entry.packId)}`,
 		meta: activityActor(entry) || undefined,
 		title: entry.packTitle
 	})));

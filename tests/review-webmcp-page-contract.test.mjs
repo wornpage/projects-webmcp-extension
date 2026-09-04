@@ -72,7 +72,7 @@ function queueView() {
 test('one Review selector excludes terminal work and includes explicit Review actions', () => {
 	assert.match(
 		workflowSource,
-		/export function isReview\(pack: DemoPack\): boolean \{\s*if \(pack\.status === 'done' \|\| pack\.archived\) return false;\s*const action = commandActionForLabel\(pack\.next \|\| ''\)\.action;\s*return hasBlocker\(pack\)\s*\|\| isMissingNextAction\(pack\)\s*\|\| action === 'review'\s*\|\| action === 'review-work';\s*\}/u
+		/export function canSetNextAction\(pack: DemoPack\): boolean \{\s*return pack\.status !== 'done' && !pack\.archived;\s*\}[\s\S]*?export function isReview\(pack: DemoPack\): boolean \{\s*if \(!canSetNextAction\(pack\)\) return false;[\s\S]*?action === 'review-work';\s*\}/u
 	);
 	assert.deepEqual(
 		seedPacks.filter((pack) => pack.status === 'done' && !pack.next).map((pack) => pack.id),
