@@ -60,6 +60,8 @@ const server = createServer(async (request, response) => {
 		response.end('Not found');
 	}
 });
+server.keepAliveTimeout = 1000;
+server.headersTimeout = 5000;
 
 let browser;
 try {
@@ -171,5 +173,10 @@ try {
 	console.log(JSON.stringify({ cache: activeCacheName, generation: 'build-derived', buildAssets: buildAssets.length, unvisitedOfflineRoute: 'next', unrelatedCachePreserved: true, freshness: 'network-first', cachedSeed }));
 } finally {
 	await browser?.close();
-	if (server.listening) await new Promise((resolve) => server.close(resolve));
+	if (server.listening) {
+		await new Promise((resolve) => {
+			server.close(resolve);
+			server.closeAllConnections();
+		});
+	}
 }
