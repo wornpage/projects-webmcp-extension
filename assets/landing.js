@@ -10,14 +10,26 @@
 // Visible WebMCP handoff replay: Observe → Narrow → Prepare → Decide.
 (function () {
   var btn = document.getElementById("replay-play");
+  var demo = document.getElementById("replay-demo");
+  var stageLabel = document.getElementById("replay-stage-label");
   var steps = document.querySelectorAll(".lp-replay-step");
   var note = document.getElementById("replay-note");
-  if (!btn || !steps.length) return;
+  var views = demo ? demo.querySelectorAll("[data-replay-view]") : [];
+  var progress = demo ? demo.querySelectorAll("[data-replay-progress]") : [];
+  if (!btn || !demo || !steps.length || steps.length !== views.length) return;
 
   var STEP_MS = 2200;
   var DEFAULT_NOTE = "Press play — four steps, about ten seconds. No account, no setup.";
   var timer = null;
-  var index = -1;
+  var index = 0;
+  var stateNames = ["observe", "narrow", "prepare", "decide"];
+  var stageNames = ["Observe · 1 of 4", "Narrow · 2 of 4", "Prepare · 3 of 4", "Decide · 4 of 4"];
+  var stateLabels = [
+    "Observe: the agent reads eight visible work items and identifies a blocked client handoff.",
+    "Narrow: the agent shows two relevant items out of eight while the workspace remains unchanged.",
+    "Prepare: the agent cites the blocked workflow and blocker, then proposes an unsaved next action.",
+    "Decide: the agent stops before Save and leaves Discard draft or Approve and save to the person."
+  ];
   var stepNotes = [
     "Observed the exact visible queue — a client handoff is blocked while details are pending.",
     "Narrowed Work and Review to the relevant items — the denominators stay visible and workspace data is unchanged.",
@@ -29,6 +41,13 @@
     for (var i = 0; i < steps.length; i++) {
       steps[i].classList.remove("is-on");
       steps[i].removeAttribute("aria-current");
+      steps[i].setAttribute("aria-pressed", "false");
+    }
+    for (var j = 0; j < views.length; j++) {
+      views[j].classList.remove("is-active");
+    }
+    for (var k = 0; k < progress.length; k++) {
+      progress[k].classList.remove("is-current", "is-complete");
     }
   }
 
@@ -37,10 +56,20 @@
   }
 
   function selectStep(nextIndex) {
+    if (nextIndex < 0 || nextIndex >= steps.length) return;
     clearAll();
     index = nextIndex;
     steps[index].classList.add("is-on");
     steps[index].setAttribute("aria-current", "step");
+    steps[index].setAttribute("aria-pressed", "true");
+    views[index].classList.add("is-active");
+    demo.setAttribute("data-replay-state", stateNames[index]);
+    demo.setAttribute("aria-label", stateLabels[index]);
+    if (stageLabel) stageLabel.textContent = stageNames[index];
+    for (var i = 0; i < progress.length; i++) {
+      if (i < index) progress[i].classList.add("is-complete");
+      if (i === index) progress[i].classList.add("is-current");
+    }
     if (index < stepNotes.length) setNote(stepNotes[index]);
   }
 
@@ -71,8 +100,7 @@
 
   function stop() {
     pause();
-    clearAll();
-    index = -1;
+    selectStep(0);
     setNote(DEFAULT_NOTE);
   }
 
@@ -96,4 +124,6 @@
     });
   }
 
+  selectStep(0);
+  setNote(DEFAULT_NOTE);
 })();
