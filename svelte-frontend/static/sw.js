@@ -1,6 +1,7 @@
 const CACHE_NAME = 'projects-webmcp-v2';
 const PRECACHE = [
 	'/',
+	'/landing.html',
 	'/webmcp-challenge',
 	'/priority',
 	'/work',
@@ -9,15 +10,55 @@ const PRECACHE = [
 	'/manifest.json',
 	'/data/demo-packs.json',
 	'/assets/demo.css',
+	'/assets/landing.css',
+	'/assets/landing.js',
+	'/assets/favicon.png',
+	'/assets/favicon.svg',
+	'/assets/icon-192.svg',
+	'/assets/icon-512.svg',
 	'/sw.js'
 ];
+
+// These URLs are intentionally unversioned. Prefer the network while online so
+// a newly deployed landing proof, manifest, or sample seed cannot be hidden by
+// an older cache entry. The cache remains the offline fallback.
+const NETWORK_FIRST_PATHS = new Set([
+	'/',
+	'/landing.html',
+	'/manifest.json',
+	'/data/demo-packs.json',
+	'/assets/demo.css',
+	'/assets/landing.css',
+	'/assets/landing.js'
+]);
+
+async function fetchAndCache(request) {
+	const response = await fetch(request);
+	if (response.ok && response.status === 200) {
+		try {
+			const cache = await caches.open(CACHE_NAME);
+			await cache.put(request, response.clone());
+		} catch {}
+	}
+	return response;
+}
+
+async function cachedOrOfflineFallback(request) {
+	const cached = await caches.match(request);
+	if (cached) return cached;
+	if (request.mode === 'navigate') {
+		const guide = await caches.match('/webmcp-challenge');
+		if (guide) return guide;
+	}
+	return Response.error();
+}
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(caches.open(CACHE_NAME).then(async (cache) => {
 		await Promise.all(PRECACHE.map(async (url) => {
 			try {
-				const response = await fetch(url);
-				if (response.ok) await cache.put(url, response);
+				const response = await fetch(new Request(url, { cache: 'reload' }));
+				if (response.ok && response.status === 200) await cache.put(url, response);
 			} catch {}
 		}));
 	}));
@@ -34,9 +75,12 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
 	const requestUrl = new URL(event.request.url);
 	if (event.request.method !== 'GET' || requestUrl.origin !== self.location.origin || requestUrl.pathname === '/sw.js') return;
-	event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-		const copy = response.clone();
-		void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-		return response;
-	}).catch(() => event.request.mode === 'navigate' ? caches.match('/webmcp-challenge') : Response.error())));
+
+	if (event.request.mode === 'navigate' || NETWORK_FIRST_PATHS.has(requestUrl.pathname)) {
+		event.respondWith(fetchAndCache(event.request).catch(() => cachedOrOfflineFallback(event.request)));
+		return;
+	}
+
+	event.respondWith(caches.match(event.request).then((cached) => cached || fetchAndCache(event.request)
+		.catch(() => cachedOrOfflineFallback(event.request))));
 });
