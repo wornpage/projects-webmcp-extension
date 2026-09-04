@@ -18,6 +18,7 @@ export const STATIC_PUBLISH_FILES = Object.freeze([
 	'assets/favicon.svg',
 	'assets/icon-192.svg',
 	'assets/icon-512.svg',
+	'assets/og-image-7876d230.png',
 	'assets/og-image.svg',
 	'data/demo-packs.json'
 ]);
