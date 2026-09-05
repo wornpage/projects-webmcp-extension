@@ -1,6 +1,8 @@
 # Wornpage Projects — WebMCP Challenge
 
-A small, static edition of Wornpage Projects built for the 2026 WebMCP Challenge. People and browser agents operate the same visible Priority, Work, Review, and Next screens; the agent receives a bounded projection of what the person can already see.
+Turn blocked work into a clear next action, with a person approving the final save. Wornpage Projects is a static work tracker where browser agents inspect visible evidence and prepare decisions through page-owned WebMCP tools.
+
+Built for the 2026 WebMCP Challenge, this edition demonstrates shared human and agent interfaces, bounded tool authority, and reviewable next-action drafts. Work, Pending, and Guide form the main navigation; Priority, Review, and Next are focused views inside Tools.
 
 Live submission: <https://projects-webmcp-extension.pages.dev/webmcp-challenge>
 
